@@ -1,0 +1,2069 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FORMA — Design System</title>
+<link rel="stylesheet" href="styles.css">
+<script src="image-slot.js"></script>
+<style>
+/* ================================================================
+   Documentation layout
+   ================================================================ */
+.docs-page {
+  display: flex;
+  min-height: calc(100vh - 72px);
+}
+
+/* Sidebar */
+.docs-sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 72px;
+  height: calc(100vh - 72px);
+  overflow-y: auto;
+  border-right: 1px solid var(--line);
+  padding: 28px 0;
+  scrollbar-width: none;
+}
+.docs-sidebar::-webkit-scrollbar { display: none; }
+
+.docs-nav__group { margin-bottom: 24px; padding: 0 14px; }
+.docs-nav__group-label {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+  display: block;
+  padding: 0 8px;
+}
+.docs-nav__link {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  padding: 6px 10px;
+  border-radius: 8px;
+  margin-bottom: 1px;
+  transition: all .15s;
+}
+.docs-nav__link:hover { color: var(--text); background: var(--surface); }
+.docs-nav__link.is-active { color: var(--text); background: var(--surface-2); font-weight: 600; }
+
+/* Main */
+.docs-main {
+  flex: 1;
+  min-width: 0;
+  padding: 56px 60px 100px;
+  max-width: 900px;
+}
+
+/* Section blocks */
+.ds-section { margin-bottom: 80px; scroll-margin-top: 100px; }
+.ds-section__title {
+  font-size: clamp(22px, 2.5vw, 30px);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  margin: 0 0 8px;
+}
+.ds-section__desc {
+  font-size: 15px;
+  color: var(--text-muted);
+  max-width: 60ch;
+  margin: 0 0 36px;
+  line-height: 1.65;
+}
+.ds-divider { border: none; border-top: 1px solid var(--line); margin: 64px 0; }
+
+/* Subsection */
+.ds-sub { margin-bottom: 40px; }
+.ds-sub__title {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 0 0 16px;
+}
+
+/* Preview box */
+.ds-preview {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+.ds-preview__canvas {
+  padding: 36px 32px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+.ds-preview__canvas--col { flex-direction: column; align-items: flex-start; }
+.ds-preview__canvas--surface { background: var(--surface); }
+.ds-preview__canvas--dark { background: #0e0e0d; }
+.ds-preview__meta {
+  padding: 12px 20px;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--text-muted);
+  letter-spacing: .02em;
+}
+
+/* Color swatches */
+.ds-color-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  gap: 12px;
+}
+.ds-swatch {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+}
+.ds-swatch__color { height: 72px; }
+.ds-swatch__info { padding: 10px 12px; background: var(--card); }
+.ds-swatch__name { font-size: 12.5px; font-weight: 600; margin-bottom: 3px; }
+.ds-swatch__token { font-family: var(--mono); font-size: 10px; color: var(--text-muted); letter-spacing: .04em; display: block; }
+.ds-swatch__hex { font-family: var(--mono); font-size: 10px; color: var(--text-muted); }
+
+/* Table */
+.ds-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+.ds-table th {
+  text-align: left;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 0 16px 12px 0;
+  border-bottom: 1px solid var(--line);
+  font-weight: 600;
+}
+.ds-table td {
+  padding: 13px 16px 13px 0;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+  line-height: 1.5;
+}
+.ds-table tr:last-child td { border-bottom: none; }
+.ds-table code {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  background: var(--surface-2);
+  padding: 2px 6px;
+  border-radius: 5px;
+  letter-spacing: .01em;
+}
+.ds-color-dot {
+  display: inline-block;
+  width: 14px; height: 14px;
+  border-radius: 4px;
+  border: 1px solid var(--line);
+  vertical-align: middle;
+  margin-right: 7px;
+  position: relative; top: -1px;
+}
+
+/* Type scale */
+.ds-type-row {
+  display: flex;
+  align-items: baseline;
+  gap: 28px;
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--line);
+}
+.ds-type-row:last-child { border-bottom: none; }
+.ds-type-meta {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: .06em;
+  min-width: 160px;
+  flex-shrink: 0;
+  line-height: 1.6;
+}
+
+/* Spacing bars */
+.ds-space-row {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 10px 24px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+.ds-space-row:last-child { border-bottom: none; }
+.ds-space-bar {
+  height: 10px;
+  background: var(--text);
+  border-radius: 3px;
+  opacity: .12;
+  flex-shrink: 0;
+}
+.ds-space-token {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--text-muted);
+  min-width: 100px;
+}
+
+/* Radius demos */
+.ds-radius-grid { display: flex; gap: 20px; flex-wrap: wrap; }
+.ds-radius-item { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.ds-radius-box {
+  width: 76px; height: 76px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+}
+.ds-radius-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-muted);
+  text-align: center;
+  line-height: 1.5;
+}
+
+/* Shadow cards */
+.ds-shadow-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.ds-shadow-card {
+  border-radius: 16px;
+  padding: 28px 24px;
+  background: var(--card);
+  border: 1px solid var(--line);
+}
+.ds-shadow-card__label { font-family: var(--mono); font-size: 10.5px; color: var(--text-muted); letter-spacing: .12em; text-transform: uppercase; margin-bottom: 8px; }
+.ds-shadow-card__name { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+.ds-shadow-card__desc { font-size: 13px; color: var(--text-muted); }
+
+/* Principles cards */
+.ds-principles { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
+.ds-principle {
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+}
+.ds-principle__num {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .14em;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  display: block;
+}
+.ds-principle__title { font-size: 15px; font-weight: 700; margin-bottom: 8px; }
+.ds-principle__body { font-size: 13.5px; color: var(--text-muted); line-height: 1.6; }
+
+/* Intro hero */
+.ds-intro {
+  padding: 56px 0 48px;
+  margin-bottom: 56px;
+  border-bottom: 1px solid var(--line);
+}
+.ds-intro .eyebrow { display: block; margin-bottom: 16px; }
+.ds-intro__title {
+  font-size: clamp(42px, 5.5vw, 68px);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: .95;
+  margin: 0 0 22px;
+}
+.ds-intro__desc {
+  font-size: 17px;
+  color: var(--text-muted);
+  max-width: 54ch;
+  line-height: 1.65;
+  margin: 0 0 30px;
+}
+.ds-intro__links { display: flex; gap: 10px; flex-wrap: wrap; }
+
+/* Mono inline */
+code {
+  font-family: var(--mono);
+  font-size: 12px;
+  background: var(--surface-2);
+  padding: 2px 6px;
+  border-radius: 5px;
+}
+
+/* Mobile */
+@media(max-width:768px){
+  .docs-sidebar {
+    position:fixed;left:0;top:72px;z-index:50;
+    width:260px;height:calc(100vh - 72px);
+    background:var(--bg);border-right:1px solid var(--line);
+    transform:translateX(-100%);transition:transform .3s var(--ease);
+    display:block;
+  }
+  .docs-sidebar.open{transform:translateX(0);}
+  .docs-sidebar__toggle{
+    display:flex;align-items:center;justify-content:center;
+    position:fixed;left:12px;bottom:24px;z-index:51;
+    width:44px;height:44px;border-radius:50%;
+    background:var(--text);color:var(--bg);
+    box-shadow:var(--shadow-lg);font-size:18px;font-weight:700;
+    border:none;cursor:pointer;
+  }
+  .docs-sidebar__scrim{
+    display:none;position:fixed;inset:0;z-index:49;
+    background:var(--overlay);
+  }
+  .docs-sidebar__scrim.open{display:block;}
+  .docs-main { padding: 32px var(--pad) 60px; }
+  .ds-shadow-grid { grid-template-columns: 1fr; }
+  .ds-principles { grid-template-columns: 1fr; }
+  .ds-type-row { flex-direction: column; gap: 6px; }
+  .ds-type-meta { min-width: unset; }
+}
+@media(min-width:769px){
+  .docs-sidebar__toggle{display:none;}
+  .docs-sidebar__scrim{display:none;}
+}
+</style>
+</head>
+<body>
+
+<!-- ============ HEADER ============ -->
+<header class="site-head">
+  <div class="wrap site-head__row">
+    <a class="brand" href="index.html">
+      <span class="brand__mark">F</span> FORMA
+    </a>
+    <nav class="mainnav">
+      <a href="index.html">Store</a>
+      <a href="product.html">Product</a>
+      <a href="documentation.html" style="color:var(--text)">Design System</a>
+    </nav>
+    <div class="head-actions">
+      <div class="theme-switch">
+        <button class="switch" data-theme-toggle aria-label="Toggle theme">
+          <span class="switch__knob">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4 12H2M22 12h-2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/></svg>
+          </span>
+        </button>
+        <span class="theme-switch__label"><span data-theme-text>Light</span> mode</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ============ DOCS LAYOUT ============ -->
+<div class="docs-page">
+
+  <!-- Sidebar navigation -->
+  <aside class="docs-sidebar">
+    <nav aria-label="Design system navigation">
+      <div class="docs-nav__group">
+        <span class="docs-nav__group-label">Intro</span>
+        <a class="docs-nav__link" href="#intro">Overview</a>
+        <a class="docs-nav__link" href="#principles">Principles</a>
+      </div>
+      <div class="docs-nav__group">
+        <span class="docs-nav__group-label">Tokens</span>
+        <a class="docs-nav__link" href="#colors">Colors</a>
+        <a class="docs-nav__link" href="#typography">Typography</a>
+        <a class="docs-nav__link" href="#spacing">Spacing</a>
+        <a class="docs-nav__link" href="#shadows">Shadows & Motion</a>
+        <a class="docs-nav__link" href="#variables">CSS Variables</a>
+      </div>
+      <div class="docs-nav__group">
+        <span class="docs-nav__group-label">Components</span>
+        <a class="docs-nav__link" href="#states">States & Status</a>
+        <a class="docs-nav__link" href="#buttons">Buttons</a>
+        <a class="docs-nav__link" href="#forms">Forms & Inputs</a>
+        <a class="docs-nav__link" href="#cards">Cards</a>
+        <a class="docs-nav__link" href="#navigation">Navigation</a>
+        <a class="docs-nav__link" href="#accordion">Accordion</a>
+        <a class="docs-nav__link" href="#form-inputs">Form Inputs</a>
+        <a class="docs-nav__link" href="#form-validation">Form Validation</a>
+      </div>
+      <div class="docs-nav__group">
+        <span class="docs-nav__group-label">Page Sections</span>
+        <a class="docs-nav__link" href="#hero-doc">Hero</a>
+        <a class="docs-nav__link" href="#search-panel-doc">Search Panel</a>
+        <a class="docs-nav__link" href="#cats-rails">Categories & Rails</a>
+        <a class="docs-nav__link" href="#banner-news">Banner & Newsletter</a>
+        <a class="docs-nav__link" href="#footer-doc">Footer</a>
+      </div>
+      <div class="docs-nav__group">
+        <span class="docs-nav__group-label">Behavior</span>
+        <a class="docs-nav__link" href="#image-slot-doc">Image Slot</a>
+        <a class="docs-nav__link" href="#javascript">JavaScript</a>
+        <a class="docs-nav__link" href="#accessibility">Accessibility</a>
+      </div>
+      <div class="docs-nav__group">
+        <span class="docs-nav__group-label">Layout</span>
+        <a class="docs-nav__link" href="#layout">Grid & Wrap</a>
+        <a class="docs-nav__link" href="#breakpoints">Breakpoints</a>
+      </div>
+    </nav>
+  </aside>
+
+  <!-- Main content -->
+  <main class="docs-main">
+
+    <!-- Intro -->
+    <div class="ds-intro" id="intro">
+      <span class="eyebrow">FORMA Design System</span>
+      <h1 class="ds-intro__title">Design<br>Language</h1>
+      <p class="ds-intro__desc">A minimal, high-performance design language for FORMA's digital presence. Monochrome palette, grotesque type, precise spacing — everything scales from 320px to 1440px+.</p>
+      <div class="ds-intro__links">
+        <a class="btn btn--pri" href="index.html">View store</a>
+        <a class="btn btn--sec" href="product.html">Product page</a>
+      </div>
+    </div>
+
+    <!-- Principles -->
+    <div class="ds-section" id="principles">
+      <h2 class="ds-section__title">Principles</h2>
+      <p class="ds-section__desc">Three values guide every decision in this system.</p>
+      <div class="ds-principles">
+        <div class="ds-principle">
+          <span class="ds-principle__num">01 — Clarity</span>
+          <div class="ds-principle__title">No decoration</div>
+          <div class="ds-principle__body">Every element earns its place. High contrast, generous whitespace, legible type at all sizes.</div>
+        </div>
+        <div class="ds-principle">
+          <span class="ds-principle__num">02 — Motion</span>
+          <div class="ds-principle__title">Purposeful transitions</div>
+          <div class="ds-principle__body">The single easing curve <code>cubic-bezier(.22,.61,.36,1)</code> makes every interaction feel responsive, not performative.</div>
+        </div>
+        <div class="ds-principle">
+          <span class="ds-principle__num">03 — Adaptability</span>
+          <div class="ds-principle__title">Light & dark, all sizes</div>
+          <div class="ds-principle__body">Dark mode is first-class. Every token has a dark counterpart. Fluid type with <code>clamp()</code> throughout.</div>
+        </div>
+      </div>
+    </div>
+
+    <hr class="ds-divider">
+
+    <!-- Colors -->
+    <div class="ds-section" id="colors">
+      <h2 class="ds-section__title">Colors</h2>
+      <p class="ds-section__desc">Near-monochrome palette with a teal accent for product highlights. Light mode uses warm whites; dark mode deep charcoal. Semantic colors (success, warning, danger, info) serve system feedback only.</p>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Light mode — Primary palette</div>
+        <div class="ds-color-grid">
+          <div class="ds-swatch">
+            <div class="ds-swatch__color" style="background:#ffffff;border-bottom:1px solid #e6e5e2"></div>
+            <div class="ds-swatch__info">
+              <div class="ds-swatch__name">Background</div>
+              <code class="ds-swatch__token">--bg</code>
+              <div class="ds-swatch__hex">#ffffff</div>
+            </div>
+          </div>
+          <div class="ds-swatch">
+            <div class="ds-swatch__color" style="background:#f6f6f4"></div>
+            <div class="ds-swatch__info">
+              <div class="ds-swatch__name">Surface</div>
+              <code class="ds-swatch__token">--surface</code>
+              <div class="ds-swatch__hex">#f6f6f4</div>
+            </div>
+          </div>
+          <div class="ds-swatch">
+            <div class="ds-swatch__color" style="background:#eeedea"></div>
+            <div class="ds-swatch__info">
+              <div class="ds-swatch__name">Surface 2</div>
+              <code class="ds-swatch__token">--surface-2</code>
+              <div class="ds-swatch__hex">#eeedea</div>
+            </div>
+          </div>
+          <div class="ds-swatch">
+            <div class="ds-swatch__color" style="background:#101010"></div>
+            <div class="ds-swatch__info">
+              <div class="ds-swatch__name">Text</div>
+              <code class="ds-swatch__token">--text</code>
+              <div class="ds-swatch__hex">#101010</div>
+            </div>
+          </div>
+          <div class="ds-swatch">
+            <div class="ds-swatch__color" style="background:#6a6a67"></div>
+            <div class="ds-swatch__info">
+              <div class="ds-swatch__name">Text Muted</div>
+              <code class="ds-swatch__token">--text-muted</code>
+              <div class="ds-swatch__hex">#6a6a67</div>
+            </div>
+          </div>
+          <div class="ds-swatch">
+            <div class="ds-swatch__color" style="background:#e6e5e2"></div>
+            <div class="ds-swatch__info">
+              <div class="ds-swatch__name">Line</div>
+              <code class="ds-swatch__token">--line</code>
+              <div class="ds-swatch__hex">#e6e5e2</div>
+            </div>
+          </div>
+          <div class="ds-swatch">
+            <div class="ds-swatch__color" style="background:#d6d5d1"></div>
+            <div class="ds-swatch__info">
+              <div class="ds-swatch__name">Line Strong</div>
+              <code class="ds-swatch__token">--line-strong</code>
+              <div class="ds-swatch__hex">#d6d5d1</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Dark mode — Primary palette</div>
+        <div class="ds-color-grid">
+          <div class="ds-swatch">
+            <div class="ds-swatch__color" style="background:#0e0e0d"></div>
+            <div class="ds-swatch__info">
+              <div class="ds-swatch__name">Background</div>
+              <code class="ds-swatch__token">--bg</code>
+              <div class="ds-swatch__hex">#0e0e0d</div>
+            </div>
+          </div>
+          <div class="ds-swatch">
+            <div class="ds-swatch__color" style="background:#161614"></div>
+            <div class="ds-swatch__info">
+              <div class="ds-swatch__name">Surface</div>
+              <code class="ds-swatch__token">--surface</code>
+              <div class="ds-swatch__hex">#161614</div>
+            </div>
+          </div>
+          <div class="ds-swatch">
+            <div class="ds-swatch__color" style="background:#1e1e1b"></div>
+            <div class="ds-swatch__info">
+              <div class="ds-swatch__name">Surface 2</div>
+              <code class="ds-swatch__token">--surface-2</code>
+              <div class="ds-swatch__hex">#1e1e1b</div>
+            </div>
+          </div>
+          <div class="ds-swatch">
+            <div class="ds-swatch__color" style="background:#f4f3f0"></div>
+            <div class="ds-swatch__info">
+              <div class="ds-swatch__name">Text</div>
+              <code class="ds-swatch__token">--text</code>
+              <div class="ds-swatch__hex">#f4f3f0</div>
+            </div>
+          </div>
+          <div class="ds-swatch">
+            <div class="ds-swatch__color" style="background:#a2a19c"></div>
+            <div class="ds-swatch__info">
+              <div class="ds-swatch__name">Text Muted</div>
+              <code class="ds-swatch__token">--text-muted</code>
+              <div class="ds-swatch__hex">#a2a19c</div>
+            </div>
+          </div>
+          <div class="ds-swatch">
+            <div class="ds-swatch__color" style="background:#2a2a26"></div>
+            <div class="ds-swatch__info">
+              <div class="ds-swatch__name">Line</div>
+              <code class="ds-swatch__token">--line</code>
+              <div class="ds-swatch__hex">#2a2a26</div>
+            </div>
+          </div>
+          <div class="ds-swatch">
+            <div class="ds-swatch__color" style="background:#373732"></div>
+            <div class="ds-swatch__info">
+              <div class="ds-swatch__name">Line Strong</div>
+              <code class="ds-swatch__token">--line-strong</code>
+              <div class="ds-swatch__hex">#373732</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Button colors — Light / Dark</div>
+        <table class="ds-table">
+          <thead>
+            <tr><th>Token</th><th>Light</th><th>Dark</th><th>Role</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>--btn-pri-bg</code></td>
+              <td><span class="ds-color-dot" style="background:#101010"></span>#101010</td>
+              <td><span class="ds-color-dot" style="background:#f4f3f0"></span>#f4f3f0</td>
+              <td>Primary button background</td>
+            </tr>
+            <tr>
+              <td><code>--btn-pri-fg</code></td>
+              <td><span class="ds-color-dot" style="background:#ffffff;border-color:#d6d5d1"></span>#ffffff</td>
+              <td><span class="ds-color-dot" style="background:#101010"></span>#101010</td>
+              <td>Primary button text</td>
+            </tr>
+            <tr>
+              <td><code>--btn-pri-bg-h</code></td>
+              <td><span class="ds-color-dot" style="background:#2c2c2c"></span>#2c2c2c</td>
+              <td><span class="ds-color-dot" style="background:#e3e2dd"></span>#e3e2dd</td>
+              <td>Primary hover state</td>
+            </tr>
+            <tr>
+              <td><code>--btn-sec-bg</code></td>
+              <td><span class="ds-color-dot" style="background:#eeedea"></span>#eeedea</td>
+              <td><span class="ds-color-dot" style="background:#262623"></span>#262623</td>
+              <td>Secondary button background</td>
+            </tr>
+            <tr>
+              <td><code>--btn-sec-fg</code></td>
+              <td><span class="ds-color-dot" style="background:#101010"></span>#101010</td>
+              <td><span class="ds-color-dot" style="background:#f4f3f0"></span>#f4f3f0</td>
+              <td>Secondary button text</td>
+            </tr>
+            <tr>
+              <td><code>--btn-sec-bg-h</code></td>
+              <td><span class="ds-color-dot" style="background:#e2e1dd"></span>#e2e1dd</td>
+              <td><span class="ds-color-dot" style="background:#302f2b"></span>#302f2b</td>
+              <td>Secondary hover state</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <hr class="ds-divider">
+
+    <!-- Typography -->
+    <div class="ds-section" id="typography">
+      <h2 class="ds-section__title">Typography</h2>
+      <p class="ds-section__desc">Two typefaces: a grotesque sans-serif for all UI text and a monospace for labels, metadata, and eyebrows. Both stack to native system fonts — no web font downloads.</p>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Typefaces</div>
+        <div class="ds-preview">
+          <div class="ds-preview__canvas ds-preview__canvas--col" style="gap:32px">
+            <div>
+              <div style="font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px">--font · Primary</div>
+              <div style="font-size:28px;font-weight:700;letter-spacing:-0.02em;margin-bottom:4px">"Helvetica Neue", Helvetica, Arial, "Segoe UI", sans-serif</div>
+              <div style="font-size:16px;color:var(--text-muted);line-height:1.5">Aa Bb Cc Dd Ee Ff Gg Hh Ii Jj Kk Ll Mm Nn Oo Pp Qq Rr Ss Tt Uu Vv Ww Xx Yy Zz 0–9</div>
+            </div>
+            <div>
+              <div style="font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px">--mono · Labels &amp; code</div>
+              <div style="font-family:var(--mono);font-size:22px;font-weight:600;letter-spacing:.02em;margin-bottom:4px">ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace</div>
+              <div style="font-family:var(--mono);font-size:13px;color:var(--text-muted);letter-spacing:.08em">NEW ARRIVALS · SKU-2026-001 · 0123456789 · EN/FR/DE</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Type scale</div>
+        <div style="border:1px solid var(--line);border-radius:16px;overflow:hidden">
+          <div class="ds-type-row">
+            <div class="ds-type-meta">Display<br>clamp(40–84px) · 700<br>tracking -0.035em</div>
+            <div style="font-size:clamp(36px,5vw,72px);font-weight:700;letter-spacing:-0.035em;line-height:.95">Elevate</div>
+          </div>
+          <div class="ds-type-row">
+            <div class="ds-type-meta">Hero title<br>clamp(28–42px) · 700<br>tracking -0.03em</div>
+            <div style="font-size:clamp(28px,3.2vw,42px);font-weight:700;letter-spacing:-0.03em;line-height:1">Aero Glide</div>
+          </div>
+          <div class="ds-type-row">
+            <div class="ds-type-meta">h-section<br>clamp(26–38px) · 700<br>tracking -0.025em</div>
+            <h2 class="h-section" style="margin:0">Featured</h2>
+          </div>
+          <div class="ds-type-row">
+            <div class="ds-type-meta">PDP title<br>clamp(32–46px) · 700<br>tracking -0.03em</div>
+            <div style="font-size:clamp(32px,3.4vw,46px);font-weight:700;letter-spacing:-0.03em;line-height:1.02">Drift Cotton Hoodie</div>
+          </div>
+          <div class="ds-type-row">
+            <div class="ds-type-meta">Body<br>16px · 400<br>line-height 1.5</div>
+            <div style="font-size:16px;line-height:1.5;max-width:50ch;color:var(--text-muted)">Reimagine the feeling of a classic hoodie. With our organic cotton fabric, everyday essentials no longer have to be ordinary.</div>
+          </div>
+          <div class="ds-type-row">
+            <div class="ds-type-meta">Card name<br>15px · 600</div>
+            <div style="font-size:15px;font-weight:600">Stormshell Jacket</div>
+          </div>
+          <div class="ds-type-row">
+            <div class="ds-type-meta">Price<br>30px · 700<br>tracking -0.02em</div>
+            <div style="font-size:30px;font-weight:700;letter-spacing:-0.02em">€130</div>
+          </div>
+          <div class="ds-type-row" style="border-bottom:none">
+            <div class="ds-type-meta">Eyebrow<br>mono · 11px · uppercase<br>tracking 0.18em</div>
+            <span class="eyebrow">New Arrivals</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Text helpers</div>
+        <div class="ds-preview">
+          <div class="ds-preview__canvas ds-preview__canvas--col" style="gap:18px">
+            <div>
+              <span class="eyebrow" style="display:block;margin-bottom:6px">Eyebrow label — Selection</span>
+              <h2 class="h-section" style="margin:0">Section Heading</h2>
+            </div>
+            <p style="color:var(--text-muted);font-size:16px;line-height:1.6;margin:0;max-width:52ch">Muted body text — used for descriptions, secondary copy, and supporting information throughout the interface.</p>
+            <span class="muted" style="font-size:13px">Helper muted text · <code>.muted</code></span>
+          </div>
+          <div class="ds-preview__meta">.eyebrow · .h-section · .muted</div>
+        </div>
+      </div>
+    </div>
+
+    <hr class="ds-divider">
+
+    <!-- Spacing -->
+    <div class="ds-section" id="spacing">
+      <h2 class="ds-section__title">Spacing & Radius</h2>
+      <p class="ds-section__desc">Spacing follows a base-8 scale. The <code>--pad</code> variable controls the horizontal gutter and adapts at each breakpoint.</p>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Space scale</div>
+        <div style="border:1px solid var(--line);border-radius:16px;overflow:hidden">
+          <div class="ds-space-row"><div class="ds-space-bar" style="width:4px"></div><div class="ds-space-token">4px</div><div>Micro · icon gaps, fine details</div></div>
+          <div class="ds-space-row"><div class="ds-space-bar" style="width:8px"></div><div class="ds-space-token">8px</div><div>XS · button icon gap, tag padding</div></div>
+          <div class="ds-space-row"><div class="ds-space-bar" style="width:12px"></div><div class="ds-space-token">12px</div><div>SM · composer padding, cart item gap</div></div>
+          <div class="ds-space-row"><div class="ds-space-bar" style="width:16px"></div><div class="ds-space-token">16px</div><div>MD · card gap, sub-section spacing</div></div>
+          <div class="ds-space-row"><div class="ds-space-bar" style="width:22px"></div><div class="ds-space-token">22px</div><div>Rail gap between product cards</div></div>
+          <div class="ds-space-row"><div class="ds-space-bar" style="width:28px"></div><div class="ds-space-token">28px · --pad (md)</div><div>Container padding · tablet ≤ 1024px</div></div>
+          <div class="ds-space-row"><div class="ds-space-bar" style="width:40px"></div><div class="ds-space-token">40px · --pad</div><div>Container padding · desktop</div></div>
+          <div class="ds-space-row"><div class="ds-space-bar" style="width:60px"></div><div class="ds-space-token">60px</div><div>PDP grid gap (gallery ↔ sidebar)</div></div>
+        </div>
+      </div>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Border radius</div>
+        <div class="ds-radius-grid">
+          <div class="ds-radius-item"><div class="ds-radius-box" style="border-radius:5px"></div><div class="ds-radius-label">5px<br>Inline code chips</div></div>
+          <div class="ds-radius-item"><div class="ds-radius-box" style="border-radius:8px"></div><div class="ds-radius-label">8px<br>Brand mark, avatars</div></div>
+          <div class="ds-radius-item"><div class="ds-radius-box" style="border-radius:12px"></div><div class="ds-radius-label">12px<br>Chat images, alerts</div></div>
+          <div class="ds-radius-item"><div class="ds-radius-box" style="border-radius:14px"></div><div class="ds-radius-label">14px<br>Product &amp; chat cards</div></div>
+          <div class="ds-radius-item"><div class="ds-radius-box" style="border-radius:16px"></div><div class="ds-radius-label">16px<br>Gallery images, panels</div></div>
+          <div class="ds-radius-item"><div class="ds-radius-box" style="border-radius:18px"></div><div class="ds-radius-label">18px <code>--radius-tile</code><br>Category tiles</div></div>
+          <div class="ds-radius-item"><div class="ds-radius-box" style="border-radius:16px;height:40px;width:96px"></div><div class="ds-radius-label">16px<br>Buttons, icon buttons</div></div>
+        </div>
+      </div>
+    </div>
+
+    <hr class="ds-divider">
+
+    <!-- Shadows & Motion -->
+    <div class="ds-section" id="shadows">
+      <h2 class="ds-section__title">Shadows & Motion</h2>
+      <p class="ds-section__desc">Two elevation levels using soft, low-opacity shadows to maintain the minimal aesthetic. A single easing curve governs all transitions.</p>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Elevations</div>
+        <div class="ds-shadow-grid">
+          <div class="ds-shadow-card" style="box-shadow:var(--shadow)">
+            <div class="ds-shadow-card__label">--shadow</div>
+            <div class="ds-shadow-card__name">Subtle</div>
+            <div class="ds-shadow-card__desc">Cards, modal windows, floating elements at low elevation.</div>
+          </div>
+          <div class="ds-shadow-card" style="box-shadow:var(--shadow-lg)">
+            <div class="ds-shadow-card__label">--shadow-lg</div>
+            <div class="ds-shadow-card__name">Prominent</div>
+            <div class="ds-shadow-card__desc">Search panel, hero card, tweaks panel — high-elevation surfaces.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Easing & duration</div>
+        <table class="ds-table">
+          <thead><tr><th>Token / Value</th><th>Usage</th></tr></thead>
+          <tbody>
+            <tr><td><code>--ease</code> · cubic-bezier(.22,.61,.36,1)</td><td>All transitions — deceleration curve, snappy feel</td></tr>
+            <tr><td>0.15s</td><td>Micro interactions (button active press)</td></tr>
+            <tr><td>0.2s</td><td>Icon button hover, mainnav underline</td></tr>
+            <tr><td>0.25s</td><td>Button background, cart badge</td></tr>
+            <tr><td>0.35s</td><td>Accordion open/close (max-height)</td></tr>
+            <tr><td>0.4s–0.5s</td><td>Theme toggle (bg + color), search panel</td></tr>
+            <tr><td>0.7s</td><td>Hero slide fade</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <hr class="ds-divider">
+
+    <!-- CSS Variables -->
+    <div class="ds-section" id="variables">
+      <h2 class="ds-section__title">CSS Variables</h2>
+      <p class="ds-section__desc">All design tokens as custom properties on <code>:root</code> (light) and <code>html.dark</code>. Switching themes is a single class toggle — no JS re-renders needed.</p>
+      <table class="ds-table">
+        <thead>
+          <tr><th>Variable</th><th>Light</th><th>Dark</th><th>Usage</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>--bg</code></td><td>#ffffff</td><td>#0e0e0d</td><td>Page background</td></tr>
+          <tr><td><code>--surface</code></td><td>#f6f6f4</td><td>#161614</td><td>Section tinted backgrounds</td></tr>
+          <tr><td><code>--surface-2</code></td><td>#eeedea</td><td>#1e1e1b</td><td>Hover fills, composer bg</td></tr>
+          <tr><td><code>--text</code></td><td>#101010</td><td>#f4f3f0</td><td>Primary text & icon color</td></tr>
+          <tr><td><code>--text-muted</code></td><td>#6a6a67</td><td>#a2a19c</td><td>Secondary text, labels</td></tr>
+          <tr><td><code>--line</code></td><td>#e6e5e2</td><td>#2a2a26</td><td>Borders, dividers</td></tr>
+          <tr><td><code>--line-strong</code></td><td>#d6d5d1</td><td>#373732</td><td>Size btn border, composer border</td></tr>
+          <tr><td><code>--card</code></td><td>#ffffff</td><td>#161614</td><td>Card & panel backgrounds</td></tr>
+          <tr><td><code>--overlay</code></td><td colspan="2">rgba(16,16,16,.45) / rgba(0,0,0,.6)</td><td>Scrim behind modals</td></tr>
+          <tr><td><code>--shadow</code></td><td colspan="2">Low-opacity box-shadow (2 layers)</td><td>Card elevation</td></tr>
+          <tr><td><code>--shadow-lg</code></td><td colspan="2">Deeper box-shadow (1 layer)</td><td>Panel / hero elevation</td></tr>
+          <tr><td><code>--maxw</code></td><td colspan="2">1280px</td><td>Container max-width</td></tr>
+          <tr><td><code>--pad</code></td><td colspan="2">40px → 28px → 18px</td><td>Container horizontal padding</td></tr>
+          <tr><td><code>--radius-tile</code></td><td colspan="2">18px</td><td>Category tile corner radius</td></tr>
+          <tr><td><code>--font</code></td><td colspan="2">"Helvetica Neue", Helvetica, Arial, "Segoe UI", sans-serif</td><td>Body & UI typeface</td></tr>
+          <tr><td><code>--mono</code></td><td colspan="2">ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace</td><td>Labels, eyebrows, code</td></tr>
+          <tr><td><code>--ease</code></td><td colspan="2">cubic-bezier(.22,.61,.36,1)</td><td>All transition timing functions</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <hr class="ds-divider">
+
+    <!-- States & Status -->
+    <div class="ds-section" id="states">
+      <h2 class="ds-section__title">States & Status Colors</h2>
+      <p class="ds-section__desc">Semantic tokens for communicating availability, alerts, and system states. Each color has three variants: text, tinted background, and border. The accent (<code>--accent</code>) is a teal tone for product badges like "New" or "Sale".</p>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Semantic palette</div>
+        <div class="ds-color-grid">
+          <!-- Accent -->
+          <div class="ds-swatch">
+            <div class="ds-swatch__color" style="background:var(--accent-bg);border-bottom:1px solid var(--accent-line)">
+              <div style="height:100%;display:flex;align-items:center;justify-content:center">
+                <span style="background:var(--accent);color:#fff;font-family:var(--mono);font-size:10px;font-weight:700;padding:4px 10px;border-radius:999px;letter-spacing:.06em">NEW</span>
+              </div>
+            </div>
+            <div class="ds-swatch__info">
+              <div class="ds-swatch__name">Accent / Highlight</div>
+              <code class="ds-swatch__token">--accent</code>
+              <div class="ds-swatch__hex">Light: #0d9488 (teal) · Dark: #2dd4bf</div>
+            </div>
+          </div>
+          <!-- Success -->
+          <div class="ds-swatch">
+            <div class="ds-swatch__color" style="background:var(--clr-success-bg);border-bottom:1px solid var(--clr-success-line)">
+              <div style="height:100%;display:flex;align-items:center;justify-content:center">
+                <span style="color:var(--clr-success);font-size:22px">✓</span>
+              </div>
+            </div>
+            <div class="ds-swatch__info">
+              <div class="ds-swatch__name">Success</div>
+              <code class="ds-swatch__token">--clr-success</code>
+              <div class="ds-swatch__hex">Light: #1a7a4a · Dark: #4ade80</div>
+            </div>
+          </div>
+          <!-- Warning -->
+          <div class="ds-swatch">
+            <div class="ds-swatch__color" style="background:var(--clr-warning-bg);border-bottom:1px solid var(--clr-warning-line)">
+              <div style="height:100%;display:flex;align-items:center;justify-content:center">
+                <span style="color:var(--clr-warning);font-size:20px">⚠</span>
+              </div>
+            </div>
+            <div class="ds-swatch__info">
+              <div class="ds-swatch__name">Warning</div>
+              <code class="ds-swatch__token">--clr-warning</code>
+              <div class="ds-swatch__hex">Light: #9a5200 · Dark: #f59e0b</div>
+            </div>
+          </div>
+          <!-- Danger -->
+          <div class="ds-swatch">
+            <div class="ds-swatch__color" style="background:var(--clr-danger-bg);border-bottom:1px solid var(--clr-danger-line)">
+              <div style="height:100%;display:flex;align-items:center;justify-content:center">
+                <span style="color:var(--clr-danger);font-size:20px">✕</span>
+              </div>
+            </div>
+            <div class="ds-swatch__info">
+              <div class="ds-swatch__name">Danger / Error</div>
+              <code class="ds-swatch__token">--clr-danger</code>
+              <div class="ds-swatch__hex">Light: #c0182c · Dark: #f87171</div>
+            </div>
+          </div>
+          <!-- Info -->
+          <div class="ds-swatch">
+            <div class="ds-swatch__color" style="background:var(--clr-info-bg);border-bottom:1px solid var(--clr-info-line)">
+              <div style="height:100%;display:flex;align-items:center;justify-content:center">
+                <span style="color:var(--clr-info);font-size:20px">ℹ</span>
+              </div>
+            </div>
+            <div class="ds-swatch__info">
+              <div class="ds-swatch__name">Info</div>
+              <code class="ds-swatch__token">--clr-info</code>
+              <div class="ds-swatch__hex">Light: #1d52b0 · Dark: #60a5fa</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Token table</div>
+        <table class="ds-table">
+          <thead><tr><th>Group</th><th>Token</th><th>Role</th></tr></thead>
+          <tbody>
+            <tr><td rowspan="3" style="vertical-align:top;padding-top:14px"><span class="badge badge--new">Accent</span></td><td><code>--accent</code></td><td>Accent text color</td></tr>
+            <tr><td><code>--accent-bg</code></td><td>Badge/chip background</td></tr>
+            <tr><td><code>--accent-line</code></td><td>Badge/chip border</td></tr>
+            <tr><td rowspan="3" style="vertical-align:top;padding-top:14px"><span class="badge badge--ok">Success</span></td><td><code>--clr-success</code></td><td>Confirmation text, checkmark</td></tr>
+            <tr><td><code>--clr-success-bg</code></td><td>Success alert background</td></tr>
+            <tr><td><code>--clr-success-line</code></td><td>Success alert border</td></tr>
+            <tr><td rowspan="3" style="vertical-align:top;padding-top:14px"><span class="badge badge--low">Warning</span></td><td><code>--clr-warning</code></td><td>Warning text, low stock</td></tr>
+            <tr><td><code>--clr-warning-bg</code></td><td>Warning alert background</td></tr>
+            <tr><td><code>--clr-warning-line</code></td><td>Warning alert border</td></tr>
+            <tr><td rowspan="3" style="vertical-align:top;padding-top:14px"><span class="badge badge--sale">Danger</span></td><td><code>--clr-danger</code></td><td>Error text, sold out, sale</td></tr>
+            <tr><td><code>--clr-danger-bg</code></td><td>Error alert background</td></tr>
+            <tr><td><code>--clr-danger-line</code></td><td>Error alert border</td></tr>
+            <tr><td rowspan="3" style="vertical-align:top;padding-top:14px"><span class="badge badge--info">Info</span></td><td><code>--clr-info</code></td><td>Informational text</td></tr>
+            <tr><td><code>--clr-info-bg</code></td><td>Info alert background</td></tr>
+            <tr><td><code>--clr-info-line</code></td><td>Info alert border</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Product badges (.badge)</div>
+        <div class="ds-preview">
+          <div class="ds-preview__canvas" style="gap:8px;flex-wrap:wrap">
+            <span class="badge badge--new"><span class="badge__dot"></span>New</span>
+            <span class="badge badge--sale"><span class="badge__dot"></span>Sale</span>
+            <span class="badge badge--low"><span class="badge__dot"></span>Low stock</span>
+            <span class="badge badge--oos">Out of stock</span>
+            <span class="badge badge--ok"><span class="badge__dot"></span>In stock</span>
+            <span class="badge badge--info">Pre-order</span>
+          </div>
+          <div class="ds-preview__meta">.badge + variant · .badge__dot — color dot · height:22px · mono 10px uppercase</div>
+        </div>
+      </div>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Alerts and notifications (.alert)</div>
+        <div class="ds-preview">
+          <div class="ds-preview__canvas ds-preview__canvas--col" style="gap:10px;align-items:stretch">
+
+            <div class="alert alert--success">
+              <svg class="alert__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>
+              <div>
+                <div class="alert__title">Order confirmed</div>
+                <div class="alert__body">Your order #28491 is confirmed and will ship in 2–4 business days.</div>
+              </div>
+            </div>
+
+            <div class="alert alert--warning">
+              <svg class="alert__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.7a2 2 0 013.4 0l7.7 13.3A2 2 0 0119.7 20H4.3a2 2 0 01-1.7-3z"/></svg>
+              <div>
+                <div class="alert__title">Low stock</div>
+                <div class="alert__body">Only 2 units left in size S. Buy now to secure yours.</div>
+              </div>
+            </div>
+
+            <div class="alert alert--danger">
+              <svg class="alert__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
+              <div>
+                <div class="alert__title">Size out of stock</div>
+                <div class="alert__body">Size XL is currently unavailable. Enable restock notifications.</div>
+              </div>
+            </div>
+
+            <div class="alert alert--info">
+              <svg class="alert__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>
+              <div>
+                <div class="alert__title">Upcoming launch</div>
+                <div class="alert__body">This product launches June 20. Sign up to be notified first.</div>
+              </div>
+            </div>
+
+          </div>
+          <div class="ds-preview__meta">.alert + .alert--success / --warning / --danger / --info · .alert__title + .alert__body</div>
+        </div>
+      </div>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Product state — real usage</div>
+        <div class="ds-preview">
+          <div class="ds-preview__canvas" style="flex-direction:column;align-items:flex-start;gap:20px">
+            <!-- Product header with badge -->
+            <div style="display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap">
+              <div>
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+                  <span style="font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-muted)">Running</span>
+                  <span class="badge badge--new"><span class="badge__dot"></span>New</span>
+                </div>
+                <div style="font-size:22px;font-weight:700;letter-spacing:-0.02em">Aero Glide 2026</div>
+                <div style="font-size:24px;font-weight:700;letter-spacing:-0.02em;margin-top:6px">€130 <span style="font-size:14px;font-weight:400;color:var(--text-muted)">· incl. VAT</span></div>
+              </div>
+            </div>
+            <!-- Size grid with states -->
+            <div>
+              <div style="font-size:13px;font-weight:600;margin-bottom:10px">Select size</div>
+              <div class="sizes" style="margin:0">
+                <button class="size">XS</button>
+                <button class="size sel">S</button>
+                <button class="size">M</button>
+                <button class="size">L</button>
+                <button class="size oos" disabled>XL</button>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px;margin-top:10px">
+                <span class="badge badge--low"><span class="badge__dot"></span>Low stock</span>
+                <span style="font-size:13px;color:var(--clr-warning)">Only 3 units left in size S</span>
+              </div>
+            </div>
+          </div>
+          <div class="ds-preview__meta">Badge + selected size + inline status message combination</div>
+        </div>
+      </div>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Discounted price (Sale)</div>
+        <div class="ds-preview">
+          <div class="ds-preview__canvas" style="gap:24px;align-items:flex-end">
+            <!-- Normal -->
+            <div>
+              <div style="font-family:var(--mono);font-size:10px;color:var(--text-muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">Normal</div>
+              <div style="font-size:28px;font-weight:700;letter-spacing:-0.02em">€130</div>
+            </div>
+            <!-- Sale -->
+            <div>
+              <div style="font-family:var(--mono);font-size:10px;color:var(--text-muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">Sale</div>
+              <div style="display:flex;align-items:baseline;gap:10px">
+                <div style="font-size:28px;font-weight:700;letter-spacing:-0.02em;color:var(--clr-danger)">€91</div>
+                <div style="font-size:18px;color:var(--text-muted);text-decoration:line-through">€130</div>
+                <span class="badge badge--sale">−30%</span>
+              </div>
+            </div>
+            <!-- Out of stock -->
+            <div>
+              <div style="font-family:var(--mono);font-size:10px;color:var(--text-muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">Out of stock</div>
+              <div style="font-size:28px;font-weight:700;letter-spacing:-0.02em;opacity:.35">€130</div>
+              <span class="badge badge--oos" style="margin-top:6px">Out of stock</span>
+            </div>
+          </div>
+          <div class="ds-preview__meta">Sale price: color:var(--clr-danger) · strikethrough: text-decoration:line-through · .badge--sale for discount %</div>
+        </div>
+      </div>
+    </div>
+
+    <hr class="ds-divider">
+
+    <!-- Buttons -->
+    <div class="ds-section" id="buttons">
+      <h2 class="ds-section__title">Buttons</h2>
+      <p class="ds-section__desc">All buttons share the base <code>.btn</code> class. Variants are additive modifiers. Height is fixed (48px default, 56px for <code>.btn--lg</code>). Corner radius is 16px.</p>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Primary & secondary</div>
+        <div class="ds-preview">
+          <div class="ds-preview__canvas" style="gap:10px">
+            <button class="btn btn--pri">Primary</button>
+            <button class="btn btn--sec">Secondary</button>
+            <button class="btn btn--pri btn--lg">Large primary</button>
+            <button class="btn btn--sec btn--lg">Large secondary</button>
+          </div>
+          <div class="ds-preview__meta">.btn.btn--pri · .btn.btn--sec · .btn--lg (height: 56px)</div>
+        </div>
+      </div>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Block (full width)</div>
+        <div class="ds-preview">
+          <div class="ds-preview__canvas ds-preview__canvas--col" style="max-width:400px;width:100%">
+            <button class="btn btn--pri btn--block btn--lg">Add to cart</button>
+            <button class="btn btn--sec btn--block">Shop now</button>
+          </div>
+          <div class="ds-preview__meta">.btn--block — width:100%</div>
+        </div>
+      </div>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">With decorative dot</div>
+        <div class="ds-preview">
+          <div class="ds-preview__canvas">
+            <button class="btn btn--sec"><span class="btn-dot"></span> Explore</button>
+          </div>
+          <div class="ds-preview__meta">.btn-dot — 15×15px ring with inner dot, used inside .btn--sec</div>
+        </div>
+      </div>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Icon buttons</div>
+        <div class="ds-preview">
+          <div class="ds-preview__canvas">
+            <button class="iconbtn" aria-label="Search">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+            </button>
+            <button class="iconbtn" aria-label="Account">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg>
+            </button>
+            <button class="iconbtn cart-dot" aria-label="Cart">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 7h13l-1.2 9.5a2 2 0 01-2 1.7H9.2a2 2 0 01-2-1.7L6 4H3"/><circle cx="9" cy="21" r="1"/><circle cx="17" cy="21" r="1"/></svg>
+            </button>
+            <button class="iconbtn" style="border:1px solid var(--line)" aria-label="Prev">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M15 6l-6 6 6 6"/></svg>
+            </button>
+            <button class="iconbtn" style="border:1px solid var(--line)" aria-label="Next">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 6l6 6-6 6"/></svg>
+            </button>
+            <button class="iconbtn" aria-label="Close">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 6l12 12M18 6L6 18"/></svg>
+            </button>
+          </div>
+          <div class="ds-preview__meta">.iconbtn — 42×42px · 16px radius · hover: background:var(--surface-2) · .cart-dot adds ::after badge</div>
+        </div>
+      </div>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Dark mode preview</div>
+        <div class="ds-preview">
+          <div class="ds-preview__canvas ds-preview__canvas--dark">
+            <button class="btn" style="background:#f4f3f0;color:#101010">Primary dark</button>
+            <button class="btn" style="background:#262623;color:#f4f3f0">Secondary dark</button>
+            <button class="iconbtn" style="color:#f4f3f0" aria-label="Search">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+            </button>
+          </div>
+          <div class="ds-preview__meta">In html.dark: --btn-pri-bg inverts to #f4f3f0 (near-white on dark background)</div>
+        </div>
+      </div>
+    </div>
+
+    <hr class="ds-divider">
+
+    <!-- Forms -->
+    <div class="ds-section" id="forms">
+      <h2 class="ds-section__title">Forms & Inputs</h2>
+      <p class="ds-section__desc">Form elements inherit the system font and use CSS custom properties for theming. Focused state highlights the border to <code>var(--text)</code>.</p>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Text &amp; email inputs</div>
+        <div class="ds-preview">
+          <div class="ds-preview__canvas ds-preview__canvas--col" style="max-width:420px;width:100%;gap:12px">
+            <input type="text" placeholder="Text input" style="width:100%;padding:14px 18px;border:1px solid var(--line-strong);border-radius:16px;background:var(--surface);color:var(--text);font-size:15px;font-family:var(--font);outline:none;transition:border-color .2s" onfocus="this.style.borderColor='var(--text)'" onblur="this.style.borderColor='var(--line-strong)'">
+            <input type="email" placeholder="Email address" style="width:100%;padding:14px 18px;border:1px solid var(--line-strong);border-radius:16px;background:var(--surface);color:var(--text);font-size:15px;font-family:var(--font);outline:none;transition:border-color .2s" onfocus="this.style.borderColor='var(--text)'" onblur="this.style.borderColor='var(--line-strong)'">
+          </div>
+          <div class="ds-preview__meta">border:1px solid var(--line-strong) · border-radius:16px · focus → border-color:var(--text)</div>
+        </div>
+      </div>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Newsletter form — pill style</div>
+        <div class="ds-preview">
+          <div class="ds-preview__canvas" style="background:#1a1a18;padding:40px 32px">
+            <form class="news__form" onsubmit="return false" style="width:100%;max-width:460px">
+              <input type="email" placeholder="Your email" aria-label="Email" style="color:#fff">
+              <button class="btn">Subscribe</button>
+            </form>
+          </div>
+          <div class="ds-preview__meta">.news__form — frosted pill, backdrop-filter:blur(8px), border:1px solid rgba(255,255,255,.35)</div>
+        </div>
+      </div>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Composer — chat input</div>
+        <div class="ds-preview">
+          <div class="ds-preview__canvas" style="align-items:stretch">
+            <div class="composer__inner" style="width:100%">
+              <div class="composer__row">
+                <textarea rows="1" placeholder="Describe what you're looking for…" style="flex:1;border:none;background:none;resize:none;outline:none;color:var(--text);font-size:15.5px;line-height:1.5;padding:6px 0;font-family:var(--font)"></textarea>
+                <button class="composer__attach" aria-label="Attach image">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 11.5l-8.5 8.5a5 5 0 01-7-7l9-9a3.3 3.3 0 014.7 4.7l-9 9a1.6 1.6 0 01-2.3-2.3l8.2-8.2"/></svg>
+                </button>
+                <button class="composer__send" aria-label="Send">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M5 12h13M12 5l7 7-7 7"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="ds-preview__meta">.composer__inner — border:1px solid var(--line-strong) · :focus-within → border-color:var(--text)</div>
+        </div>
+      </div>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Size selector</div>
+        <div class="ds-preview">
+          <div class="ds-preview__canvas">
+            <div class="sizes" style="margin:0">
+              <button class="size">XS</button>
+              <button class="size sel">S</button>
+              <button class="size">M</button>
+              <button class="size">L</button>
+              <button class="size oos" disabled>XL</button>
+            </div>
+          </div>
+          <div class="ds-preview__meta">.size · .size.sel (selected: bg:var(--text), color:var(--bg)) · .size.oos (opacity:.35, line-through, disabled) · border-radius:16px</div>
+        </div>
+      </div>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Suggestion pills</div>
+        <div class="ds-preview">
+          <div class="ds-preview__canvas">
+            <button class="suggest">Long-distance running</button>
+            <button class="suggest">Waterproof outdoor</button>
+            <button class="suggest">Lightweight training</button>
+          </div>
+          <div class="ds-preview__meta">.suggest — pill chip, border:1px solid var(--line), hover → border-color:var(--text)</div>
+        </div>
+      </div>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Theme toggle switch</div>
+        <div class="ds-preview">
+          <div class="ds-preview__canvas">
+            <div class="theme-switch">
+              <button class="switch" data-theme-toggle aria-label="Toggle theme">
+                <span class="switch__knob">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4 12H2M22 12h-2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/></svg>
+                </span>
+              </button>
+              <span class="theme-switch__label"><span data-theme-text>Light</span> mode</span>
+            </div>
+          </div>
+          <div class="ds-preview__meta">.switch — 52×30px pill · .switch__knob slides via transform:translateX(22px) on html.dark</div>
+        </div>
+      </div>
+    </div>
+
+    <hr class="ds-divider">
+
+    <!-- Cards -->
+    <div class="ds-section" id="cards">
+      <h2 class="ds-section__title">Cards</h2>
+      <p class="ds-section__desc">Two card types: product cards for the main catalog and compact chat cards for AI assistant results.</p>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Product card — .pcard</div>
+        <div class="ds-preview">
+          <div class="ds-preview__canvas" style="align-items:flex-start;gap:20px;flex-wrap:wrap">
+            <a class="pcard" href="product.html?id=aero-glide" style="flex:0 0 220px">
+              <div class="pcard__img">
+                <image-slot id="doc-p1" placeholder="Aero Glide"></image-slot>
+              </div>
+              <div class="pcard__b">
+                <div><div class="pcard__n">Aero Glide</div><div class="pcard__brand">Running</div></div>
+                <div class="pcard__p">€130</div>
+              </div>
+            </a>
+            <a class="pcard" href="product.html?id=shell-jacket" style="flex:0 0 220px">
+              <div class="pcard__img">
+                <image-slot id="doc-p2" placeholder="Stormshell Jacket"></image-slot>
+              </div>
+              <div class="pcard__b">
+                <div><div class="pcard__n">Stormshell Jacket</div><div class="pcard__brand">Outdoor</div></div>
+                <div class="pcard__p">€220</div>
+              </div>
+            </a>
+          </div>
+          <div class="ds-preview__meta">.pcard — flex:0 0 calc((100% - 66px) / 4) · 4 per row on desktop · 1:1 image ratio</div>
+        </div>
+      </div>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Chat card — .chat-card</div>
+        <div class="ds-preview">
+          <div class="ds-preview__canvas" style="align-items:flex-start">
+            <div class="chat-cards" style="margin:0">
+              <a class="chat-card" href="product.html?id=aero-glide">
+                <div class="chat-card__img">
+                  <image-slot id="doc-c1" placeholder="Aero Glide"></image-slot>
+                  <div class="chat-card__badges"><span class="badge badge--new"><span class="badge__dot"></span>New</span></div>
+                </div>
+                <div class="chat-card__b"><div class="chat-card__n">Aero Glide</div><div class="chat-card__brand">Running</div><div class="chat-card__price">€130</div></div>
+              </a>
+              <a class="chat-card" href="product.html?id=drift-hoodie">
+                <div class="chat-card__img">
+                  <image-slot id="doc-c2" placeholder="Drift Hoodie"></image-slot>
+                  <div class="chat-card__badges"><span class="badge badge--low"><span class="badge__dot"></span>Low stock</span></div>
+                </div>
+                <div class="chat-card__b"><div class="chat-card__n">Drift Hoodie</div><div class="chat-card__brand">Lifestyle</div><div class="chat-card__price">€95</div></div>
+              </a>
+              <a class="chat-card" href="product.html?id=trail-vector">
+                <div class="chat-card__img">
+                  <image-slot id="doc-c3" placeholder="Trail Vector GTX"></image-slot>
+                </div>
+                <div class="chat-card__b"><div class="chat-card__n">Trail Vector GTX</div><div class="chat-card__brand">Outdoor</div><div class="chat-card__price">€185</div></div>
+              </a>
+            </div>
+          </div>
+          <div class="ds-preview__meta">.chat-card — flex:0 0 calc((100% - 28px) / 3) · min-width:160px · 1:1 image · same badge + price layout as .pcard · hover: translateY(-2px) · ATC button on hover</div>
+        </div>
+      </div>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Chat message bubbles</div>
+        <div class="ds-preview">
+          <div class="ds-preview__canvas ds-preview__canvas--col" style="align-items:stretch;gap:18px">
+            <div class="msg msg--bot">
+              <div class="msg__avatar">F</div>
+              <div class="msg__body"><div>Hi! I'm your FORMA assistant. Tell me what you're after — or paste a photo.</div></div>
+            </div>
+            <div class="msg msg--user">
+              <div class="msg__avatar">YOU</div>
+              <div class="msg__body"><div>Trail running shoes, something lightweight</div></div>
+            </div>
+          </div>
+          <div class="ds-preview__meta">.msg.msg--bot (left, F avatar bg:var(--text)) · .msg.msg--user (right-aligned via flex-direction:row-reverse)</div>
+        </div>
+      </div>
+    </div>
+
+    <hr class="ds-divider">
+
+    <!-- Navigation -->
+    <div class="ds-section" id="navigation">
+      <h2 class="ds-section__title">Navigation</h2>
+      <p class="ds-section__desc">The header is sticky with a frosted glass backdrop. Nav links animate an underline on hover using a <code>::after</code> pseudo-element slide.</p>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Brand mark</div>
+        <div class="ds-preview">
+          <div class="ds-preview__canvas" style="gap:28px">
+            <a class="brand" href="index.html"><span class="brand__mark">F</span> FORMA</a>
+          </div>
+          <div class="ds-preview__meta">.brand + .brand__mark — 30×30px · border-radius:8px · bg:var(--text) · color:var(--bg)</div>
+        </div>
+      </div>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Main navigation</div>
+        <div class="ds-preview">
+          <div class="ds-preview__canvas">
+            <nav class="mainnav" style="display:flex">
+              <a href="#">New Arrivals</a>
+              <a href="#">Footwear</a>
+              <a href="#">Apparel</a>
+              <a href="#">Equipment</a>
+            </nav>
+          </div>
+          <div class="ds-preview__meta">.mainnav a — 14px · 500 weight · ::after underline slides from right:100% → right:0 on hover</div>
+        </div>
+      </div>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Breadcrumbs</div>
+        <div class="ds-preview">
+          <div class="ds-preview__canvas">
+            <nav class="breadcrumbs"><a href="index.html">Home</a> / <a href="index.html">Apparel</a> / <span>Drift Cotton Hoodie</span></nav>
+          </div>
+          <div class="ds-preview__meta">.breadcrumbs — mono · 11px · tracking 0.1em · uppercase · color:var(--text-muted)</div>
+        </div>
+      </div>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Section eyebrow + heading</div>
+        <div class="ds-preview">
+          <div class="ds-preview__canvas ds-preview__canvas--col" style="gap:8px">
+            <span class="eyebrow">Selection</span>
+            <h2 class="h-section" style="margin:0">Featured</h2>
+          </div>
+          <div class="ds-preview__meta">.eyebrow (mono, 11px, 0.18em) stacked above .h-section · standard section header pattern</div>
+        </div>
+      </div>
+    </div>
+
+    <hr class="ds-divider">
+
+    <!-- Accordion -->
+    <div class="ds-section" id="accordion">
+      <h2 class="ds-section__title">Accordion</h2>
+      <p class="ds-section__desc">Used on the product detail page for collapsible information. Open/close driven by <code>max-height</code> transition — no JS height calculation after first open.</p>
+
+      <div class="ds-preview">
+        <div class="ds-preview__canvas ds-preview__canvas--col" style="align-items:stretch;padding:0 32px">
+          <div class="acc">
+            <div class="acc__item open">
+              <button class="acc__head">Product information <span class="acc__icon"></span></button>
+              <div class="acc__body" style="max-height:200px">
+                <div class="acc__body-in">Organic cotton, 380 gsm. Relaxed fit. Ribbed cuffs and hem. Embroidered brand mark at chest. Made in Portugal under Fair Wear standards.</div>
+              </div>
+            </div>
+            <div class="acc__item">
+              <button class="acc__head" onclick="this.closest('.acc__item').classList.toggle('open');const b=this.nextElementSibling;b.style.maxHeight=this.closest('.acc__item').classList.contains('open')?b.scrollHeight+'px':0">Shipping &amp; returns <span class="acc__icon"></span></button>
+              <div class="acc__body"><div class="acc__body-in">Standard shipping in 2–4 business days. Free over €50. Free returns within 30 days of delivery.</div></div>
+            </div>
+            <div class="acc__item">
+              <button class="acc__head" onclick="this.closest('.acc__item').classList.toggle('open');const b=this.nextElementSibling;b.style.maxHeight=this.closest('.acc__item').classList.contains('open')?b.scrollHeight+'px':0">Materials &amp; care <span class="acc__icon"></span></button>
+              <div class="acc__body"><div class="acc__body-in">100% organic cotton. Machine wash at 30°C with similar colors. Do not bleach. Line dry.</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="ds-preview__meta">.acc__item.open · .acc__icon — +/- via ::before (horizontal) and ::after (vertical, scaleY(0) when open)</div>
+      </div>
+    </div>
+
+    <hr class="ds-divider">
+
+    <!-- Form Inputs -->
+    <div class="ds-section" id="form-inputs">
+      <h2 class="ds-section__title">Form Inputs</h2>
+      <p class="ds-section__desc">Reusable <code>.input</code> class for text, email, and other form controls. Use <code>.input--pill</code> for rounded pill inputs like the newsletter form.</p>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Standard & pill inputs</div>
+        <div class="ds-preview">
+          <div class="ds-preview__canvas ds-preview__canvas--col" style="gap:12px;align-items:stretch;max-width:420px">
+            <input class="input" type="text" placeholder="Full name">
+            <input class="input" type="email" placeholder="Email address">
+            <input class="input input--pill" type="email" placeholder="newsletter@example.com">
+          </div>
+          <div class="ds-preview__meta">.input · .input--pill · border:1px solid var(--line-strong) · :focus → border-color:var(--text)</div>
+        </div>
+      </div>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Input with label</div>
+        <div class="ds-preview">
+          <div class="ds-preview__canvas ds-preview__canvas--col" style="gap:8px;align-items:stretch;max-width:420px">
+            <label style="font-size:13px;font-weight:600">Email</label>
+            <input class="input" type="email" placeholder="you@example.com">
+            <span style="font-size:12px;color:var(--text-muted)">We'll never share your email.</span>
+          </div>
+          <div class="ds-preview__meta">Label (13px, 600) + .input + helper text (12px, muted)</div>
+        </div>
+      </div>
+    </div>
+
+    <hr class="ds-divider">
+
+    <!-- Form Validation -->
+    <div class="ds-section" id="form-validation">
+      <h2 class="ds-section__title">Form Validation</h2>
+      <p class="ds-section__desc">Input error and success states, helper text, checkboxes, and inline validation messages. Semantic colors from the status palette provide consistent feedback.</p>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Checkbox</div>
+        <div class="ds-preview">
+          <div class="ds-preview__canvas ds-preview__canvas--col" style="gap:16px">
+            <label class="checkbox">
+              <input type="checkbox" checked>
+              <span class="checkbox__box"></span>
+              <span>Keep me signed in</span>
+            </label>
+            <label class="checkbox">
+              <input type="checkbox">
+              <span class="checkbox__box"></span>
+              <span>Send me news and offers</span>
+            </label>
+            <label class="checkbox checkbox--disabled">
+              <input type="checkbox" disabled>
+              <span class="checkbox__box"></span>
+              <span>Unavailable option</span>
+            </label>
+          </div>
+          <div class="ds-preview__meta">.checkbox · .checkbox__box — 22×22px · border-radius:8px · .checkbox--disabled · input hidden, custom box with ::after checkmark</div>
+        </div>
+      </div>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Input states — error</div>
+        <div class="ds-preview">
+          <div class="ds-preview__canvas ds-preview__canvas--col" style="gap:12px;align-items:stretch;max-width:420px">
+            <div>
+              <label style="font-size:13px;font-weight:600;display:block;margin-bottom:8px">Email address</label>
+              <input class="input input--error" type="email" value="not-an-email" placeholder="you@example.com">
+              <div class="field-msg field-msg--error">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>
+                Enter a valid email address
+              </div>
+            </div>
+            <div>
+              <label style="font-size:13px;font-weight:600;display:block;margin-bottom:8px">Password</label>
+              <input class="input input--error" type="text" value="abc" placeholder="Minimum 8 characters">
+              <div class="field-msg field-msg--error">Must be at least 8 characters</div>
+            </div>
+          </div>
+          <div class="ds-preview__meta">.input.input--error · border-color:var(--clr-danger) · .field-msg.field-msg--error with optional icon</div>
+        </div>
+      </div>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Input states — success & hint</div>
+        <div class="ds-preview">
+          <div class="ds-preview__canvas ds-preview__canvas--col" style="gap:12px;align-items:stretch;max-width:420px">
+            <div>
+              <label style="font-size:13px;font-weight:600;display:block;margin-bottom:8px">Username</label>
+              <input class="input input--success" type="text" value="janesmith" placeholder="Choose a username">
+              <div class="field-msg field-msg--success">Username is available</div>
+            </div>
+            <div>
+              <label style="font-size:13px;font-weight:600;display:block;margin-bottom:8px">Phone</label>
+              <input class="input" type="text" placeholder="+34 612 345 678">
+              <div class="field-msg field-msg--hint">Optional — used for shipping updates only</div>
+            </div>
+          </div>
+          <div class="ds-preview__meta">.input.input--success · border-color:var(--clr-success) · .field-msg--success | .field-msg--hint for neutral helper text</div>
+        </div>
+      </div>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Full form example</div>
+        <div class="ds-preview">
+          <div class="ds-preview__canvas ds-preview__canvas--col" style="gap:20px;align-items:stretch;max-width:460px">
+            <div>
+              <label style="font-size:13px;font-weight:600;display:block;margin-bottom:8px">Full name</label>
+              <input class="input" type="text" placeholder="Your name" value="Jane Smith">
+            </div>
+            <div>
+              <label style="font-size:13px;font-weight:600;display:block;margin-bottom:8px">Email</label>
+              <input class="input input--error" type="email" placeholder="you@example.com" value="bad-email">
+              <div class="field-msg field-msg--error">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>
+                Enter a valid email
+              </div>
+            </div>
+            <div>
+              <label style="font-size:13px;font-weight:600;display:block;margin-bottom:8px">Password</label>
+              <input class="input" type="password" placeholder="Create a password" value="·······">
+              <div class="field-msg field-msg--hint">At least 8 characters with a number</div>
+            </div>
+            <label class="checkbox">
+              <input type="checkbox">
+              <span class="checkbox__box"></span>
+              <span>I agree to the terms and conditions</span>
+            </label>
+            <div style="display:flex;gap:10px">
+              <button class="btn btn--pri">Create account</button>
+              <button class="btn btn--sec">Cancel</button>
+            </div>
+          </div>
+          <div class="ds-preview__meta">Complete form: .input + validation states · .checkbox · .field-msg variants · .btn actions</div>
+        </div>
+      </div>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Inline success / error messages</div>
+        <div class="ds-preview">
+          <div class="ds-preview__canvas ds-preview__canvas--col" style="gap:10px;align-items:stretch">
+            <div class="alert alert--success">
+              <svg class="alert__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>
+              <div>
+                <div class="alert__title">Account created</div>
+                <div class="alert__body">Check your email to verify your address and get started.</div>
+              </div>
+            </div>
+            <div class="alert alert--danger">
+              <svg class="alert__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
+              <div>
+                <div class="alert__title">Something went wrong</div>
+                <div class="alert__body">The email you entered is already registered. Try signing in instead.</div>
+              </div>
+            </div>
+            <div class="alert alert--info">
+              <svg class="alert__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>
+              <div>
+                <div class="alert__title">Almost there</div>
+                <div class="alert__body">We sent a code to your phone. Enter it below to continue.</div>
+              </div>
+            </div>
+          </div>
+          <div class="ds-preview__meta">.alert (reused from States section) — for form-level feedback after submission</div>
+        </div>
+      </div>
+    </div>
+
+    <hr class="ds-divider">
+
+    <!-- Hero -->
+    <div class="ds-section" id="hero-doc">
+      <h2 class="ds-section__title">Hero Slider</h2>
+      <p class="ds-section__desc">Full-bleed image carousel with a frosted card overlay. The card uses a diagonal notch (<code>clip-path</code>) as its signature element. Slides auto-rotate every 6s with dot indicators and arrow navigation. Each slide carries <code>data-title</code> and <code>data-link</code> attributes to update the card content dynamically.</p>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Structure</div>
+        <table class="ds-table">
+          <thead><tr><th>Class</th><th>Role</th><th>Key styles</th></tr></thead>
+          <tbody>
+            <tr><td><code>.hero</code></td><td>Section wrapper</td><td>position:relative</td></tr>
+            <tr><td><code>.hero__stage</code></td><td>Image container</td><td>aspect-ratio:21/9 · min-height:440px · overflow:hidden</td></tr>
+            <tr><td><code>.hero__slide</code></td><td>Single slide</td><td>position:absolute inset:0 · opacity:0 · transition:opacity .7s</td></tr>
+            <tr><td><code>.hero__slide.active</code></td><td>Visible slide</td><td>opacity:1</td></tr>
+            <tr><td><code>.hero__shade</code></td><td>Gradient overlay</td><td>linear-gradient(90deg, rgba(0,0,0,.34)… transparent)</td></tr>
+            <tr><td><code>.hero__card</code></td><td>Floating info card</td><td>position:absolute · left:var(--pad) · clip-path polygon with --notch:36px</td></tr>
+            <tr><td><code>.hero__card-top</code></td><td>Frosted top band</td><td>backdrop-filter:blur(13px) · rgba(250,250,250,.34)</td></tr>
+            <tr><td><code>.hero__card-body</code></td><td>Solid bottom area</td><td>background:var(--card) · title + buttons</td></tr>
+            <tr><td><code>.hero__dots</code></td><td>Slide indicators</td><td>position:absolute bottom-right · active dot expands horizontally</td></tr>
+            <tr><td><code>.hero__arrows</code></td><td>Prev/next buttons</td><td>position:absolute right center · frosted glass circles</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Variants via data-hero</div>
+        <div class="ds-preview">
+          <div class="ds-preview__canvas ds-preview__canvas--col" style="gap:16px;align-items:flex-start">
+            <div>
+              <span style="font-family:var(--mono);font-size:10px;color:var(--text-muted);letter-spacing:.12em;display:block;margin-bottom:8px">NOTCH (DEFAULT)</span>
+              <div style="background:var(--surface);padding:24px;border-radius:12px;position:relative;overflow:hidden;max-width:380px;clip-path:polygon(0 0,calc(100% - 36px) 0,100% 36px,100% 100%,0 100%)">
+                <div style="font-size:18px;font-weight:700">Aero Glide</div>
+              </div>
+            </div>
+            <div>
+              <span style="font-family:var(--mono);font-size:10px;color:var(--text-muted);letter-spacing:.12em;display:block;margin-bottom:8px">PLAIN</span>
+              <div style="background:var(--surface);padding:24px;border-radius:12px;max-width:380px">
+                <div style="font-size:18px;font-weight:700">Aero Glide</div>
+              </div>
+            </div>
+            <div>
+              <span style="font-family:var(--mono);font-size:10px;color:var(--text-muted);letter-spacing:.12em;display:block;margin-bottom:8px">OUTLINE</span>
+              <div style="background:var(--surface);padding:24px;border-radius:12px;border:1px solid rgba(255,255,255,.4);max-width:380px">
+                <div style="font-size:18px;font-weight:700">Aero Glide</div>
+              </div>
+            </div>
+          </div>
+          <div class="ds-preview__meta">data-hero="notch" (default) · "plain" · "outline" — controlled via Tweaks panel in edit mode</div>
+        </div>
+      </div>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">JS behavior</div>
+        <table class="ds-table">
+          <thead><tr><th>Feature</th><th>Detail</th></tr></thead>
+          <tbody>
+            <tr><td>Auto-rotation</td><td>6.5s interval, resets on manual interaction</td></tr>
+            <tr><td>Dot navigation</td><td>Click any dot to jump to that slide</td></tr>
+            <tr><td>Arrow buttons</td><td>Prev/next with arrow keys (coming)</td></tr>
+            <tr><td>Title sync</td><td><code>data-title</code> on slide updates <code>#heroTitle</code></td></tr>
+            <tr><td>Link sync</td><td><code>data-link</code> on slide updates Explore + Shop Now hrefs</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <hr class="ds-divider">
+
+    <!-- Search Panel -->
+    <div class="ds-section" id="search-panel-doc">
+      <h2 class="ds-section__title">Search / Chat Panel</h2>
+      <p class="ds-section__desc">A full-screen panel that drops down from the top. Combines a chat interface with an AI shopping assistant, file attachments, and suggestion pills. Opens via the search icon, the header pull-down notch, or a swipe-down gesture.</p>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Structure</div>
+        <table class="ds-table">
+          <thead><tr><th>Class</th><th>Role</th></tr></thead>
+          <tbody>
+            <tr><td><code>.search-scrim</code></td><td>Full-screen overlay backdrop · opacity:0 → 1 on open</td></tr>
+            <tr><td><code>.search-panel</code></td><td>Fixed full-height panel · transform:translateY(-100%) → 0 on open</td></tr>
+            <tr><td><code>.search-panel__head</code></td><td>Header bar with title, close button, and grip indicator</td></tr>
+            <tr><td><code>.chat</code></td><td>Scrollable message area · flex:1 overflow-y:auto</td></tr>
+            <tr><td><code>.msg</code></td><td>Chat message bubble · .msg--bot (left) / .msg--user (right)</td></tr>
+            <tr><td><code>.chat-cards</code></td><td>Horizontal row of product recommendation cards</td></tr>
+            <tr><td><code>.composer</code></td><td>Bottom input area with textarea, attach, and send buttons</td></tr>
+            <tr><td><code>.suggests</code></td><td>Row of suggestion pill buttons below the chat</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Opening methods</div>
+        <table class="ds-table">
+          <thead><tr><th>Method</th><th>Trigger</th></tr></thead>
+          <tbody>
+            <tr><td>Search icon</td><td>Click <code>[data-search-open]</code> in header</td></tr>
+            <tr><td>Notch tap</td><td>Click the pull-down tab below the header</td></tr>
+            <tr><td>Notch drag</td><td>Pointer drag down on the notch reveals the panel progressively</td></tr>
+            <tr><td>Keyboard</td><td>Escape to close · Enter to send message</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Composer input</div>
+        <div class="ds-preview">
+          <div class="ds-preview__canvas" style="align-items:stretch;padding:0">
+            <div class="composer__inner" style="width:100%">
+              <div class="composer__row">
+                <textarea rows="1" placeholder="Describe what you're looking for…" style="flex:1;border:none;background:none;resize:none;outline:none;color:var(--text);font-size:15.5px;line-height:1.5;padding:6px 0;font-family:var(--font)"></textarea>
+                <button class="composer__attach" aria-label="Attach">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 11.5l-8.5 8.5a5 5 0 01-7-7l9-9a3.3 3.3 0 014.7 4.7l-9 9a1.6 1.6 0 01-2.3-2.3l8.2-8.2"/></svg>
+                </button>
+                <button class="composer__send" aria-label="Send">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M5 12h13M12 5l7 7-7 7"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="ds-preview__meta">Autosized textarea + attach button + send button · supports image paste + drag-drop · Enter to send, Shift+Enter for newline</div>
+        </div>
+      </div>
+    </div>
+
+    <hr class="ds-divider">
+
+    <!-- Categories & Rails -->
+    <div class="ds-section" id="cats-rails">
+      <h2 class="ds-section__title">Categories & Rails</h2>
+      <p class="ds-section__desc">Category tiles use a 5-column responsive grid with 1:1 aspect ratio tiles. Product rails are horizontally scrollable carousels with snap alignment and arrow navigation.</p>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Category tiles (.cats)</div>
+        <table class="ds-table">
+          <thead><tr><th>Class</th><th>Role</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td><code>.cats</code></td><td>Grid container</td><td>5 → 3 → 2 columns · gap:18px</td></tr>
+            <tr><td><code>.cat__tile</code></td><td>Image container</td><td>aspect-ratio:1 · border-radius:var(--radius-tile) · hover: translateY(-4px)</td></tr>
+            <tr><td><code>.cat__name</code></td><td>Category label</td><td>15px · 600 weight · centered below tile</td></tr>
+            <tr><td><code>.cat__count</code></td><td>Product count</td><td>Mono 11px · muted · below name</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Shape variants</div>
+        <div class="ds-preview">
+          <div class="ds-preview__canvas" style="gap:30px">
+            <div style="text-align:center">
+              <div style="width:100px;height:100px;border-radius:18px;background:var(--surface-2);margin-bottom:8px"></div>
+              <span style="font-family:var(--mono);font-size:10px;color:var(--text-muted)">Square (default)</span>
+            </div>
+            <div style="text-align:center">
+              <div style="width:100px;height:100px;border-radius:50%;background:var(--surface-2);margin-bottom:8px"></div>
+              <span style="font-family:var(--mono);font-size:10px;color:var(--text-muted)">Round</span>
+            </div>
+          </div>
+          <div class="ds-preview__meta">Toggle via Tweaks panel · body[data-cats="square"] vs body[data-cats="round"]</div>
+        </div>
+      </div>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Product rail (.rail)</div>
+        <table class="ds-table">
+          <thead><tr><th>Class</th><th>Role</th></tr></thead>
+          <tbody>
+            <tr><td><code>.rail</code></td><td>Carousel wrapper · data-rail + data-rail-visible attributes control scroll amount</td></tr>
+            <tr><td><code>.rail__track</code></td><td>Flex row · overflow-x:auto · scroll-snap-type:x mandatory · scrollbar hidden</td></tr>
+            <tr><td><code>.rail__nav</code></td><td>Prev/next arrow buttons · populated by inline JS in index.html</td></tr>
+            <tr><td><code>.pcard</code></td><td>Product card · flex:0 0 calc((100% - gaps) / N) · scroll-snap-align:start</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Lookbook rail (.style-track)</div>
+        <table class="ds-table">
+          <thead><tr><th>Class</th><th>Role</th></tr></thead>
+          <tbody>
+            <tr><td><code>.style-track</code></td><td>Flex row · gap:18px · items: clamp(200px, 20vw, 240px)</td></tr>
+            <tr><td><code>.style-item</code></td><td>Look card · 3:4 image ratio · mono caption below</td></tr>
+            <tr><td><code>.style-item__cap</code></td><td>Product name in mono uppercase · 10.5px · tracking .1em</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <hr class="ds-divider">
+
+    <!-- Banner & Newsletter -->
+    <div class="ds-section" id="banner-news">
+      <h2 class="ds-section__title">Banner & Newsletter</h2>
+      <p class="ds-section__desc">Full-bleed sections with image backgrounds, gradient overlays, and centered call-to-action content. Both use <code>&lt;image-slot&gt;</code> for user-fillable backgrounds.</p>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Banner (.banner)</div>
+        <table class="ds-table">
+          <thead><tr><th>Class</th><th>Role</th></tr></thead>
+          <tbody>
+            <tr><td><code>.banner</code></td><td>Full-width section · min-height:clamp(360px,46vw,560px) · overflow:hidden</td></tr>
+            <tr><td><code>.banner__shade</code></td><td>Left-to-right gradient overlay: rgba(0,0,0,.55) → transparent</td></tr>
+            <tr><td><code>.banner__in</code></td><td>Content inside .wrap · z-index:2 · white text</td></tr>
+            <tr><td><code>.banner__t</code></td><td>Display heading · clamp(40px,6vw,84px) · 700 weight · -0.035em tracking</td></tr>
+            <tr><td><code>.banner__s</code></td><td>Subtitle paragraph · clamp(16px,1.6vw,21px) · opacity:.92</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Newsletter (.news)</div>
+        <table class="ds-table">
+          <thead><tr><th>Class</th><th>Role</th></tr></thead>
+          <tbody>
+            <tr><td><code>.news</code></td><td>Full-width section · min-height:420px · display:grid · place-items:center</td></tr>
+            <tr><td><code>.news__shade</code></td><td>Uniform dark overlay: rgba(0,0,0,.5)</td></tr>
+            <tr><td><code>.news__in</code></td><td>Centered content · max-width:620px · white text</td></tr>
+            <tr><td><code>.news__t</code></td><td>Heading · clamp(34px,5vw,60px) · 700 weight</td></tr>
+            <tr><td><code>.news__form</code></td><td>Frosted pill form · backdrop-filter:blur(8px) · border-radius:999px · flex row</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Newsletter form preview</div>
+        <div class="ds-preview">
+          <div class="ds-preview__canvas" style="background:#1a1a18;padding:40px 32px">
+            <form class="news__form" onsubmit="return false" style="width:100%;max-width:460px">
+              <input type="email" name="email" placeholder="Your email" aria-label="Email" style="color:#fff">
+              <button class="btn">Subscribe</button>
+            </form>
+          </div>
+          <div class="ds-preview__meta">.news__form — frosted pill · input transparent on dark bg · white button</div>
+        </div>
+      </div>
+    </div>
+
+    <hr class="ds-divider">
+
+    <!-- Footer -->
+    <div class="ds-section" id="footer-doc">
+      <h2 class="ds-section__title">Footer</h2>
+      <p class="ds-section__desc">Four-column grid with brand info, support links, company links, and the theme toggle. Responsive: 4 → 2 → 1 column.</p>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Structure</div>
+        <table class="ds-table">
+          <thead><tr><th>Class</th><th>Role</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td><code>.foot</code></td><td>Footer wrapper</td><td>border-top:1px solid var(--line) · padding:64px 0 36px</td></tr>
+            <tr><td><code>.foot__grid</code></td><td>Grid container</td><td>1.4fr 1fr 1fr 1fr → 2-col → 1-col · gap:40px</td></tr>
+            <tr><td><code>.foot__brand</code></td><td>Brand column</td><td>Logo + description + social icons</td></tr>
+            <tr><td><code>.foot__col</code></td><td>Link columns</td><td>h4 heading + ul of links</td></tr>
+            <tr><td><code>.foot__social</code></td><td>Social icon row</td><td>40px circles · hover fills with --text</td></tr>
+            <tr><td><code>.foot__bottom</code></td><td>Copyright bar</td><td>Flex row · top border · muted text</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <hr class="ds-divider">
+
+    <!-- Image Slot -->
+    <div class="ds-section" id="image-slot-doc">
+      <h2 class="ds-section__title">Image Slot</h2>
+      <p class="ds-section__desc">A custom element (<code>&lt;image-slot&gt;</code>) that provides user-fillable image placeholders throughout the design. Users drop image files directly onto slots, and the image persists via a sidecar JSON file. Supports drag-and-drop, file browse, image replacement, removal, and a reframe/crop mode (double-click).</p>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Attributes</div>
+        <table class="ds-table">
+          <thead><tr><th>Attribute</th><th>Values</th><th>Default</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td><code>id</code></td><td>string</td><td>—</td><td><strong>Required</strong> for persistence. Without it, the image is session-only.</td></tr>
+            <tr><td><code>shape</code></td><td>rect / rounded / circle / pill</td><td>rounded</td><td>Preset border-radius on the frame</td></tr>
+            <tr><td><code>radius</code></td><td>number (px)</td><td>12</td><td>Corner radius when shape="rounded"</td></tr>
+            <tr><td><code>mask</code></td><td>CSS clip-path</td><td>—</td><td>Arbitrary clip-path override. Overrides <code>shape</code>.</td></tr>
+            <tr><td><code>fit</code></td><td>cover / contain / fill</td><td>cover</td><td>Object-fit. Double-click reframe only works with <code>cover</code>.</td></tr>
+            <tr><td><code>position</code></td><td>CSS object-position</td><td>50% 50%</td><td>For fit=contain/fill</td></tr>
+            <tr><td><code>placeholder</code></td><td>string</td><td>"Drop an image"</td><td>Empty-state caption</td></tr>
+            <tr><td><code>src</code></td><td>URL</td><td>—</td><td>Fallback image URL. A user drop overrides it; clearing shows src again.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Persistence</div>
+        <div class="ds-preview">
+          <div class="ds-preview__canvas ds-preview__canvas--col" style="gap:12px">
+            <p style="margin:0;font-size:14px;color:var(--text-muted);line-height:1.6">Dropped images are saved to <code>.image-slots.state.json</code> as data URLs (WebP, max 1200px on longest side). The sidecar is read on page load and written on every image change. When running inside the omelette runtime (<code>window.omelette.writeFile</code>), writes go through the host bridge. Outside it, the component is read-only.</p>
+            <p style="margin:0;font-size:14px;color:var(--text-muted);line-height:1.6">Accepted formats: PNG, JPEG, WebP, AVIF. SVG and GIF are rejected for security and single-frame limitations respectively.</p>
+          </div>
+          <div class="ds-preview__meta">Sidecar: .image-slots.state.json · Max dimension: 1200px · Format: WebP q=0.85</div>
+        </div>
+      </div>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Reframe mode (double-click)</div>
+        <div class="ds-preview">
+          <div class="ds-preview__canvas ds-preview__canvas--col" style="gap:12px">
+            <p style="margin:0;font-size:14px;color:var(--text-muted);line-height:1.6">When <code>fit="cover"</code>, double-clicking a filled slot enters reframe mode. The full image spills past the mask with a translucent ghost and corner drag handles. Drag to reposition, corner-drag to scale (aspect-locked), wheel to zoom toward cursor. Press Escape or click outside to commit.</p>
+          </div>
+          <div class="ds-preview__meta">Reframe stores {s, x, y} alongside the image URL for persistent crops across responsive resizes</div>
+        </div>
+      </div>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Live demo</div>
+        <div class="ds-preview">
+          <div class="ds-preview__canvas" style="gap:20px;flex-wrap:wrap">
+            <image-slot id="doc-demo-1" style="width:200px;height:160px" shape="rounded" placeholder="Drop a product photo"></image-slot>
+            <image-slot id="doc-demo-2" style="width:120px;height:120px" shape="circle" placeholder="Avatar"></image-slot>
+          </div>
+          <div class="ds-preview__meta">Drag any PNG/JPEG/WebP image onto these slots to test. Auto-persists if writable.</div>
+        </div>
+      </div>
+    </div>
+
+    <hr class="ds-divider">
+
+    <!-- JavaScript -->
+    <div class="ds-section" id="javascript">
+      <h2 class="ds-section__title">JavaScript Behavior</h2>
+      <p class="ds-section__desc">All interactive behavior lives in <code>app.js</code>, a single self-invoking script with no framework dependencies. Each subsystem initializes on <code>DOMContentLoaded</code>.</p>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Subsystems</div>
+        <table class="ds-table">
+          <thead><tr><th>System</th><th>Function</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td>Theme</td><td><code>initTheme()</code></td><td>Toggles <code>html.dark</code> class · persists to <code>localStorage("forma-theme")</code> · syncs all <code>[data-theme-text]</code> labels</td></tr>
+            <tr><td>Search Panel</td><td><code>initSearch()</code></td><td>Full chat UI: open/close, drag-down notch, autosized textarea, image paste + file upload, message rendering, AI/local product matching, Enter to send</td></tr>
+            <tr><td>Hero Slider</td><td><code>initHero()</code></td><td>Auto-rotates slides every 6.5s · dot + arrow navigation · syncs title + links from <code>data-title</code>/<code>data-link</code></td></tr>
+            <tr><td>Rails</td><td><code>initRails()</code></td><td>Scroll buttons for product and lookbook carousels · scroll amount = track width / visible items</td></tr>
+            <tr><td>PDP</td><td><code>initPDP()</code></td><td>Size selector (single-select with .sel class) · accordion toggle with max-height animation</td></tr>
+            <tr><td>Catalog</td><td><code>FORMA_CATALOG</code></td><td>Shared product data array used by featured section, chat matching, and lookbook</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Product catalog schema</div>
+        <div class="ds-preview">
+          <div class="ds-preview__canvas ds-preview__canvas--col" style="gap:6px;align-items:stretch">
+            <code style="font-family:var(--mono);font-size:12px;line-height:1.7">
+              { id:"aero-glide", name:"Aero Glide", line:"Running", price:130, cat:"Running" }
+            </code>
+          </div>
+          <div class="ds-preview__meta">window.FORMA_CATALOG — Array of {id, name, line, price, cat} objects. Shared across all page scripts.</div>
+        </div>
+      </div>
+    </div>
+
+    <hr class="ds-divider">
+
+    <!-- Accessibility -->
+    <div class="ds-section" id="accessibility">
+      <h2 class="ds-section__title">Accessibility</h2>
+      <p class="ds-section__desc">Design decisions and patterns that make the interface usable by everyone.</p>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Practices</div>
+        <table class="ds-table">
+          <thead><tr><th>Pattern</th><th>Implementation</th></tr></thead>
+          <tbody>
+            <tr><td>High contrast</td><td>Text (#101010 / #f4f3f0) against backgrounds passes WCAG AAA for large text, AA for body</td></tr>
+            <tr><td>Reduced motion</td><td><code>@media(prefers-reduced-motion:reduce)</code> disables notch hint animation. All transitions use <code>--ease</code> and respect OS settings.</td></tr>
+            <tr><td>Keyboard navigation</td><td>All interactive elements are buttons or links · Escape closes panels · Enter activates · visible :focus-visible outlines</td></tr>
+            <tr><td>ARIA labels</td><td><code>aria-label</code> on all icon-only buttons (Search, Cart, Account, Close, Prev, Next) · <code>aria-label="Search assistant"</code> on search panel</td></tr>
+            <tr><td>Theme persistence</td><td>Theme choice saved to <code>localStorage</code> · applied before paint to avoid flash</td></tr>
+            <tr><td>Form labels</td><td>All inputs have associated labels or <code>aria-label</code> · newsletter form has explicit <code>name</code> + <code>required</code></td></tr>
+            <tr><td>Semantic HTML</td><td><code>&lt;header&gt;</code>, <code>&lt;nav&gt;</code>, <code>&lt;main&gt;</code>, <code>&lt;footer&gt;</code>, <code>&lt;aside&gt;</code>, <code>&lt;section&gt;</code> used throughout</td></tr>
+            <tr><td>Focus management</td><td>Search panel auto-focuses textarea on open (after 420ms transition) · accordion buttons are keyboard-operable</td></tr>
+            <tr><td>Decorative elements</td><td><code>aria-hidden="true"</code> on purely visual elements (hero + symbol, grip indicator)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Known gaps</div>
+        <div class="alert alert--warning" style="margin:0">
+          <svg class="alert__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.7a2 2 0 013.4 0l7.7 13.3A2 2 0 0119.7 20H4.3a2 2 0 01-1.7-3z"/></svg>
+          <div>
+            <div class="alert__title">Work in progress</div>
+            <div class="alert__body">Hero slider lacks keyboard navigation (arrow keys). Rails do not announce scroll position to screen readers. Image-slot reframe mode is pointer-only.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <hr class="ds-divider">
+
+    <!-- Layout -->
+    <div class="ds-section" id="layout">
+      <h2 class="ds-section__title">Grid & Wrap</h2>
+      <p class="ds-section__desc">The <code>.wrap</code> class centers all content and applies horizontal padding. Sections use CSS grid with responsive column counts.</p>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Container (.wrap)</div>
+        <div class="ds-preview">
+          <div class="ds-preview__canvas" style="padding:0;background:var(--surface)">
+            <div style="width:100%;padding:20px 0">
+              <div class="wrap" style="background:var(--surface-2);padding-top:16px;padding-bottom:16px;border-radius:8px;font-family:var(--mono);font-size:11.5px;color:var(--text-muted);text-align:center">
+                max-width: 1280px · margin: 0 auto · padding-inline: var(--pad)
+              </div>
+            </div>
+          </div>
+          <div class="ds-preview__meta">.wrap — centers content within --maxw:1280px, responds via --pad at each breakpoint</div>
+        </div>
+      </div>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Section padding</div>
+        <table class="ds-table">
+          <thead><tr><th>Class</th><th>Padding / Size</th><th>Usage</th></tr></thead>
+          <tbody>
+            <tr><td><code>.section</code></td><td>clamp(56px, 7vw, 96px) block</td><td>Standard content sections</td></tr>
+            <tr><td><code>.section--surface</code></td><td>same + background:var(--surface)</td><td>Alternating tinted sections</td></tr>
+            <tr><td><code>.pdp</code></td><td>36px top · 90px bottom</td><td>Product detail page</td></tr>
+            <tr><td><code>.banner</code></td><td>min-height: clamp(360px, 46vw, 560px)</td><td>Full-bleed image banner</td></tr>
+            <tr><td><code>.news</code></td><td>min-height: 420px · grid place-items:center</td><td>Newsletter section</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Key grid patterns</div>
+        <table class="ds-table">
+          <thead><tr><th>Component</th><th>Columns</th><th>Gap</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td>Categories <code>.cats</code></td><td>5 → 3 → 2</td><td>18px</td><td>Tiles: 1:1, border-radius:var(--radius-tile)</td></tr>
+            <tr><td>PDP <code>.pdp__grid</code></td><td>1fr 0.82fr → 1fr</td><td>60px</td><td>Gallery left, sticky sidebar right</td></tr>
+            <tr><td>Footer <code>.foot__grid</code></td><td>1.4fr 1fr 1fr 1fr → 2col → 1col</td><td>40px</td><td>Brand col wider than nav cols</td></tr>
+            <tr><td>Featured <code>.rail__track</code></td><td>flex scroll-snap</td><td>22px</td><td>Card: calc((100% - 66px) / 4) · 4 per row desktop</td></tr>
+            <tr><td>Lookbook <code>.style-track</code></td><td>flex scroll-snap</td><td>18px</td><td>Item: calc((100% - 72px) / 5) · 3:4 ratio</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <hr class="ds-divider">
+
+    <!-- Breakpoints -->
+    <div class="ds-section" id="breakpoints">
+      <h2 class="ds-section__title">Breakpoints</h2>
+      <p class="ds-section__desc">Three breakpoints, desktop-first. Fluid type with <code>clamp()</code> means most elements scale continuously between breakpoints without extra overrides.</p>
+      <table class="ds-table">
+        <thead><tr><th>Name</th><th>Condition</th><th>--pad</th><th>Layout changes</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="eyebrow" style="font-size:9px">Desktop</span></td>
+            <td>> 1024px</td>
+            <td>40px</td>
+            <td>5-col categories · 4-col footer · PDP 2-col with sticky sidebar</td>
+          </tr>
+          <tr>
+            <td><span class="eyebrow" style="font-size:9px">Tablet</span></td>
+            <td>≤ 1024px</td>
+            <td>28px</td>
+            <td>3-col categories · 2-col footer · PDP single column, static sidebar</td>
+          </tr>
+          <tr>
+            <td><span class="eyebrow" style="font-size:9px">Mobile</span></td>
+            <td>≤ 680px</td>
+            <td>18px</td>
+            <td>2-col categories · 1-col footer · mainnav hidden · hero 4:5 ratio · hero card full-width · no arrow buttons</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </main>
+</div>
+
+<!-- ============ FOOTER ============ -->
+<footer class="foot">
+  <div class="wrap">
+    <div class="foot__bottom" style="margin-top:0;padding-top:0;border-top:none">
+      <span style="font-family:var(--mono);font-size:11px;letter-spacing:.08em">FORMA Design System · 2026</span>
+      <a href="index.html" class="btn btn--sec" style="height:36px;font-size:12.5px;padding:0 18px">← Back to store</a>
+    </div>
+  </div>
+</footer>
+
+<script src="app.js"></script>
+<!-- Mobile sidebar toggle -->
+<div class="docs-sidebar__scrim" id="docsSidebarScrim"></div>
+<button class="docs-sidebar__toggle" id="docsSidebarToggle" aria-label="Toggle documentation menu">☰</button>
+<script>
+(function(){
+  const sidebar=document.querySelector('.docs-sidebar');
+  const scrim=document.getElementById('docsSidebarScrim');
+  const toggle=document.getElementById('docsSidebarToggle');
+  if(!sidebar||!toggle) return;
+  function open(){ sidebar.classList.add('open'); scrim.classList.add('open'); }
+  function close(){ sidebar.classList.remove('open'); scrim.classList.remove('open'); }
+  toggle.addEventListener('click',()=>sidebar.classList.contains('open')?close():open());
+  scrim.addEventListener('click',close);
+  document.querySelectorAll('.docs-nav__link').forEach(a=>a.addEventListener('click',close));
+})();
+(function(){
+  /* Sidebar active link on scroll */
+  const links = document.querySelectorAll('.docs-nav__link');
+  const sections = document.querySelectorAll('.ds-section, .ds-intro');
+  function onScroll(){
+    let active = '';
+    sections.forEach(s => { if(window.scrollY >= s.offsetTop - 110) active = s.id; });
+    links.forEach(a => a.classList.toggle('is-active', a.getAttribute('href') === '#' + active));
+  }
+  window.addEventListener('scroll', onScroll, {passive: true});
+  onScroll();
+})();
+</script>
+</body>
+</html>
