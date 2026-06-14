@@ -61,6 +61,7 @@
       <a href="index.html">Footwear</a>
       <a href="index.html">Apparel</a>
       <a href="index.html">Equipment</a>
+      <a href="documentation.html">Design System</a>
     </nav>
     <div class="head-actions">
       <button class="iconbtn" data-search-open aria-label="Search">
@@ -85,18 +86,32 @@
     <nav class="breadcrumbs"><a href="index.html">Home</a> / <a href="index.html">Apparel</a> / <span id="bcName">Product</span></nav>
 
     <div class="pdp__grid">
-      <!-- gallery -->
-      <div class="gallery">
-        <image-slot id="pdp-1" placeholder="Product — front view"></image-slot>
-        <image-slot id="pdp-2" placeholder="Product — back view"></image-slot>
-        <image-slot id="pdp-3" placeholder="Product — detail"></image-slot>
-        <image-slot id="pdp-4" placeholder="Product — in use"></image-slot>
+      <!-- gallery carousel -->
+      <div class="gallery" id="pdpGallery">
+        <div class="gallery__track">
+          <image-slot id="pdp-1" placeholder="Product — front view"></image-slot>
+          <image-slot id="pdp-2" placeholder="Product — back view"></image-slot>
+          <image-slot id="pdp-3" placeholder="Product — detail"></image-slot>
+          <image-slot id="pdp-4" placeholder="Product — in use"></image-slot>
+          <button class="gallery__arrow gallery__arrow--prev" data-gallery-prev aria-label="Previous image">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M15 6l-6 6 6 6"/></svg>
+          </button>
+          <button class="gallery__arrow gallery__arrow--next" data-gallery-next aria-label="Next image">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 6l6 6-6 6"/></svg>
+          </button>
+        </div>
+        <div class="gallery__dots" id="galleryDots">
+          <button class="gallery__dot active" aria-label="Image 1"></button>
+          <button class="gallery__dot" aria-label="Image 2"></button>
+          <button class="gallery__dot" aria-label="Image 3"></button>
+          <button class="gallery__dot" aria-label="Image 4"></button>
+        </div>
       </div>
 
       <!-- side -->
       <div class="pdp__side">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-          <div class="pdp__brand" id="pBrand" style="margin:0">Lifestyle</div>
+        <div class="pdp__brand-row" id="pdpBrandRow">
+          <div class="pdp__brand" id="pBrand">Lifestyle</div>
           <span class="badge badge--new" id="pBadge"><span class="badge__dot"></span>New</span>
         </div>
         <h1 class="pdp__title" id="pTitle">Drift Cotton Hoodie</h1>
@@ -186,6 +201,12 @@
     </div>
   </div>
 </footer>
+
+<!-- ============ SOFIA BUTTON ============ -->
+<button class="sofia-btn" id="sofiaBtn" aria-label="Ask SofIA">
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6V2H8"/><path d="M15 11v2"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="M20 16a2 2 0 0 1-2 2H8.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 4 20.286V8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2z"/><path d="M9 11v2"/></svg>
+  <span>Ask SofIA</span>
+</button>
 
 <script src="app.js"></script>
 <script>

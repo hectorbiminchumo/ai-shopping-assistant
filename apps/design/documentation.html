@@ -918,7 +918,7 @@ code {
         <div class="ds-preview">
           <div class="ds-preview__canvas" style="gap:8px;flex-wrap:wrap">
             <span class="badge badge--new"><span class="badge__dot"></span>New</span>
-            <span class="badge badge--sale"><span class="badge__dot"></span>Sale</span>
+            <span class="badge badge--sale">Sale</span>
             <span class="badge badge--low"><span class="badge__dot"></span>Low stock</span>
             <span class="badge badge--oos">Out of stock</span>
             <span class="badge badge--ok"><span class="badge__dot"></span>In stock</span>
@@ -1625,7 +1625,7 @@ code {
     <!-- Search Panel -->
     <div class="ds-section" id="search-panel-doc">
       <h2 class="ds-section__title">Search / Chat Panel</h2>
-      <p class="ds-section__desc">A full-screen panel that drops down from the top. Combines a chat interface with an AI shopping assistant, file attachments, and suggestion pills. Opens via the search icon, the header pull-down notch, or a swipe-down gesture.</p>
+      <p class="ds-section__desc">A full-screen panel that slides up from the bottom. Combines a chat interface with an AI shopping assistant, file attachments, and suggestion pills. Opens via the search icon, the SofIA button, or a drag-down gesture on the header notch.</p>
 
       <div class="ds-sub">
         <div class="ds-sub__title">Structure</div>
@@ -1633,7 +1633,7 @@ code {
           <thead><tr><th>Class</th><th>Role</th></tr></thead>
           <tbody>
             <tr><td><code>.search-scrim</code></td><td>Full-screen overlay backdrop · opacity:0 → 1 on open</td></tr>
-            <tr><td><code>.search-panel</code></td><td>Fixed full-height panel · transform:translateY(-100%) → 0 on open</td></tr>
+            <tr><td><code>.search-panel</code></td><td>Fixed full-height panel · transform:translateY(100%) → 0 on open (slides up from bottom)</td></tr>
             <tr><td><code>.search-panel__head</code></td><td>Header bar with title, close button, and grip indicator</td></tr>
             <tr><td><code>.chat</code></td><td>Scrollable message area · flex:1 overflow-y:auto</td></tr>
             <tr><td><code>.msg</code></td><td>Chat message bubble · .msg--bot (left) / .msg--user (right)</td></tr>

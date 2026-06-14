@@ -27,7 +27,7 @@
     "drift-hoodie":[{cls:"badge--new",  dot:true,  label:"New"},{cls:"badge--low",dot:true,label:"Low stock"}],
     "cloud-step":  [{cls:"badge--new",  dot:true,  label:"New"}],
     "meridian-tee":[{cls:"badge--new",  dot:true,  label:"New"}],
-    "pace-short":  [{cls:"badge--new",  dot:true,  label:"New"}],
+    "pace-short":  [{cls:"badge--low",  dot:true,  label:"Low stock"}],
     "flux-tight":  [{cls:"badge--low",  dot:true,  label:"Low stock"}],
     "vapor-cap":   [{cls:"badge--new",  dot:true,  label:"New"}],
     "core-pack":   [{cls:"badge--low",  dot:true,  label:"Low stock"}]
@@ -71,6 +71,7 @@
     if(!panel) return;
     const openers = $$("[data-search-open]");
     const closer  = $("#searchClose");
+    const sofiaBtn = $("#sofiaBtn");
     const chat     = $("#chatInner");
     const ta       = $("#chatInput");
     const sendBtn  = $("#chatSend");
@@ -83,14 +84,17 @@
       scrim.classList.add("open");
       panel.classList.add("open");
       document.body.style.overflow="hidden";
+      if(sofiaBtn) sofiaBtn.classList.add("hidden");
       setTimeout(()=>ta && ta.focus(), 420);
     }
     function close(){
       scrim.classList.remove("open");
       panel.classList.remove("open");
       document.body.style.overflow="";
+      if(sofiaBtn) sofiaBtn.classList.remove("hidden");
     }
     openers.forEach(b=>b.addEventListener("click",open));
+    if(sofiaBtn) sofiaBtn.addEventListener("click",open);
     closer && closer.addEventListener("click",close);
     scrim && scrim.addEventListener("click",close);
     document.addEventListener("keydown",e=>{ if(e.key==="Escape") close(); });
@@ -378,7 +382,48 @@ Pick 1 to 4 ids from the catalog that best match. If nothing matches, pick the c
   window.FORMA_addToCart = addToCart;
   window.FORMA_cart = cart;
 
+  /* ============================================================
+     PRODUCT GALLERY CAROUSEL
+     ============================================================ */
+  function initGallery(){
+    const gallery=$(".gallery");
+    if(!gallery) return;
+    const track=gallery.querySelector(".gallery__track");
+    const slides=$$("image-slot",track||gallery);
+    const dots=$$(".gallery__dot",gallery);
+    const prev=$("[data-gallery-prev]",gallery);
+    const next=$("[data-gallery-next]",gallery);
+    let i=0;
+    function isMobile(){ return window.matchMedia("(max-width:680px)").matches; }
+    function activateCarousel(on){
+      slides.forEach((s,k)=>s.classList.toggle("active",on?k===i:true));
+      dots.forEach((d,k)=>d.classList.toggle("active",on?k===i:false));
+    }
+    function go(n){
+      i=(n+slides.length)%slides.length;
+      if(!isMobile()) return;
+      slides.forEach((s,k)=>s.classList.toggle("active",k===i));
+      dots.forEach((d,k)=>d.classList.toggle("active",k===i));
+    }
+    prev&&prev.addEventListener("click",()=>go(i-1));
+    next&&next.addEventListener("click",()=>go(i+1));
+    dots.forEach((d,k)=>d.addEventListener("click",()=>go(k)));
+    let touchX=0;
+    track&&track.addEventListener("touchstart",e=>{if(!isMobile()) return;touchX=e.changedTouches[0].clientX;},{passive:true});
+    track&&track.addEventListener("touchend",e=>{
+      if(!isMobile()) return;
+      const dx=e.changedTouches[0].clientX-touchX;
+      if(dx>50) go(i-1); else if(dx<-50) go(i+1);
+    },{passive:true});
+    function onResize(){
+      activateCarousel(isMobile());
+      if(isMobile()) go(i);
+    }
+    onResize();
+    window.addEventListener("resize",onResize);
+  }
+
   document.addEventListener("DOMContentLoaded",()=>{
-    initTheme(); initSearch(); initHero(); initRails(); initPDP();
+    initTheme(); initSearch(); initHero(); initRails(); initPDP(); initGallery();
   });
 })();
