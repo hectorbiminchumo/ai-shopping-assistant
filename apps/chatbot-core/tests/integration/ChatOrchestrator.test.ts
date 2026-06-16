@@ -1,0 +1,73 @@
+import { PromptAssembler } from "../../src/pipeline/PromptAssembler"
+import { QueryParser } from "../../src/pipeline/QueryParser"
+import { ResponseFormatter } from "../../src/pipeline/ResponseFormatter"
+import { ChatOrchestrator } from "../../src/orchestrator/ChatOrchestrator"
+import type { ChatSession, Product, RetrievalResult } from "../../src/types"
+import { createMockLLMService } from "../mocks/openai.mock"
+import { createMockChatLogger, createMockRetrievalService } from "../mocks/supabase.mock"
+import { createMockEmbeddingService } from "../mocks/voyageai.mock"
+
+const product: Product = {
+  id: "prod_1",
+  medusaProductId: "medusa_1",
+  title: "Trail Runner X",
+  description: "A lightweight trail running shoe.",
+  tags: ["trail"],
+  variants: [{ id: "var_1", title: "42", sku: "TRX-42", price: 90, inventoryQuantity: 5, options: {} }],
+}
+
+const retrievalResult: RetrievalResult = { product, similarityScore: 0.82 }
+
+const session: ChatSession = { sessionId: "session_1", history: [] }
+
+describe("ChatOrchestrator (integration, mocked providers)", () => {
+  it("runs the full RAG pipeline and returns a formatted response", async () => {
+    const embeddingService = createMockEmbeddingService()
+    const retrievalService = createMockRetrievalService([retrievalResult])
+    const llmService = createMockLLMService("Trail Runner X is a great match.")
+    const chatLogger = createMockChatLogger()
+
+    const orchestrator = new ChatOrchestrator(
+      new QueryParser(),
+      embeddingService,
+      retrievalService,
+      new PromptAssembler(),
+      llmService,
+      new ResponseFormatter(),
+      chatLogger
+    )
+
+    const response = await orchestrator.handle("trail shoes size 42", session)
+
+    expect(embeddingService.embedText).toHaveBeenCalledWith("trail shoes size 42")
+    expect(retrievalService.search).toHaveBeenCalled()
+    expect(llmService.complete).toHaveBeenCalled()
+    expect(chatLogger.log).toHaveBeenCalledWith(
+      expect.objectContaining({ sessionId: "session_1", hasResults: true })
+    )
+
+    expect(response.message).toBe("Trail Runner X is a great match.")
+    expect(response.products[0].title).toBe("Trail Runner X")
+    expect(response.hasResults).toBe(true)
+  })
+
+  it("logs hasResults false when nothing meets the similarity threshold", async () => {
+    const retrievalService = createMockRetrievalService([{ product, similarityScore: 0.3 }])
+    const chatLogger = createMockChatLogger()
+
+    const orchestrator = new ChatOrchestrator(
+      new QueryParser(),
+      createMockEmbeddingService(),
+      retrievalService,
+      new PromptAssembler(),
+      createMockLLMService(),
+      new ResponseFormatter(),
+      chatLogger
+    )
+
+    const response = await orchestrator.handle("something obscure", session)
+
+    expect(response.hasResults).toBe(false)
+    expect(chatLogger.log).toHaveBeenCalledWith(expect.objectContaining({ hasResults: false }))
+  })
+})
