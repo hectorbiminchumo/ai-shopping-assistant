@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<title>VECTRA — Product</title>
+<link rel="stylesheet" href="styles.css">
+<script src="image-slot.js"></script>
+</head>
+<body>
+
+<!-- ============ SEARCH / CHAT PANEL ============ -->
+<div class="search-scrim" id="searchScrim"></div>
+<aside class="search-panel" id="searchPanel" aria-label="Search assistant">
+  <div class="search-panel__head">
+    <div class="search-panel__title"><b>Vectra</b> · search with text or images</div>
+    <button class="iconbtn" id="searchClose" aria-label="Close">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+    <div class="grip"></div>
+  </div>
+  <div class="chat" id="chatScroll">
+    <div class="chat__inner" id="chatInner">
+      <div class="msg msg--bot">
+        <div class="msg__avatar">V</div>
+        <div class="msg__body">
+          <div>Hi 👋 I'm Vectra, your shopping assistant. Tell me what you're after or paste a photo and I'll find the closest match.</div>
+        </div>
+      </div>
+    </div>
+    <div class="suggests">
+      <button class="suggest" data-suggest="Shoes for long-distance running">Long-distance running</button>
+      <button class="suggest" data-suggest="Something waterproof for the mountains">Waterproof outdoor</button>
+      <button class="suggest" data-suggest="Lightweight training gear">Lightweight training</button>
+    </div>
+  </div>
+  <div class="composer">
+    <div class="composer__inner">
+      <div class="composer__thumbs" id="chatThumbs" style="display:none"></div>
+      <div class="composer__row">
+        <textarea id="chatInput" rows="1" placeholder="Describe what you're looking for…"></textarea>
+        <input type="file" id="chatFile" accept="image/*" multiple hidden>
+        <button class="composer__attach" onclick="document.getElementById('chatFile').click()" aria-label="Attach image">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 11.5l-8.5 8.5a5 5 0 01-7-7l9-9a3.3 3.3 0 014.7 4.7l-9 9a1.6 1.6 0 01-2.3-2.3l8.2-8.2"/></svg>
+        </button>
+        <button class="composer__send" id="chatSend" aria-label="Send">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M5 12h13M12 5l7 7-7 7"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="composer__hint" style="text-align:center">Paste or attach images · Enter to send · Esc to close</div>
+  </div>
+</aside>
+
+<!-- ============ HEADER ============ -->
+<header class="site-head">
+  <div class="wrap site-head__row">
+    <a class="brand" href="index.html"><span class="brand__mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6l6 6-6 6"/><path d="M12 6l6 6-6 6"/></svg></span> VECTRA</a>
+    <nav class="mainnav">
+      <a href="index.html">New Arrivals</a>
+      <a href="index.html">Footwear</a>
+      <a href="index.html">Apparel</a>
+      <a href="index.html">Equipment</a>
+      <a href="documentation.html">Design System</a>
+    </nav>
+    <div class="head-actions">
+      <div class="head-search" id="headSearch">
+        <input type="search" id="headSearchInput" class="head-search__input" placeholder="Search products…" aria-label="Search products">
+        <button class="iconbtn" id="headSearchBtn" aria-label="Search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        </button>
+      </div>
+      <button class="iconbtn" aria-label="Account">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg>
+      </button>
+      <button class="iconbtn cart-dot" aria-label="Cart">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 7h13l-1.2 9.5a2 2 0 01-2 1.7H9.2a2 2 0 01-2-1.7L6 4H3"/><circle cx="9" cy="21" r="1"/><circle cx="17" cy="21" r="1"/></svg>
+      </button>
+    </div>
+  </div>
+  <button class="head-notch" id="headNotch" data-search-open aria-label="Open search assistant — tap or drag down">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 10l5 5 5-5"/></svg>
+  </button>
+</header>
+
+<!-- ============ PRODUCT ============ -->
+<main class="pdp">
+  <div class="wrap">
+    <nav class="breadcrumbs"><a href="index.html">Home</a> / <a href="index.html">Apparel</a> / <span id="bcName">Product</span></nav>
+
+    <div class="pdp__grid">
+      <!-- gallery carousel -->
+      <div class="gallery" id="pdpGallery">
+        <div class="gallery__track">
+          <image-slot id="pdp-1" placeholder="Product — front view"></image-slot>
+          <image-slot id="pdp-2" placeholder="Product — back view"></image-slot>
+          <image-slot id="pdp-3" placeholder="Product — detail"></image-slot>
+          <image-slot id="pdp-4" placeholder="Product — in use"></image-slot>
+          <button class="gallery__arrow gallery__arrow--prev" data-gallery-prev aria-label="Previous image">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M15 6l-6 6 6 6"/></svg>
+          </button>
+          <button class="gallery__arrow gallery__arrow--next" data-gallery-next aria-label="Next image">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 6l6 6-6 6"/></svg>
+          </button>
+        </div>
+        <div class="gallery__dots" id="galleryDots">
+          <button class="gallery__dot active" aria-label="Image 1"></button>
+          <button class="gallery__dot" aria-label="Image 2"></button>
+          <button class="gallery__dot" aria-label="Image 3"></button>
+          <button class="gallery__dot" aria-label="Image 4"></button>
+        </div>
+      </div>
+
+      <!-- side -->
+      <div class="pdp__side">
+        <div class="pdp__brand-row" id="pdpBrandRow">
+          <div class="pdp__brand" id="pBrand">Lifestyle</div>
+          <span class="badge badge--new" id="pBadge"><span class="badge__dot"></span>New</span>
+        </div>
+        <h1 class="pdp__title" id="pTitle">Drift Cotton Hoodie</h1>
+        <p class="pdp__desc">Reimagine the feeling of a classic hoodie. With our organic cotton fabric, everyday essentials no longer have to be ordinary.</p>
+
+        <div class="pdp__label"><span>Select size</span><a href="index.html">Size guide</a></div>
+        <div class="sizes">
+          <button class="size">XS</button>
+          <button class="size sel">S</button>
+          <button class="size">M</button>
+          <button class="size">L</button>
+          <button class="size oos" disabled>XL</button>
+        </div>
+
+        <div class="alert alert--warning" id="stockAlert" style="margin-bottom:18px">
+          <svg class="alert__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.7a2 2 0 013.4 0l7.7 13.3A2 2 0 0119.7 20H4.3a2 2 0 01-1.7-3z"/></svg>
+          <div>
+            <div class="alert__title">Only 3 left in size S</div>
+            <div class="alert__body">This item is selling fast — secure yours now.</div>
+          </div>
+        </div>
+
+        <div class="pdp__price" id="pPrice">€95<small> · incl. VAT</small></div>
+        <button class="btn btn--pri btn--block btn--lg pdp__cta" id="pdpAtc">Add to cart</button>
+
+
+        <div class="pdp__meta">
+          <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 7h13l5 5v5h-3M3 7v10h2M16 17H9"/><circle cx="6.5" cy="17.5" r="1.5"/><circle cx="17.5" cy="17.5" r="1.5"/></svg> Free shipping over €50</span>
+          <span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 12a9 9 0 1018 0 9 9 0 00-18 0z"/><path d="M9 12l2 2 4-4"/></svg> 30-day returns</span>
+        </div>
+
+        <div class="acc">
+          <div class="acc__item">
+            <button class="acc__head">Product information <span class="acc__icon"></span></button>
+            <div class="acc__body"><div class="acc__body-in">Organic cotton, 380 gsm. Relaxed fit. Ribbed cuffs and hem. Embroidered brand mark at the chest. Made in Portugal under Fair Wear standards.</div></div>
+          </div>
+          <div class="acc__item">
+            <button class="acc__head">Shipping &amp; returns <span class="acc__icon"></span></button>
+            <div class="acc__body"><div class="acc__body-in">Standard shipping in 2–4 business days. Free over €50. Free returns within 30 days of delivery.</div></div>
+          </div>
+          <div class="acc__item">
+            <button class="acc__head">Materials &amp; care <span class="acc__icon"></span></button>
+            <div class="acc__body"><div class="acc__body-in">100% organic cotton. Machine wash at 30°C with similar colors. Do not bleach. Line dry.</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- ============ FOOTER ============ -->
+<footer class="foot">
+  <div class="wrap">
+    <div class="foot__grid">
+      <div class="foot__col foot__brand">
+        <a class="brand" href="index.html"><span class="brand__mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6l6 6-6 6"/><path d="M12 6l6 6-6 6"/></svg></span> VECTRA</a>
+        <p>Essential sportswear. Clean design, honest materials.</p>
+        <div class="foot__social">
+          <a href="index.html" aria-label="Instagram"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg></a>
+          <a href="index.html" aria-label="Facebook"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 9h3V5h-3a4 4 0 00-4 4v2H7v4h3v6h4v-6h3l1-4h-4V9a1 1 0 011-1z"/></svg></a>
+          <a href="index.html" aria-label="X"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M18 3h3l-7 8 8 10h-6l-5-6-5 6H3l7-9L3 3h6l4 5z"/></svg></a>
+        </div>
+      </div>
+      <div class="foot__col">
+        <h4>Support</h4>
+        <ul><li><a href="index.html">Customer service</a></li><li><a href="index.html">Shipping</a></li><li><a href="index.html">Returns</a></li><li><a href="index.html">Size guide</a></li></ul>
+      </div>
+      <div class="foot__col">
+        <h4>Company</h4>
+        <ul><li><a href="index.html">About VECTRA</a></li><li><a href="index.html">Contact</a></li><li><a href="index.html">Terms &amp; conditions</a></li><li><a href="index.html">Privacy</a></li></ul>
+      </div>
+      <div class="foot__col">
+        <h4>Appearance</h4>
+        <div class="theme-switch">
+          <button class="switch" data-theme-toggle aria-label="Toggle theme">
+            <span class="switch__knob">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4 12H2M22 12h-2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/></svg>
+            </span>
+          </button>
+          <span class="theme-switch__label"><span data-theme-text>Light</span> mode</span>
+        </div>
+      </div>
+    </div>
+    <div class="foot__bottom">
+      <span>© 2026 VECTRA. All rights reserved.</span>
+      <span style="font-family:var(--mono);letter-spacing:.04em">Made with care · EN</span>
+    </div>
+  </div>
+</footer>
+
+<!-- ============ VECTRA BUTTON ============ -->
+<button class="vectra-btn" id="vectraBtn" aria-label="Ask Vectra">
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6V2H8"/><path d="M15 11v2"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="M20 16a2 2 0 0 1-2 2H8.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 4 20.286V8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2z"/><path d="M9 11v2"/></svg>
+  <span>Ask Vectra</span>
+</button>
+
+<script src="app.js"></script>
+<script>
+(function(){
+  const id=new URLSearchParams(location.search).get("id");
+  const p=(window.VECTRA_CATALOG||[]).find(x=>x.id===id);
+  if(!p) return;
+
+  document.getElementById("pTitle").innerHTML=p.name;
+  document.getElementById("pBrand").textContent=p.line;
+  document.getElementById("bcName").textContent=p.name;
+  document.title=`VECTRA — ${p.name}`;
+
+  /* Status config per product */
+  const STATUS={
+    "aero-glide":   {badge:"new",   stockMsg:"Only 2 left in size M",   sale:null},
+    "trail-vector": {badge:"low",   stockMsg:"Almost sold out in size S", sale:null},
+    "shell-jacket": {badge:"sale",  stockMsg:null, sale:{pct:15}},
+    "drift-hoodie": {badge:"new",   stockMsg:"Only 3 left in size S",   sale:null},
+    "cloud-step":   {badge:"new",   stockMsg:null, sale:null},
+    "meridian-tee": {badge:"new",   stockMsg:null, sale:null},
+    "pace-short":   {badge:"low",   stockMsg:"Last units available",     sale:null},
+    "flux-tight":   {badge:"low",   stockMsg:"Last units available",     sale:null},
+    "vapor-cap":    {badge:"new",   stockMsg:null, sale:null},
+    "core-pack":    {badge:"low",   stockMsg:"Almost sold out",          sale:null}
+  };
+  const st=STATUS[id]||{badge:"new", stockMsg:null, sale:null};
+
+  /* Badge */
+  const badgeEl=document.getElementById("pBadge");
+  const badgeMap={
+    "new":  {cls:"badge--new",  label:"New",        dot:true},
+    "low":  {cls:"badge--low",  label:"Low stock",  dot:true},
+    "sale": {cls:"badge--sale", label:"Sale",       dot:false}
+  };
+  if(st.badge && badgeMap[st.badge]){
+    const b=badgeMap[st.badge];
+    badgeEl.className=`badge ${b.cls}`;
+    badgeEl.innerHTML=`${b.dot?'<span class="badge__dot"></span>':''}${b.label}`;
+  } else {
+    badgeEl.style.display="none";
+  }
+
+  /* Stock alert */
+  const alertEl=document.getElementById("stockAlert");
+  if(st.stockMsg){
+    alertEl.querySelector(".alert__title").textContent=st.stockMsg;
+  } else {
+    alertEl.style.display="none";
+  }
+
+  /* Price (normal or sale) */
+  const priceEl=document.getElementById("pPrice");
+  if(st.sale){
+    const discounted=Math.round(p.price*(1-st.sale.pct/100));
+    priceEl.innerHTML=`
+      <span style="color:var(--clr-danger)">€${discounted}</span>
+      <span style="font-size:18px;color:var(--text-muted);text-decoration:line-through;font-weight:500;margin-left:8px">€${p.price}</span>
+      <span class="badge badge--sale" style="margin-left:10px;vertical-align:middle">−${st.sale.pct}%</span>
+      <small style="display:block;margin-top:4px"> · incl. VAT</small>`;
+  } else {
+    priceEl.innerHTML=`€${p.price}<small> · incl. VAT</small>`;
+  }
+
+  /* Add to cart button */
+  const atcBtn=document.getElementById("pdpAtc");
+  if(atcBtn && window.VECTRA_addToCart){
+    atcBtn.addEventListener("click",()=>{
+      window.VECTRA_addToCart(p.id, atcBtn);
+    });
+  }
+})();
+</script>
+</body>
+</html>
