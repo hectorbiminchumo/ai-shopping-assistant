@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FORMA — Product</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<title>VECTRA — Product</title>
 <link rel="stylesheet" href="styles.css">
 <script src="image-slot.js"></script>
 </head>
@@ -13,7 +14,7 @@
 <div class="search-scrim" id="searchScrim"></div>
 <aside class="search-panel" id="searchPanel" aria-label="Search assistant">
   <div class="search-panel__head">
-    <div class="search-panel__title"><b>FORMA Assistant</b> · search with text or images</div>
+    <div class="search-panel__title"><b>Vectra</b> · search with text or images</div>
     <button class="iconbtn" id="searchClose" aria-label="Close">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 6l12 12M18 6L6 18"/></svg>
     </button>
@@ -22,9 +23,9 @@
   <div class="chat" id="chatScroll">
     <div class="chat__inner" id="chatInner">
       <div class="msg msg--bot">
-        <div class="msg__avatar">F</div>
+        <div class="msg__avatar">V</div>
         <div class="msg__body">
-          <div>Hi 👋 I'm your assistant. Tell me what you're after or paste a photo and I'll find the closest match.</div>
+          <div>Hi 👋 I'm Vectra, your shopping assistant. Tell me what you're after or paste a photo and I'll find the closest match.</div>
         </div>
       </div>
     </div>
@@ -55,7 +56,7 @@
 <!-- ============ HEADER ============ -->
 <header class="site-head">
   <div class="wrap site-head__row">
-    <a class="brand" href="index.html"><span class="brand__mark">F</span> FORMA</a>
+    <a class="brand" href="index.html"><span class="brand__mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6l6 6-6 6"/><path d="M12 6l6 6-6 6"/></svg></span> VECTRA</a>
     <nav class="mainnav">
       <a href="index.html">New Arrivals</a>
       <a href="index.html">Footwear</a>
@@ -64,9 +65,12 @@
       <a href="documentation.html">Design System</a>
     </nav>
     <div class="head-actions">
-      <button class="iconbtn" data-search-open aria-label="Search">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-      </button>
+      <div class="head-search" id="headSearch">
+        <input type="search" id="headSearchInput" class="head-search__input" placeholder="Search products…" aria-label="Search products">
+        <button class="iconbtn" id="headSearchBtn" aria-label="Search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        </button>
+      </div>
       <button class="iconbtn" aria-label="Account">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg>
       </button>
@@ -167,7 +171,7 @@
   <div class="wrap">
     <div class="foot__grid">
       <div class="foot__col foot__brand">
-        <a class="brand" href="index.html"><span class="brand__mark">F</span> FORMA</a>
+        <a class="brand" href="index.html"><span class="brand__mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6l6 6-6 6"/><path d="M12 6l6 6-6 6"/></svg></span> VECTRA</a>
         <p>Essential sportswear. Clean design, honest materials.</p>
         <div class="foot__social">
           <a href="index.html" aria-label="Instagram"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg></a>
@@ -181,7 +185,7 @@
       </div>
       <div class="foot__col">
         <h4>Company</h4>
-        <ul><li><a href="index.html">About FORMA</a></li><li><a href="index.html">Contact</a></li><li><a href="index.html">Terms &amp; conditions</a></li><li><a href="index.html">Privacy</a></li></ul>
+        <ul><li><a href="index.html">About VECTRA</a></li><li><a href="index.html">Contact</a></li><li><a href="index.html">Terms &amp; conditions</a></li><li><a href="index.html">Privacy</a></li></ul>
       </div>
       <div class="foot__col">
         <h4>Appearance</h4>
@@ -196,29 +200,29 @@
       </div>
     </div>
     <div class="foot__bottom">
-      <span>© 2026 FORMA. All rights reserved.</span>
+      <span>© 2026 VECTRA. All rights reserved.</span>
       <span style="font-family:var(--mono);letter-spacing:.04em">Made with care · EN</span>
     </div>
   </div>
 </footer>
 
-<!-- ============ SOFIA BUTTON ============ -->
-<button class="sofia-btn" id="sofiaBtn" aria-label="Ask SofIA">
+<!-- ============ VECTRA BUTTON ============ -->
+<button class="vectra-btn" id="vectraBtn" aria-label="Ask Vectra">
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6V2H8"/><path d="M15 11v2"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="M20 16a2 2 0 0 1-2 2H8.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 4 20.286V8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2z"/><path d="M9 11v2"/></svg>
-  <span>Ask SofIA</span>
+  <span>Ask Vectra</span>
 </button>
 
 <script src="app.js"></script>
 <script>
 (function(){
   const id=new URLSearchParams(location.search).get("id");
-  const p=(window.FORMA_CATALOG||[]).find(x=>x.id===id);
+  const p=(window.VECTRA_CATALOG||[]).find(x=>x.id===id);
   if(!p) return;
 
   document.getElementById("pTitle").innerHTML=p.name;
   document.getElementById("pBrand").textContent=p.line;
   document.getElementById("bcName").textContent=p.name;
-  document.title=`FORMA — ${p.name}`;
+  document.title=`VECTRA — ${p.name}`;
 
   /* Status config per product */
   const STATUS={
@@ -273,9 +277,9 @@
 
   /* Add to cart button */
   const atcBtn=document.getElementById("pdpAtc");
-  if(atcBtn && window.FORMA_addToCart){
+  if(atcBtn && window.VECTRA_addToCart){
     atcBtn.addEventListener("click",()=>{
-      window.FORMA_addToCart(p.id, atcBtn);
+      window.VECTRA_addToCart(p.id, atcBtn);
     });
   }
 })();

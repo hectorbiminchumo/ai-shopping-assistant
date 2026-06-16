@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FORMA — Design System</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<title>VECTRA — Design System</title>
 <link rel="stylesheet" href="styles.css">
 <script src="image-slot.js"></script>
 <style>
@@ -337,7 +338,7 @@ code {
 <header class="site-head">
   <div class="wrap site-head__row">
     <a class="brand" href="index.html">
-      <span class="brand__mark">F</span> FORMA
+      <span class="brand__mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6l6 6-6 6"/><path d="M12 6l6 6-6 6"/></svg></span> VECTRA
     </a>
     <nav class="mainnav">
       <a href="index.html">Store</a>
@@ -414,9 +415,9 @@ code {
 
     <!-- Intro -->
     <div class="ds-intro" id="intro">
-      <span class="eyebrow">FORMA Design System</span>
+      <span class="eyebrow">VECTRA Design System</span>
       <h1 class="ds-intro__title">Design<br>Language</h1>
-      <p class="ds-intro__desc">A minimal, high-performance design language for FORMA's digital presence. Monochrome palette, grotesque type, precise spacing — everything scales from 320px to 1440px+.</p>
+      <p class="ds-intro__desc">A minimal, high-performance design language for VECTRA's digital presence. Monochrome palette, grotesque type, precise spacing — everything scales from 320px to 1440px+.</p>
       <div class="ds-intro__links">
         <a class="btn btn--pri" href="index.html">View store</a>
         <a class="btn btn--sec" href="product.html">Product page</a>
@@ -1285,8 +1286,8 @@ code {
         <div class="ds-preview">
           <div class="ds-preview__canvas ds-preview__canvas--col" style="align-items:stretch;gap:18px">
             <div class="msg msg--bot">
-              <div class="msg__avatar">F</div>
-              <div class="msg__body"><div>Hi! I'm your FORMA assistant. Tell me what you're after — or paste a photo.</div></div>
+              <div class="msg__avatar">V</div>
+              <div class="msg__body"><div>Hi! I'm Vectra, your shopping assistant. Tell me what you're after — or paste a photo.</div></div>
             </div>
             <div class="msg msg--user">
               <div class="msg__avatar">YOU</div>
@@ -1309,7 +1310,7 @@ code {
         <div class="ds-sub__title">Brand mark</div>
         <div class="ds-preview">
           <div class="ds-preview__canvas" style="gap:28px">
-            <a class="brand" href="index.html"><span class="brand__mark">F</span> FORMA</a>
+            <a class="brand" href="index.html"><span class="brand__mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 6l6 6-6 6"/><path d="M12 6l6 6-6 6"/></svg></span> VECTRA</a>
           </div>
           <div class="ds-preview__meta">.brand + .brand__mark — 30×30px · border-radius:8px · bg:var(--text) · color:var(--bg)</div>
         </div>
@@ -1327,6 +1328,21 @@ code {
             </nav>
           </div>
           <div class="ds-preview__meta">.mainnav a — 14px · 500 weight · ::after underline slides from right:100% → right:0 on hover</div>
+        </div>
+      </div>
+
+      <div class="ds-sub">
+        <div class="ds-sub__title">Header search</div>
+        <div class="ds-preview">
+          <div class="ds-preview__canvas">
+            <div class="head-search open">
+              <input type="search" class="head-search__input" placeholder="Search products…" aria-label="Search products">
+              <button class="iconbtn" aria-label="Search">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="ds-preview__meta">.head-search + .head-search__input — the search icon (#headSearchBtn) toggles an inline input beside it via .head-search.open (width 0 → 200px). Independent of the assistant panel; closes on Escape or outside click. initHeadSearch()</div>
         </div>
       </div>
 
@@ -1625,7 +1641,7 @@ code {
     <!-- Search Panel -->
     <div class="ds-section" id="search-panel-doc">
       <h2 class="ds-section__title">Search / Chat Panel</h2>
-      <p class="ds-section__desc">A full-screen panel that slides up from the bottom. Combines a chat interface with an AI shopping assistant, file attachments, and suggestion pills. Opens via the search icon, the SofIA button, or a drag-down gesture on the header notch.</p>
+      <p class="ds-section__desc">A full-screen panel that slides up from the bottom. Combines a chat interface with an AI shopping assistant, file attachments, and suggestion pills. Opens via the Vectra button or a drag-down gesture on the header notch.</p>
 
       <div class="ds-sub">
         <div class="ds-sub__title">Structure</div>
@@ -1649,8 +1665,8 @@ code {
         <table class="ds-table">
           <thead><tr><th>Method</th><th>Trigger</th></tr></thead>
           <tbody>
-            <tr><td>Search icon</td><td>Click <code>[data-search-open]</code> in header</td></tr>
-            <tr><td>Notch tap</td><td>Click the pull-down tab below the header</td></tr>
+            <tr><td>Vectra button</td><td>Click the floating <code>#vectraBtn</code> (any page)</td></tr>
+            <tr><td>Notch tap</td><td>Click the pull-down tab below the header (<code>[data-search-open]</code>)</td></tr>
             <tr><td>Notch drag</td><td>Pointer drag down on the notch reveals the panel progressively</td></tr>
             <tr><td>Keyboard</td><td>Escape to close · Enter to send message</td></tr>
           </tbody>
@@ -1882,12 +1898,12 @@ code {
         <table class="ds-table">
           <thead><tr><th>System</th><th>Function</th><th>Description</th></tr></thead>
           <tbody>
-            <tr><td>Theme</td><td><code>initTheme()</code></td><td>Toggles <code>html.dark</code> class · persists to <code>localStorage("forma-theme")</code> · syncs all <code>[data-theme-text]</code> labels</td></tr>
+            <tr><td>Theme</td><td><code>initTheme()</code></td><td>Toggles <code>html.dark</code> class · persists to <code>localStorage("vectra-theme")</code> · syncs all <code>[data-theme-text]</code> labels</td></tr>
             <tr><td>Search Panel</td><td><code>initSearch()</code></td><td>Full chat UI: open/close, drag-down notch, autosized textarea, image paste + file upload, message rendering, AI/local product matching, Enter to send</td></tr>
             <tr><td>Hero Slider</td><td><code>initHero()</code></td><td>Auto-rotates slides every 6.5s · dot + arrow navigation · syncs title + links from <code>data-title</code>/<code>data-link</code></td></tr>
             <tr><td>Rails</td><td><code>initRails()</code></td><td>Scroll buttons for product and lookbook carousels · scroll amount = track width / visible items</td></tr>
             <tr><td>PDP</td><td><code>initPDP()</code></td><td>Size selector (single-select with .sel class) · accordion toggle with max-height animation</td></tr>
-            <tr><td>Catalog</td><td><code>FORMA_CATALOG</code></td><td>Shared product data array used by featured section, chat matching, and lookbook</td></tr>
+            <tr><td>Catalog</td><td><code>VECTRA_CATALOG</code></td><td>Shared product data array used by featured section, chat matching, and lookbook</td></tr>
           </tbody>
         </table>
       </div>
@@ -1900,7 +1916,7 @@ code {
               { id:"aero-glide", name:"Aero Glide", line:"Running", price:130, cat:"Running" }
             </code>
           </div>
-          <div class="ds-preview__meta">window.FORMA_CATALOG — Array of {id, name, line, price, cat} objects. Shared across all page scripts.</div>
+          <div class="ds-preview__meta">window.VECTRA_CATALOG — Array of {id, name, line, price, cat} objects. Shared across all page scripts.</div>
         </div>
       </div>
     </div>
@@ -2030,7 +2046,7 @@ code {
 <footer class="foot">
   <div class="wrap">
     <div class="foot__bottom" style="margin-top:0;padding-top:0;border-top:none">
-      <span style="font-family:var(--mono);font-size:11px;letter-spacing:.08em">FORMA Design System · 2026</span>
+      <span style="font-family:var(--mono);font-size:11px;letter-spacing:.08em">VECTRA Design System · 2026</span>
       <a href="index.html" class="btn btn--sec" style="height:36px;font-size:12.5px;padding:0 18px">← Back to store</a>
     </div>
   </div>
