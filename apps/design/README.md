@@ -1,20 +1,20 @@
-# FORMA — Athletic Store Design
+# VECTRA — Athletic Store Design
 
 A production-ready frontend design for a minimalist athletic e-commerce store. Built with vanilla HTML, CSS custom properties, and a single dependency-free JavaScript module. No framework, no build step required for the design layer.
 
 ## Overview
 
-FORMA is a monochrome, high-performance storefront UI with full light/dark theme support, a responsive layout system, and a fluid type scale. The design prioritizes clarity and speed — both in visual hierarchy and in how shoppers find what they need.
+VECTRA is a monochrome, high-performance storefront UI with full light/dark theme support, a responsive layout system, and a fluid type scale. The design prioritizes clarity and speed — both in visual hierarchy and in how shoppers find what they need.
 
-### SofIA — AI Shopping Assistant
+### Vectra — AI Shopping Assistant
 
-The standout feature is **SofIA**, a conversational shopping assistant embedded in a full-screen panel accessible from any page. SofIA allows shoppers to:
+The standout feature is **Vectra**, a conversational shopping assistant embedded in a full-screen panel accessible from any page. Vectra allows shoppers to:
 
 - **Search by description** — type a natural-language query ("trail running shoes for wet terrain") and receive matched catalog results instantly
-- **Search by image** — paste or upload a product photo and SofIA identifies visually similar items from the catalog
+- **Search by image** — paste or upload a product photo and Vectra identifies visually similar items from the catalog
 - **Browse via suggestion pills** — pre-built query shortcuts for common intents (long-distance running, waterproof outdoor, etc.)
 
-When a Claude API integration is available via `window.claude.complete`, SofIA sends queries to the model and parses a structured JSON response with product IDs and a reply message. Without it, it falls back to local keyword matching against the catalog.
+When a Claude API integration is available via `window.claude.complete`, Vectra sends queries to the model and parses a structured JSON response with product IDs and a reply message. Without it, it falls back to local keyword matching against the catalog.
 
 ---
 
@@ -25,7 +25,7 @@ When a Claude API integration is available via `window.claude.complete`, SofIA s
 | `index.html` | Store homepage — hero slider, category grid, featured product rail, lookbook, banner, newsletter, footer |
 | `product.html` | Product detail page (PDP) — image gallery, size selector, stock alerts, accordion, add-to-cart |
 | `styles.css` | Complete design system stylesheet — CSS custom properties (tokens), all component styles, responsive breakpoints |
-| `app.js` | Shared JavaScript module — theme toggle, SofIA chat panel, hero slider, rail navigation, PDP logic, cart state, Claude API integration |
+| `app.js` | Shared JavaScript module — theme toggle, Vectra chat panel, hero slider, rail navigation, PDP logic, cart state, Claude API integration |
 | `image-slot.js` | Custom element `<image-slot>` — drag-and-drop image placeholder with persistence, reframe/crop mode, and WebP output |
 | `documentation.html` | Full design system documentation — tokens, components, patterns, behavior specs, and accessibility notes |
 | `vite.config.js` | Vite configuration for local development server |

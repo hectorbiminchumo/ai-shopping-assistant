@@ -1,5 +1,5 @@
 /* ============================================================
-   FORMA — shared behaviour
+   VECTRA — shared behaviour
    ============================================================ */
 (function(){
   "use strict";
@@ -17,7 +17,7 @@
     {id:"vapor-cap",   name:"Vapor Run Cap",    line:"Equipment",price:30,  cat:"Equipment"},
     {id:"core-pack",   name:"Core 12L Vest Pack", line:"Equipment", price:120, cat:"Equipment"}
   ];
-  window.FORMA_CATALOG = CATALOG;
+  window.VECTRA_CATALOG = CATALOG;
 
   /* shared badge map */
   const BADGES = {
@@ -32,7 +32,7 @@
     "vapor-cap":   [{cls:"badge--new",  dot:true,  label:"New"}],
     "core-pack":   [{cls:"badge--low",  dot:true,  label:"Low stock"}]
   };
-  window.FORMA_BADGES = BADGES;
+  window.VECTRA_BADGES = BADGES;
 
   const $  = (s,r=document)=>r.querySelector(s);
   const $$ = (s,r=document)=>[...r.querySelectorAll(s)];
@@ -40,7 +40,7 @@
   /* ============================================================
      THEME (dark mode) — shared across pages
      ============================================================ */
-  const THEME_KEY = "forma-theme";
+  const THEME_KEY = "vectra-theme";
   function applyTheme(t){
     document.documentElement.classList.toggle("dark", t==="dark");
   }
@@ -71,7 +71,7 @@
     if(!panel) return;
     const openers = $$("[data-search-open]");
     const closer  = $("#searchClose");
-    const sofiaBtn = $("#sofiaBtn");
+    const vectraBtn = $("#vectraBtn");
     const chat     = $("#chatInner");
     const ta       = $("#chatInput");
     const sendBtn  = $("#chatSend");
@@ -84,17 +84,17 @@
       scrim.classList.add("open");
       panel.classList.add("open");
       document.body.style.overflow="hidden";
-      if(sofiaBtn) sofiaBtn.classList.add("hidden");
+      if(vectraBtn) vectraBtn.classList.add("hidden");
       setTimeout(()=>ta && ta.focus(), 420);
     }
     function close(){
       scrim.classList.remove("open");
       panel.classList.remove("open");
       document.body.style.overflow="";
-      if(sofiaBtn) sofiaBtn.classList.remove("hidden");
+      if(vectraBtn) vectraBtn.classList.remove("hidden");
     }
     openers.forEach(b=>b.addEventListener("click",open));
-    if(sofiaBtn) sofiaBtn.addEventListener("click",open);
+    if(vectraBtn) vectraBtn.addEventListener("click",open);
     closer && closer.addEventListener("click",close);
     scrim && scrim.addEventListener("click",close);
     document.addEventListener("keydown",e=>{ if(e.key==="Escape") close(); });
@@ -162,7 +162,7 @@
     function bubble(role){
       const m=document.createElement("div");
       m.className="msg msg--"+(role==="user"?"user":"bot");
-      m.innerHTML=`<div class="msg__avatar">${role==="user"?"YOU":"F"}</div><div class="msg__body"></div>`;
+      m.innerHTML=`<div class="msg__avatar">${role==="user"?"YOU":"V"}</div><div class="msg__body"></div>`;
       chat.appendChild(m);
       chat.parentElement.scrollTop=chat.parentElement.scrollHeight;
       return m.querySelector(".msg__body");
@@ -176,7 +176,7 @@
           <div class="chat-card__img">
             <image-slot id="chat-${p.id}" placeholder="${p.name}"></image-slot>
             ${pb?`<div class="chat-card__badges">${pb}</div>`:""}
-            <button class="pcard__atc" aria-label="Add ${p.name} to cart" onclick="event.preventDefault();event.stopPropagation();window.FORMA_addToCart('${p.id}',this)">
+            <button class="pcard__atc" aria-label="Add ${p.name} to cart" onclick="event.preventDefault();event.stopPropagation();window.VECTRA_addToCart('${p.id}',this)">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 7h13l-1.2 9.5a2 2 0 01-2 1.7H9.2a2 2 0 01-2-1.7L6 4H3"/><circle cx="9" cy="21" r="1"/><circle cx="17" cy="21" r="1"/></svg>
             </button>
           </div>
@@ -254,9 +254,9 @@
   }
 
   async function askClaude(query,hadImage){
-    const list = window.FORMA_CATALOG.map(p=>`${p.id} | ${p.name} | ${p.cat} | €${p.price}`).join("\n");
+    const list = window.VECTRA_CATALOG.map(p=>`${p.id} | ${p.name} | ${p.cat} | €${p.price}`).join("\n");
     const prompt =
-`You are the shopping assistant for FORMA, a minimalist athletic store. Help the shopper find products from this catalog ONLY:
+`You are the shopping assistant for VECTRA, a minimalist athletic store. Help the shopper find products from this catalog ONLY:
 
 ${list}
 
@@ -270,9 +270,9 @@ Pick 1 to 4 ids from the catalog that best match. If nothing matches, pick the c
     const raw = await window.claude.complete(prompt);
     const m = raw.match(/\{[\s\S]*\}/);
     const obj = JSON.parse(m?m[0]:raw);
-    const valid = new Set(window.FORMA_CATALOG.map(p=>p.id));
+    const valid = new Set(window.VECTRA_CATALOG.map(p=>p.id));
     obj.ids = (obj.ids||[]).filter(id=>valid.has(id));
-    if(!obj.ids.length) obj.ids = window.FORMA_CATALOG.slice(0,3).map(p=>p.id);
+    if(!obj.ids.length) obj.ids = window.VECTRA_CATALOG.slice(0,3).map(p=>p.id);
     obj.text = obj.text || "These options match what you're looking for:";
     return obj;
   }
@@ -379,8 +379,8 @@ Pick 1 to 4 ids from the catalog that best match. If nothing matches, pick the c
     }
     styleEl.textContent = `.cart-dot::after{content:"${cart.length}"}`;
   }
-  window.FORMA_addToCart = addToCart;
-  window.FORMA_cart = cart;
+  window.VECTRA_addToCart = addToCart;
+  window.VECTRA_cart = cart;
 
   /* ============================================================
      PRODUCT GALLERY CAROUSEL
@@ -423,7 +423,29 @@ Pick 1 to 4 ids from the catalog that best match. If nothing matches, pick the c
     window.addEventListener("resize",onResize);
   }
 
+  /* ============================================================
+     HEADER INLINE SEARCH (opens an input next to the icon)
+     ============================================================ */
+  function initHeadSearch(){
+    const box   = $("#headSearch");
+    const btn   = $("#headSearchBtn");
+    const input = $("#headSearchInput");
+    if(!box || !btn || !input) return;
+
+    function open(){ box.classList.add("open"); input.focus(); }
+    function close(){ box.classList.remove("open"); input.blur(); }
+
+    btn.addEventListener("click",e=>{
+      e.stopPropagation();
+      box.classList.contains("open") ? close() : open();
+    });
+    document.addEventListener("click",e=>{
+      if(box.classList.contains("open") && !box.contains(e.target)) close();
+    });
+    input.addEventListener("keydown",e=>{ if(e.key==="Escape") close(); });
+  }
+
   document.addEventListener("DOMContentLoaded",()=>{
-    initTheme(); initSearch(); initHero(); initRails(); initPDP(); initGallery();
+    initTheme(); initSearch(); initHeadSearch(); initHero(); initRails(); initPDP(); initGallery();
   });
 })();

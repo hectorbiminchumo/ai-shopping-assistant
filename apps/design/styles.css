@@ -1,5 +1,5 @@
 /* ============================================================
-   FORMA — clean athletic store
+   VECTRA — clean athletic store
    Light + Dark themes, neutral grotesque type, monochrome.
    ============================================================ */
 
@@ -156,9 +156,9 @@ input,textarea{font-family:inherit;}input{border-radius:16px;}
 .iconbtn svg{width:21px;height:21px;display:block;}
 
 /* ============================================================
-   SOFIA FLOATING BUTTON
+   VECTRA FLOATING BUTTON
    ============================================================ */
-.sofia-btn{
+.vectra-btn{
   position:fixed;right:28px;bottom:28px;z-index:55;
   display:inline-flex;align-items:center;gap:10px;
   height:52px;padding:0 24px;border-radius:999px;
@@ -168,10 +168,10 @@ input,textarea{font-family:inherit;}input{border-radius:16px;}
   box-shadow:var(--shadow-lg);border:none;cursor:pointer;
   transition:transform .25s var(--ease),opacity .3s var(--ease),background .25s var(--ease);
 }
-.sofia-btn:hover{background:var(--btn-pri-bg-h);}
-.sofia-btn:active{transform:translateY(1px);}
-.sofia-btn svg{width:20px;height:20px;flex:none;}
-.sofia-btn.hidden{opacity:0;pointer-events:none;transform:translateY(20px);}
+.vectra-btn:hover{background:var(--btn-pri-bg-h);}
+.vectra-btn:active{transform:translateY(1px);}
+.vectra-btn svg{width:20px;height:20px;flex:none;}
+.vectra-btn.hidden{opacity:0;pointer-events:none;transform:translateY(20px);}
 
 /* ============================================================
     HEADER (sticky)
@@ -196,6 +196,7 @@ input,textarea{font-family:inherit;}input{border-radius:16px;}
   background:var(--text);color:var(--bg);
   display:grid;place-items:center;font-size:16px;font-weight:800;letter-spacing:0;
 }
+.brand__mark svg{width:18px;height:18px;display:block;}
 .mainnav{display:flex;align-items:center;gap:30px;}
 .mainnav a{
   font-size:14px;font-weight:500;color:var(--text-muted);
@@ -208,6 +209,16 @@ input,textarea{font-family:inherit;}input{border-radius:16px;}
 }
 .mainnav a:hover::after{right:0;}
 .head-actions{display:flex;align-items:center;gap:6px;margin-left:auto;}
+.head-search{display:flex;align-items:center;}
+.head-search__input{
+  width:0;padding:0;border:0;opacity:0;pointer-events:none;
+  height:42px;border-radius:16px;background:var(--surface-2);color:var(--text);
+  font:inherit;font-size:14px;outline:none;
+  transition:width .25s var(--ease),padding .25s var(--ease),opacity .2s var(--ease);
+}
+.head-search.open .head-search__input{
+  width:200px;padding:0 14px;opacity:1;pointer-events:auto;margin-right:4px;
+}
 .cart-dot{
   position:relative;
 }
