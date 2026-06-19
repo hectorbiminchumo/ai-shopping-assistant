@@ -1,16 +1,34 @@
+import { getVoyageClient, aiConfig } from "../config"
 import { EmbeddingError } from "../errors"
 import type { IEmbeddingService } from "../interfaces"
 
-// Wraps Voyage AI text embeddings. Implements IEmbeddingService so the rest
-// of the pipeline never depends on the concrete provider (Open/Closed +
-// Dependency Inversion) — swapping providers means a new class, not edits here.
 export class EmbeddingService implements IEmbeddingService {
-  async embedText(_text: string): Promise<number[]> {
-    // TODO: call Voyage AI (voyage-3, 1024 dims) once the client is configured in config/ai.config.ts
-    throw new EmbeddingError("Voyage AI client not configured yet")
+  async embedText(text: string): Promise<number[]> {
+    try {
+      const client = getVoyageClient()
+      const response = await client.embed({ input: [text], model: aiConfig.voyageModel })
+      const embedding = response.data?.[0]?.embedding
+      if (!embedding) throw new EmbeddingError("Empty embedding response from Voyage AI")
+      return embedding
+    } catch (err) {
+      if (err instanceof EmbeddingError) throw err
+      throw new EmbeddingError("Failed to generate embedding", err)
+    }
   }
 
   async embedBatch(texts: string[]): Promise<number[][]> {
-    return Promise.all(texts.map((text) => this.embedText(text)))
+    try {
+      const client = getVoyageClient()
+      const response = await client.embed({ input: texts, model: aiConfig.voyageModel })
+      const data = response.data
+      if (!data) throw new EmbeddingError("Empty batch response from Voyage AI")
+      return data.map((d) => {
+        if (!d.embedding) throw new EmbeddingError("Missing embedding in batch response")
+        return d.embedding
+      })
+    } catch (err) {
+      if (err instanceof EmbeddingError) throw err
+      throw new EmbeddingError("Failed to generate batch embeddings", err)
+    }
   }
 }
