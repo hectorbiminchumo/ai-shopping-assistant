@@ -1,41 +1,49 @@
 import { Metadata } from "next"
 
-import FeaturedProducts from "@modules/home/components/featured-products"
 import Hero from "@modules/home/components/hero"
+import CategoryGrid from "@modules/home/components/category-grid"
+import ProductRail from "@modules/home/components/featured-products/product-rail"
+import Lookbook from "@modules/home/components/lookbook"
+import Banner from "@modules/home/components/banner"
+import Newsletter from "@modules/home/components/newsletter"
 import { listCollections } from "@lib/data/collections"
 import { getRegion } from "@lib/data/regions"
 
 export const metadata: Metadata = {
-  title: "Medusa Next.js Starter Template",
+  title: "VECTRA — Essential Sportswear",
   description:
-    "A performant frontend ecommerce starter template with Next.js 15 and Medusa.",
+    "Essential sportswear. Clean design, honest materials. Shop running shoes, training apparel, outdoor gear and accessories.",
 }
 
 export default async function Home(props: {
   params: Promise<{ countryCode: string }>
 }) {
-  const params = await props.params
+  const { countryCode } = await props.params
 
-  const { countryCode } = params
+  const [region, { collections }] = await Promise.all([
+    getRegion(countryCode),
+    listCollections({ fields: "id, handle, title" }),
+  ])
 
-  const region = await getRegion(countryCode)
-
-  const { collections } = await listCollections({
-    fields: "id, handle, title",
-  })
-
-  if (!collections || !region) {
-    return null
-  }
+  if (!region) return null
 
   return (
     <>
       <Hero />
-      <div className="py-12">
-        <ul className="flex flex-col gap-x-6">
-          <FeaturedProducts collections={collections} region={region} />
-        </ul>
-      </div>
+      <CategoryGrid />
+
+      {/* Featured rails — one per collection, fallback if none */}
+      {collections?.length > 0 ? (
+        collections.map((collection) => (
+          <ProductRail key={collection.id} collection={collection} region={region} />
+        ))
+      ) : (
+        <ProductRail region={region} />
+      )}
+
+      <Lookbook regionId={region.id} />
+      <Banner />
+      <Newsletter />
     </>
   )
 }

@@ -33,7 +33,7 @@ Built as part of **Startup Experience 3.0** — MVP to be demoed to investors an
 ## Repository Structure (Monorepo)
 
 ```
-repo-root/
+apps/                               → workspace packages (Turborepo + npm workspaces over apps/**)
 ├── backend/                        → Medusa.js backend + API routes
 │   ├── src/
 │   │   ├── api/                    → custom routes (chat, image search, dashboard)
@@ -42,12 +42,9 @@ repo-root/
 │   ├── tests/                      → Jest integration tests
 │   └── package.json
 │
-├── storefront/                     → Next.js Medusa storefront
-│   ├── src/
-│   │   ├── components/             → Chat UI, product cards, image upload, dashboard
-│   │   └── app/                    → Next.js App Router pages
-│   ├── tests/                      → Jest unit tests
-│   └── package.json
+├── storefront/                     → Next.js 15.5 + React 19 Medusa storefront
+│   └── src/                        → modules/, app/[countryCode]/(main|checkout), lib/, styles/
+│                                     (conventions documented in apps/storefront/CLAUDE.md)
 │
 ├── chatbot-core/                   → AI engine (RAG pipeline, search, analytics)
 │   ├── src/
@@ -136,11 +133,14 @@ repo-root/
 │   ├── tsconfig.json
 │   └── package.json
 │
-└── package.json                    → workspace root (npm workspaces)
+└── design/                         → VECTRA reference design — static HTML/CSS/JS via Vite.
+                                      Visual source of truth the storefront is matched against.
 ```
 
-Each subfolder deploys independently on Vercel — one project per folder, same repo.
+Repo root holds `turbo.json` and the workspace `package.json`; all packages live under `apps/`.
+Each app deploys independently on Vercel — one project per folder, same repo.
 `chatbot-core` is consumed by `backend` as a local workspace package — not deployed separately.
+`design/` is a static reference mockup — not deployed.
 
 ### SOLID Principles Applied in chatbot-core
 
@@ -155,8 +155,8 @@ Each subfolder deploys independently on Vercel — one project per folder, same 
 ## Tech Stack
 
 ### Frontend
-- **Next.js** (App Router) — Medusa Storefront starter
-- **React + TypeScript**
+- **Next.js 15.5** (App Router, Turbopack, dev on port 8000) — Medusa Storefront starter
+- **React 19 + TypeScript**
 - **Medusa.js** — headless e-commerce storefront (catalog, cart, checkout)
 - **Jest** — unit testing
 

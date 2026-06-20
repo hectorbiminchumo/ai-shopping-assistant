@@ -19,10 +19,14 @@ const nextConfig = {
     },
   },
   eslint: {
+    // ESLint is left disabled during builds on purpose: `next lint` currently
+    // crashes in this project (ajv "defaultMeta" error) and is deprecated in
+    // Next 16. Re-enable once the ESLint config is migrated to the ESLint CLI.
     ignoreDuringBuilds: true,
   },
   typescript: {
-    ignoreBuildErrors: true,
+    // Type errors now fail the build — the project type-checks clean (tsc --noEmit).
+    ignoreBuildErrors: false,
   },
   images: {
     unoptimized: true,
@@ -38,6 +42,10 @@ const nextConfig = {
       {
         protocol: "https",
         hostname: "*.s3.amazonaws.com",
+      },
+      {
+        protocol: "https",
+        hostname: "placehold.co",
       },
       ...(S3_HOSTNAME && S3_PATHNAME
         ? [

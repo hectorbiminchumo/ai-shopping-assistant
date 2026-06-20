@@ -82,10 +82,16 @@ store/
    - **Storefront** (`apps/storefront`): create `.env.local` with at least:
 
      ```bash
-     NEXT_PUBLIC_API_URL=http://localhost:9000
+     NEXT_PUBLIC_MEDUSA_BACKEND_URL=http://localhost:9000
+     NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY=<your-publishable-key>
+     NEXT_PUBLIC_DEFAULT_REGION=dk
      NEXT_PUBLIC_SUPABASE_URL=<your-supabase-url>
      NEXT_PUBLIC_SUPABASE_ANON_KEY=<your-supabase-anon-key>
      ```
+
+     The publishable key must exist in the Medusa backend database. Get it from the Medusa Admin
+     (`http://localhost:9000/app` → Settings → API Key Management). If you reset the database,
+     you need a new key — the old one will no longer be valid.
 
    - **AI Engine** (`apps/chatbot-core`): copy the example and fill in your API keys.
 
@@ -136,6 +142,34 @@ Run from the repository root:
 | `npm run design:dev`      | Start only the design system                 |
 | `cd apps/chatbot-core && npm test`  | Run chatbot-core unit + integration tests |
 | `cd apps/chatbot-core && npm run build` | Compile chatbot-core to `dist/`       |
+
+## Troubleshooting
+
+### Storefront throws `Backend returned 400` on startup
+
+The storefront middleware fetches `/store/regions` on every request. Medusa returns 400 when the
+publishable key in `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY` does not exist in the backend database.
+
+**Steps to fix:**
+
+1. Make sure the Medusa backend is running: `npm run backend:dev`
+2. Open the Medusa Admin at `http://localhost:9000/app` and log in
+3. Go to **Settings → API Key Management**
+4. Copy an existing publishable key, or create a new one if none exist
+5. Set that value as `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY` in `apps/storefront/.env.local`
+6. Restart the storefront dev server (Next.js does not reload env files automatically)
+
+To verify the key works before restarting the storefront:
+
+```bash
+curl http://localhost:9000/store/regions \
+  -H "x-publishable-api-key: <your-key>"
+```
+
+A valid key returns `200` with a list of regions. A 400 response means the key is wrong or missing.
+
+> This issue commonly occurs after resetting or re-seeding the backend database, because the
+> database-level key is wiped while `.env.local` still holds the old value.
 
 ## Team
 
