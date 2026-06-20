@@ -53,3 +53,4 @@ public/robots.txt
 
 # Testing
 coverage/
+jest-coverage/
