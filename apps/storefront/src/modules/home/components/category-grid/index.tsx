@@ -4,13 +4,7 @@ import LocalizedClientLink from "@modules/common/components/localized-client-lin
 import RailSection from "@modules/common/components/rail-section"
 import Image from "next/image"
 
-const FALLBACK: { name: string; handle: string }[] = [
-  { name: "Running", handle: "running" },
-  { name: "Training", handle: "training" },
-  { name: "Outdoor", handle: "outdoor" },
-  { name: "Lifestyle", handle: "lifestyle" },
-  { name: "Equipment", handle: "equipment" },
-]
+const TARGET = 5
 
 const TILE_COLORS = [
   { bg: "1a1a17", fg: "f4f3f0" },
@@ -20,18 +14,27 @@ const TILE_COLORS = [
   { bg: "1a1a0a", fg: "f4f3f0" },
 ]
 
-function CategoryCard({
-  name,
-  handle,
-  count,
-  index,
-}: {
-  name: string
-  handle: string
-  count: number
-  index: number
-}) {
-  const { bg, fg } = TILE_COLORS[index % TILE_COLORS.length]
+const STATIC_FALLBACK = [
+  { name: "Running",   handle: "running"   },
+  { name: "Training",  handle: "training"  },
+  { name: "Outdoor",   handle: "outdoor"   },
+  { name: "Lifestyle", handle: "lifestyle" },
+  { name: "Equipment", handle: "equipment" },
+]
+
+type Item = { name: string; handle: string; count: number }
+
+function fill(source: Item[], target: number): Item[] {
+  if (!source.length) return []
+  const result: Item[] = []
+  while (result.length < target) {
+    result.push(...source.slice(0, target - result.length))
+  }
+  return result
+}
+
+function CategoryCard({ name, handle, count, colorIndex }: Item & { colorIndex: number }) {
+  const { bg, fg } = TILE_COLORS[colorIndex % TILE_COLORS.length]
   const src = `https://placehold.co/400x400/${bg}/${fg}?text=${encodeURIComponent(name)}`
 
   return (
@@ -41,10 +44,7 @@ function CategoryCard({
     >
       <div
         className="w-full aspect-square rounded-[18px] overflow-hidden relative transition-transform duration-300 group-hover:-translate-y-1"
-        style={{
-          boxShadow:
-            "0 1px 2px rgba(16,16,16,.04), 0 8px 30px rgba(16,16,16,.06)",
-        }}
+        style={{ boxShadow: "0 1px 2px rgba(16,16,16,.04), 0 8px 30px rgba(16,16,16,.06)" }}
       >
         <Image
           src={src}
@@ -55,24 +55,13 @@ function CategoryCard({
         />
         <div
           className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
-          style={{
-            background:
-              "linear-gradient(to bottom, transparent 40%, rgba(0,0,0,.25) 100%)",
-          }}
+          style={{ background: "linear-gradient(to bottom, transparent 40%, rgba(0,0,0,.25) 100%)" }}
           aria-hidden="true"
         />
       </div>
-      <span
-        className="text-[15px] font-semibold"
-        style={{ color: "var(--text)" }}
-      >
-        {name}
-      </span>
+      <span className="text-[15px] font-semibold" style={{ color: "var(--text)" }}>{name}</span>
       {count > 0 && (
-        <span
-          className="font-mono text-[11px] tracking-[.04em] -mt-2.5"
-          style={{ color: "var(--text-muted)" }}
-        >
+        <span className="font-mono text-[11px] tracking-[.04em] -mt-2.5" style={{ color: "var(--text-muted)" }}>
           {count} products
         </span>
       )}
@@ -81,46 +70,28 @@ function CategoryCard({
 }
 
 export default async function CategoryGrid() {
-  let categories: HttpTypes.StoreProductCategory[] = []
+  let fetched: HttpTypes.StoreProductCategory[] = []
 
   try {
-    const result = await listCategories({ limit: 10 })
-    categories = (result ?? []).filter((c) => !c.parent_category).slice(0, 5)
-  } catch {
-    /* fallback below */
-  }
+    const result = await listCategories({ limit: 20 })
+    fetched = (result ?? []).filter((c) => !c.parent_category)
+  } catch { /* fallback */ }
 
-  const items =
-    categories.length > 0
-      ? categories.map((c) => ({
-          name: c.name,
-          handle: c.handle,
-          count: c.products?.length ?? 0,
-        }))
-      : FALLBACK.map((c) => ({ ...c, count: 0 }))
+  const base: Item[] = fetched.length
+    ? fetched.map((c) => ({ name: c.name, handle: c.handle, count: c.products?.length ?? 0 }))
+    : STATIC_FALLBACK.map((c) => ({ ...c, count: 0 }))
+
+  const items = fill(base, TARGET)
 
   return (
-    <RailSection
-      eyebrow="Explore"
-      title="Categories"
-      background="var(--surface)"
-    >
+    <RailSection eyebrow="Explore" title="Categories" background="var(--surface)">
       {items.map((item, i) => (
         <li
-          key={item.handle}
+          key={`${item.handle}-${i}`}
           className="shrink-0"
-          style={{
-            flex: "0 0 calc((100% - 88px) / 5)",
-            scrollSnapAlign: "start",
-            minWidth: 140,
-          }}
+          style={{ flex: "0 0 calc((100% - 88px) / 5)", scrollSnapAlign: "start", minWidth: 140 }}
         >
-          <CategoryCard
-            name={item.name}
-            handle={item.handle}
-            count={item.count}
-            index={i}
-          />
+          <CategoryCard {...item} colorIndex={i} />
         </li>
       ))}
     </RailSection>

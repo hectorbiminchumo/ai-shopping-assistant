@@ -2,7 +2,7 @@ import { Metadata } from "next"
 
 import Hero from "@modules/home/components/hero"
 import CategoryGrid from "@modules/home/components/category-grid"
-import FeaturedProducts from "@modules/home/components/featured-products"
+import ProductRail from "@modules/home/components/featured-products/product-rail"
 import Lookbook from "@modules/home/components/lookbook"
 import Banner from "@modules/home/components/banner"
 import Newsletter from "@modules/home/components/newsletter"
@@ -53,27 +53,23 @@ export default async function Home(props: {
           )
         : "",
     thumbnail: p.thumbnail ?? null,
-    category:
-      p.collection?.title ??
-      p.categories?.[0]?.name ??
-      "",
+    category: p.collection?.title ?? p.categories?.[0]?.name ?? "",
   }))
 
   return (
     <>
       <Hero />
       <CategoryGrid />
-      {collections?.length > 0 && (
-        <div>
-          {collections.map((collection) => (
-            <FeaturedProducts
-              key={collection.id}
-              collections={[collection]}
-              region={region}
-            />
-          ))}
-        </div>
+
+      {/* Featured rails — one per collection, fallback if none */}
+      {collections?.length > 0 ? (
+        collections.map((collection) => (
+          <ProductRail key={collection.id} collection={collection} region={region} />
+        ))
+      ) : (
+        <ProductRail region={region} />
       )}
+
       <Lookbook regionId={region.id} />
       <Banner />
       <Newsletter />
