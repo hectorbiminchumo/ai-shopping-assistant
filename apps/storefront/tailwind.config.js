@@ -19,6 +19,14 @@ module.exports = {
         visibility: "visibility",
         padding: "padding-top padding-right padding-bottom padding-left",
       },
+      transitionTimingFunction: {
+        // VECTRA's custom ease — snappy with a slight overshoot feel
+        vectra: "cubic-bezier(.22,.61,.36,1)",
+      },
+      boxShadow: {
+        v:    "var(--shadow)",
+        "v-lg": "var(--shadow-lg)",
+      },
       colors: {
         grey: {
           0: "#FFFFFF",
@@ -33,14 +41,42 @@ module.exports = {
           80: "#1F2937",
           90: "#111827",
         },
+        // VECTRA design tokens — reference apps/design/styles.css
+        v: {
+          bg:           "var(--bg)",
+          surface:      "var(--surface)",
+          "surface-2":  "var(--surface-2)",
+          card:         "var(--card)",
+          text:         "var(--text)",
+          muted:        "var(--text-muted)",
+          line:         "var(--line)",
+          "line-strong":"var(--line-strong)",
+          accent:       "var(--accent)",
+          "accent-bg":  "var(--accent-bg)",
+          "accent-line":"var(--accent-line)",
+          "btn-pri":    "var(--btn-pri-bg)",
+          "btn-sec":    "var(--btn-sec-bg)",
+          success:      "var(--clr-success)",
+          "success-bg": "var(--clr-success-bg)",
+          warning:      "var(--clr-warning)",
+          "warning-bg": "var(--clr-warning-bg)",
+          danger:       "var(--clr-danger)",
+          "danger-bg":  "var(--clr-danger-bg)",
+          info:         "var(--clr-info)",
+          "info-bg":    "var(--clr-info-bg)",
+        },
       },
       borderRadius: {
-        none: "0px",
-        soft: "2px",
-        base: "4px",
-        rounded: "8px",
-        large: "16px",
+        none:   "0px",
+        soft:   "2px",
+        base:   "4px",
+        rounded:"8px",
+        large:  "16px",
         circle: "9999px",
+        // VECTRA
+        tile:   "18px",  // category tiles
+        card:   "14px",  // product image cards
+        btn:    "16px",  // buttons and inputs
       },
       maxWidth: {
         "8xl": "100rem",
@@ -58,15 +94,22 @@ module.exports = {
         "3xl": "2rem",
       },
       fontFamily: {
+        // VECTRA: system grotesque — no font loading needed
         sans: [
-          "Inter",
-          "-apple-system",
-          "BlinkMacSystemFont",
-          "Segoe UI",
-          "Roboto",
           "Helvetica Neue",
-          "Ubuntu",
+          "Helvetica",
+          "Arial",
+          "Segoe UI",
           "sans-serif",
+        ],
+        // Used for eyebrows, labels, badges, price data
+        mono: [
+          "ui-monospace",
+          "SF Mono",
+          "JetBrains Mono",
+          "Menlo",
+          "Consolas",
+          "monospace",
         ],
       },
       keyframes: {

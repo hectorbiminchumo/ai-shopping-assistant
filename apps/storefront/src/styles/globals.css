@@ -2,6 +2,133 @@
 @import "tailwindcss/components";
 @import "tailwindcss/utilities";
 
+/* ============================================================
+   VECTRA — design tokens
+   Monochrome base · teal accent · system grotesque type
+   Matches apps/design/styles.css exactly.
+   ============================================================ */
+
+:root {
+  /* Surfaces */
+  --bg:          #ffffff;
+  --surface:     #f6f6f4;
+  --surface-2:   #eeedea;
+  --card:        #ffffff;
+
+  /* Text */
+  --text:        #101010;
+  --text-muted:  #6a6a67;
+
+  /* Lines */
+  --line:        #e6e5e2;
+  --line-strong: #d6d5d1;
+
+  /* Buttons */
+  --btn-pri-bg:   #101010; --btn-pri-fg:   #ffffff; --btn-pri-bg-h: #2c2c2c;
+  --btn-sec-bg:   #eeedea; --btn-sec-fg:   #101010; --btn-sec-bg-h: #e2e1dd;
+
+  /* Shadows */
+  --shadow:    0 1px 2px rgba(16,16,16,.04), 0 8px 30px rgba(16,16,16,.06);
+  --shadow-lg: 0 20px 60px rgba(16,16,16,.16);
+  --overlay:   rgba(16,16,16,.45);
+
+  /* Accent — teal */
+  --accent:      #0d9488;
+  --accent-bg:   #f0fdfa;
+  --accent-line: #99f6e4;
+
+  /* Status — success */
+  --clr-success:      #1a7a4a;
+  --clr-success-bg:   #f0fdf4;
+  --clr-success-line: #bbf7d0;
+
+  /* Status — warning */
+  --clr-warning:      #9a5200;
+  --clr-warning-bg:   #fff8ed;
+  --clr-warning-line: #fed7aa;
+
+  /* Status — danger */
+  --clr-danger:      #c0182c;
+  --clr-danger-bg:   #fff1f2;
+  --clr-danger-line: #fecdd3;
+
+  /* Status — info */
+  --clr-info:      #1d52b0;
+  --clr-info-bg:   #eff6ff;
+  --clr-info-line: #bfdbfe;
+
+  /* Layout */
+  --maxw:        1280px;
+  --pad:         40px;
+  --radius-tile: 18px;
+
+  /* Type */
+  --font: "Helvetica Neue", Helvetica, Arial, "Segoe UI", sans-serif;
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+
+  /* Motion */
+  --ease: cubic-bezier(.22,.61,.36,1);
+}
+
+html.dark {
+  --bg:        #0e0e0d;
+  --surface:   #161614;
+  --surface-2: #1e1e1b;
+  --card:      #161614;
+
+  --text:       #f4f3f0;
+  --text-muted: #a2a19c;
+
+  --line:        #2a2a26;
+  --line-strong: #373732;
+
+  --btn-pri-bg:   #f4f3f0; --btn-pri-fg:   #101010; --btn-pri-bg-h: #e3e2dd;
+  --btn-sec-bg:   #262623; --btn-sec-fg:   #f4f3f0; --btn-sec-bg-h: #302f2b;
+
+  --shadow:    0 1px 2px rgba(0,0,0,.4), 0 8px 30px rgba(0,0,0,.4);
+  --shadow-lg: 0 20px 60px rgba(0,0,0,.6);
+  --overlay:   rgba(0,0,0,.6);
+
+  --accent:      #2dd4bf;
+  --accent-bg:   #042f2e;
+  --accent-line: #115e59;
+
+  --clr-success:      #4ade80;
+  --clr-success-bg:   #052e16;
+  --clr-success-line: #166534;
+
+  --clr-warning:      #f59e0b;
+  --clr-warning-bg:   #1c1000;
+  --clr-warning-line: #78350f;
+
+  --clr-danger:      #f87171;
+  --clr-danger-bg:   #1f0306;
+  --clr-danger-line: #7f1d1d;
+
+  --clr-info:      #60a5fa;
+  --clr-info-bg:   #0a1e3d;
+  --clr-info-line: #1e3a6e;
+}
+
+/* Base reset matching VECTRA */
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 16px;
+  line-height: 1.5;
+  letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased;
+  transition: background .4s var(--ease), color .4s var(--ease);
+}
+img { display: block; max-width: 100%; }
+a { color: inherit; text-decoration: none; }
+button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+input, textarea { font-family: inherit; }
+
 @layer utilities {
   /* Chrome, Safari and Opera */
   .no-scrollbar::-webkit-scrollbar {
