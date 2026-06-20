@@ -133,6 +133,278 @@ html.dark {
   30% { opacity: 1; }
 }
 
+/* ============================================================
+   PDP — Product Detail Page
+   Matches apps/design/product.html exactly
+   ============================================================ */
+
+/* Layout */
+.pdp { padding: 40px 0 100px; }
+.pdp .breadcrumbs {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin-bottom: 32px;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.pdp .breadcrumbs a { color: var(--text-muted); transition: color .15s; }
+.pdp .breadcrumbs a:hover { color: var(--text); }
+.pdp .breadcrumbs span { color: var(--text); }
+.pdp__grid {
+  display: grid;
+  grid-template-columns: 1fr 440px;
+  gap: 60px;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .pdp__grid { grid-template-columns: 1fr; gap: 32px; }
+}
+
+/* Gallery */
+.pdp-gallery { position: sticky; top: 88px; }
+.pdp-gallery__track {
+  display: flex;
+  overflow: hidden;
+  border-radius: 16px;
+  position: relative;
+}
+.pdp-gallery__slide {
+  flex: 0 0 100%;
+  aspect-ratio: 4/5;
+  position: relative;
+  background: var(--surface);
+  border-radius: 16px;
+  overflow: hidden;
+  transition: transform .5s var(--ease);
+}
+.pdp-gallery__arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  opacity: .85;
+  transition: opacity .15s, background .15s;
+  z-index: 2;
+  color: var(--text);
+}
+.pdp-gallery__arrow:hover { opacity: 1; background: var(--surface-2); }
+.pdp-gallery__arrow svg { width: 18px; height: 18px; pointer-events: none; }
+.pdp-gallery__arrow--prev { left: 12px; }
+.pdp-gallery__arrow--next { right: 12px; }
+.pdp-gallery__dots {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  margin-top: 14px;
+}
+.pdp-gallery__dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--line-strong);
+  border: none; cursor: pointer;
+  padding: 0;
+  transition: background .2s, transform .2s;
+}
+.pdp-gallery__dot.active { background: var(--text); transform: scale(1.4); }
+
+/* Side panel */
+.pdp__brand-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.pdp__title {
+  font-size: clamp(32px, 3.4vw, 46px);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.02;
+  margin: 0 0 16px;
+  color: var(--text);
+}
+.pdp__desc {
+  font-size: 15px;
+  color: var(--text-muted);
+  line-height: 1.65;
+  margin-bottom: 28px;
+}
+.pdp__label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: var(--text);
+}
+.pdp__label a { font-weight: 400; color: var(--text-muted); text-decoration: underline; font-size: 12px; }
+
+/* Sizes */
+.sizes { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+.size {
+  min-width: 52px;
+  height: 44px;
+  padding: 0 16px;
+  border-radius: 12px;
+  border: 1px solid var(--line-strong);
+  background: none;
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color .15s var(--ease), background .15s var(--ease), color .15s;
+}
+.size:hover:not(:disabled) { border-color: var(--text); }
+.size.sel { background: var(--text); color: var(--bg); border-color: var(--text); }
+.size.oos { opacity: .35; text-decoration: line-through; cursor: not-allowed; }
+
+/* Price */
+.pdp__price { margin-bottom: 20px; }
+.pdp__price-value {
+  font-size: clamp(26px, 3vw, 32px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+.pdp__price-meta {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-muted);
+  margin-left: 6px;
+}
+.pdp__price-sale { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.pdp__price-original {
+  font-size: 18px;
+  color: var(--text-muted);
+  text-decoration: line-through;
+  font-weight: 500;
+}
+
+/* PDP CTA button */
+.pdp__cta {
+  width: 100%;
+  height: 56px;
+  border-radius: 16px;
+  background: var(--btn-pri-bg);
+  color: var(--btn-pri-fg);
+  font-size: 15px;
+  font-weight: 600;
+  font-family: var(--font);
+  border: none;
+  cursor: pointer;
+  transition: background .2s var(--ease);
+  margin-bottom: 4px;
+}
+.pdp__cta:hover:not(:disabled) { background: var(--btn-pri-bg-h); }
+.pdp__cta:disabled { opacity: .45; cursor: not-allowed; }
+
+/* Meta */
+.pdp__meta {
+  display: flex;
+  gap: 20px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin: 18px 0 28px;
+  flex-wrap: wrap;
+}
+.pdp__meta span { display: flex; align-items: center; gap: 6px; }
+.pdp__meta svg { flex-shrink: 0; }
+
+/* Accordion */
+.acc { border-top: 1px solid var(--line); }
+.acc__item { border-bottom: 1px solid var(--line); }
+.acc__head {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 0;
+  font-size: 14px;
+  font-weight: 600;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text);
+  font-family: var(--font);
+  text-align: left;
+  transition: color .15s;
+}
+.acc__head:hover { color: var(--text-muted); }
+.acc__icon {
+  width: 20px; height: 20px;
+  position: relative;
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+.acc__icon::before,
+.acc__icon::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  background: currentColor;
+  border-radius: 1px;
+}
+.acc__icon::before { width: 12px; height: 1.5px; transform: translate(-50%,-50%); }
+.acc__icon::after  { width: 1.5px; height: 12px; transform: translate(-50%,-50%); transition: transform .3s var(--ease), opacity .25s; }
+.acc__item.open .acc__icon::after { transform: translate(-50%,-50%) rotate(90deg); opacity: 0; }
+.acc__body { overflow: hidden; max-height: 0; transition: max-height .35s var(--ease); }
+.acc__item.open .acc__body { max-height: 500px; }
+.acc__body-in { padding-bottom: 20px; font-size: 14px; color: var(--text-muted); line-height: 1.65; }
+
+/* Alert */
+.alert {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px 16px;
+  border-radius: 12px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  margin-bottom: 20px;
+}
+.alert--warning { background: var(--clr-warning-bg); color: var(--clr-warning); border: 1px solid var(--clr-warning-line); }
+.alert--danger  { background: var(--clr-danger-bg);  color: var(--clr-danger);  border: 1px solid var(--clr-danger-line); }
+.alert--success { background: var(--clr-success-bg); color: var(--clr-success); border: 1px solid var(--clr-success-line); }
+.alert__icon { width: 18px; height: 18px; flex-shrink: 0; margin-top: 1px; }
+.alert__title { font-weight: 600; }
+.alert__body { font-size: 13px; margin-top: 2px; opacity: .85; }
+
+/* Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.badge__dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.badge--new  { background: var(--accent-bg);        color: var(--accent);      border: 1px solid var(--accent-line); }
+.badge--sale { background: var(--clr-danger-bg);    color: var(--clr-danger);  border: 1px solid var(--clr-danger-line); }
+.badge--low  { background: var(--clr-warning-bg);   color: var(--clr-warning); border: 1px solid var(--clr-warning-line); }
+.badge--oos  { background: var(--surface-2);        color: var(--text-muted);  border: 1px solid var(--line); }
+.badge--ok   { background: var(--clr-success-bg);   color: var(--clr-success); border: 1px solid var(--clr-success-line); }
+.badge--info { background: var(--clr-info-bg);      color: var(--clr-info);    border: 1px solid var(--clr-info-line); }
+
 /* Base reset matching VECTRA */
 *, *::before, *::after { box-sizing: border-box; }
 html { scroll-behavior: smooth; }

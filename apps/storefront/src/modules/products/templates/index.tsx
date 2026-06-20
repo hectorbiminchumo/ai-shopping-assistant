@@ -1,15 +1,12 @@
 import React, { Suspense } from "react"
-
-import ImageGallery from "@modules/products/components/image-gallery"
-import ProductActions from "@modules/products/components/product-actions"
-import ProductOnboardingCta from "@modules/products/components/product-onboarding-cta"
-import ProductTabs from "@modules/products/components/product-tabs"
-import RelatedProducts from "@modules/products/components/related-products"
-import ProductInfo from "@modules/products/templates/product-info"
-import SkeletonRelatedProducts from "@modules/skeletons/templates/skeleton-related-products"
 import { notFound } from "next/navigation"
 import { HttpTypes } from "@medusajs/types"
 
+import PDPGallery from "@modules/products/components/pdp-gallery"
+import ProductActions from "@modules/products/components/product-actions"
+import RelatedProducts from "@modules/products/components/related-products"
+import SkeletonRelatedProducts from "@modules/skeletons/templates/skeleton-related-products"
+import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import ProductActionsWrapper from "./product-actions-wrapper"
 
 type ProductTemplateProps = {
@@ -19,46 +16,61 @@ type ProductTemplateProps = {
   images: HttpTypes.StoreProductImage[]
 }
 
-const ProductTemplate: React.FC<ProductTemplateProps> = ({
+export default function ProductTemplate({
   product,
   region,
   countryCode,
   images,
-}) => {
-  if (!product || !product.id) {
-    return notFound()
-  }
+}: ProductTemplateProps) {
+  if (!product?.id) return notFound()
+
+  const category =
+    product.collection?.title ?? product.categories?.[0]?.name ?? null
 
   return (
     <>
-      <div
-        className="content-container  flex flex-col small:flex-row small:items-start py-6 relative"
+      <main
+        className="pdp"
+        style={{ maxWidth: "var(--maxw)", margin: "0 auto", padding: "40px var(--pad) 100px" }}
         data-testid="product-container"
       >
-        <div className="flex flex-col small:sticky small:top-48 small:py-0 small:max-w-[300px] w-full py-8 gap-y-6">
-          <ProductInfo product={product} />
-          <ProductTabs product={product} />
-        </div>
-        <div className="block w-full relative">
-          <ImageGallery images={images} />
-        </div>
-        <div className="flex flex-col small:sticky small:top-48 small:py-0 small:max-w-[300px] w-full py-8 gap-y-12">
-          <ProductOnboardingCta />
+        {/* Breadcrumbs */}
+        <nav className="breadcrumbs" aria-label="Breadcrumb">
+          <LocalizedClientLink href="/">Home</LocalizedClientLink>
+          <span style={{ color: "var(--line-strong)" }}>/</span>
+          {category ? (
+            <>
+              <LocalizedClientLink href="/store">{category}</LocalizedClientLink>
+              <span style={{ color: "var(--line-strong)" }}>/</span>
+            </>
+          ) : (
+            <>
+              <LocalizedClientLink href="/store">Store</LocalizedClientLink>
+              <span style={{ color: "var(--line-strong)" }}>/</span>
+            </>
+          )}
+          <span>{product.title}</span>
+        </nav>
+
+        {/* 2-column grid */}
+        <div className="pdp__grid">
+          {/* Gallery — sticky left */}
+          <PDPGallery images={images} title={product.title} />
+
+          {/* Side panel — right */}
           <Suspense
             fallback={
-              <ProductActions
-                disabled={true}
-                product={product}
-                region={region}
-              />
+              <ProductActions disabled product={product} region={region} />
             }
           >
             <ProductActionsWrapper id={product.id} region={region} />
           </Suspense>
         </div>
-      </div>
+      </main>
+
+      {/* Related products */}
       <div
-        className="content-container my-16 small:my-32"
+        style={{ maxWidth: "var(--maxw)", margin: "0 auto", padding: "0 var(--pad) 80px" }}
         data-testid="related-products-container"
       >
         <Suspense fallback={<SkeletonRelatedProducts />}>
@@ -68,5 +80,3 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
     </>
   )
 }
-
-export default ProductTemplate
