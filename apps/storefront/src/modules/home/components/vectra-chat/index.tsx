@@ -154,8 +154,13 @@ export default function VectraChat({ products }: { products: ChatProduct[] }) {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape" && open) setOpen(false)
     }
+    const onOpen = () => setOpen(true)
     document.addEventListener("keydown", onKey)
-    return () => document.removeEventListener("keydown", onKey)
+    document.addEventListener("vectra:open", onOpen)
+    return () => {
+      document.removeEventListener("keydown", onKey)
+      document.removeEventListener("vectra:open", onOpen)
+    }
   }, [open])
 
   const autosize = () => {

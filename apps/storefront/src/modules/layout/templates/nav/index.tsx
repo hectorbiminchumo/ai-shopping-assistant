@@ -3,6 +3,8 @@ import { listRegions } from "@lib/data/regions"
 import { StoreRegion } from "@medusajs/types"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import CartButton from "@modules/layout/components/cart-button"
+import HeaderSearch from "@modules/layout/components/header-search"
+import HeadNotch from "@modules/layout/components/head-notch"
 
 const NAV_LINKS = [
   { label: "New Arrivals", href: "/store" },
@@ -23,6 +25,7 @@ export default async function Nav() {
         WebkitBackdropFilter: "saturate(1.1) blur(14px)",
         borderColor: "var(--line)",
         transition: "background .4s var(--ease)",
+        position: "sticky",
       }}
     >
       <div
@@ -33,6 +36,7 @@ export default async function Nav() {
         <LocalizedClientLink
           href="/"
           className="flex items-center gap-2.5 font-bold text-xl tracking-[.06em] shrink-0"
+          style={{ color: "var(--text)" }}
           aria-label="VECTRA – go to homepage"
         >
           <span
@@ -76,7 +80,10 @@ export default async function Nav() {
         </nav>
 
         {/* Actions */}
-        <div className="flex items-center gap-1.5 ml-auto">
+        <div className="flex items-center gap-1 ml-auto">
+          {/* Inline search */}
+          <HeaderSearch />
+
           {/* Account — desktop */}
           <LocalizedClientLink
             href="/account"
@@ -126,6 +133,9 @@ export default async function Nav() {
           </Suspense>
         </div>
       </div>
+
+      {/* Pull-down notch — opens chat assistant */}
+      <HeadNotch />
     </header>
   )
 }
