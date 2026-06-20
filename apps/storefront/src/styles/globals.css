@@ -135,15 +135,15 @@ html.dark {
 
 /* ============================================================
    PDP — Product Detail Page
-   Matches apps/design/product.html exactly
+   Matches apps/design/product.html + styles.css exactly
    ============================================================ */
 
 /* Layout */
-.pdp { padding: 40px 0 100px; }
+.pdp { padding-block: 36px 90px; }
 .pdp .breadcrumbs {
   font-size: 12.5px;
   color: var(--text-muted);
-  margin-bottom: 32px;
+  margin-bottom: 28px;
   display: flex;
   gap: 6px;
   align-items: center;
@@ -151,67 +151,110 @@ html.dark {
 .pdp .breadcrumbs a { color: var(--text-muted); transition: color .15s; }
 .pdp .breadcrumbs a:hover { color: var(--text); }
 .pdp .breadcrumbs span { color: var(--text); }
+
+/* Desktop 2-col grid */
 .pdp__grid {
   display: grid;
-  grid-template-columns: 1fr 440px;
+  grid-template-columns: 1fr 0.82fr;
   gap: 60px;
   align-items: start;
 }
-@media (max-width: 900px) {
-  .pdp__grid { grid-template-columns: 1fr; gap: 32px; }
-}
 
-/* Gallery */
-.pdp-gallery { position: sticky; top: 88px; }
+/* Gallery — left column, spans all rows */
+.pdp-gallery {
+  grid-column: 1;
+  grid-row: 1 / span 20;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
 .pdp-gallery__track {
   display: flex;
-  overflow: hidden;
-  border-radius: 16px;
-  position: relative;
+  flex-direction: column;
+  gap: 16px;
 }
 .pdp-gallery__slide {
-  flex: 0 0 100%;
+  width: 100%;
   aspect-ratio: 4/5;
-  position: relative;
-  background: var(--surface);
   border-radius: 16px;
   overflow: hidden;
-  transition: transform .5s var(--ease);
+  position: relative;
+  background: var(--surface);
 }
-.pdp-gallery__arrow {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 40px; height: 40px;
-  border-radius: 50%;
-  background: var(--bg);
-  border: 1px solid var(--line);
-  display: grid;
-  place-items: center;
-  cursor: pointer;
-  opacity: .85;
-  transition: opacity .15s, background .15s;
-  z-index: 2;
-  color: var(--text);
-}
-.pdp-gallery__arrow:hover { opacity: 1; background: var(--surface-2); }
-.pdp-gallery__arrow svg { width: 18px; height: 18px; pointer-events: none; }
-.pdp-gallery__arrow--prev { left: 12px; }
-.pdp-gallery__arrow--next { right: 12px; }
-.pdp-gallery__dots {
+/* Arrows: never shown (CSS handles navigation on mobile only) */
+.pdp-gallery__arrow { display: none; }
+/* Dots: hidden on desktop */
+.pdp-gallery__dots { display: none; }
+.pdp-gallery__dot { display: none; }
+
+/* Side panel — sticky right column */
+.pdp__side {
+  grid-column: 2;
+  position: sticky;
+  top: 96px;
   display: flex;
-  gap: 6px;
-  justify-content: center;
-  margin-top: 14px;
+  flex-direction: column;
 }
-.pdp-gallery__dot {
-  width: 6px; height: 6px; border-radius: 50%;
-  background: var(--line-strong);
-  border: none; cursor: pointer;
-  padding: 0;
-  transition: background .2s, transform .2s;
+
+/* ── Mobile PDP ────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Single flex column */
+  .pdp__grid { display: flex; flex-direction: column; gap: 0; }
+
+  /* Side panel disappears as box — children become direct flex items */
+  .pdp__side { display: contents; position: static; }
+  .pdp__side > * { order: 3; }
+
+  /* Brand row + title float above gallery */
+  .pdp__brand-row { order: 0 !important; margin-bottom: 4px; }
+  .pdp__title     { order: 1 !important; font-size: 28px; }
+
+  /* Gallery between title and rest of content */
+  .pdp-gallery { order: 2; width: 100%; margin: 8px 0 0; gap: 8px; }
+
+  /* Mobile carousel: single slide visible via opacity */
+  .pdp-gallery__track {
+    display: block;
+    position: relative;
+    overflow: hidden;
+    border-radius: 14px;
+    aspect-ratio: 3/4;
+    gap: 0;
+  }
+  .pdp-gallery__slide {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    aspect-ratio: auto;
+    border-radius: 0;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity .5s var(--ease);
+  }
+  .pdp-gallery__slide.active { opacity: 1; visibility: visible; }
+
+  /* Pill dots — shown only on mobile */
+  .pdp-gallery__dots {
+    display: flex;
+    gap: 9px;
+    justify-content: center;
+    align-items: center;
+    margin-top: 8px;
+  }
+  .pdp-gallery__dot {
+    display: block;
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    background: var(--line-strong);
+    border: none; cursor: pointer; padding: 0;
+    transition: all .3s var(--ease);
+  }
+  .pdp-gallery__dot.active { background: var(--text); width: 26px; border-radius: 999px; }
+
+  /* Description pushes below gallery */
+  .pdp__desc { order: 3; margin-top: 20px; }
 }
-.pdp-gallery__dot.active { background: var(--text); transform: scale(1.4); }
 
 /* Side panel */
 .pdp__brand-row {

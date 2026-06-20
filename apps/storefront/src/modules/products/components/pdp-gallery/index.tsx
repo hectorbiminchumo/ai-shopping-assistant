@@ -5,7 +5,7 @@ import Image from "next/image"
 import { useState } from "react"
 
 const PLACEHOLDER = (i: number) =>
-  `https://placehold.co/800x1000/f6f6f4/6a6a67?text=Image+${i + 1}`
+  `https://placehold.co/800x1000/f6f6f4/b0b0ab?text=Image+${i + 1}`
 
 export default function PDPGallery({
   images,
@@ -18,20 +18,16 @@ export default function PDPGallery({
 
   const slides = images.length
     ? images
-    : [{ id: "ph", url: PLACEHOLDER(0) }]
-
-  const prev = () => setCurrent((c) => (c - 1 + slides.length) % slides.length)
-  const next = () => setCurrent((c) => (c + 1) % slides.length)
+    : Array.from({ length: 4 }, (_, i) => ({ id: `ph-${i}`, url: PLACEHOLDER(i) }))
 
   return (
     <div className="pdp-gallery">
+      {/* Track: vertical stack on desktop, single-slide fade on mobile (CSS-driven) */}
       <div className="pdp-gallery__track">
         {slides.map((img, i) => (
           <div
             key={img.id ?? i}
-            className="pdp-gallery__slide"
-            style={{ transform: `translateX(${(i - current) * 100}%)`, position: "absolute", inset: 0, transition: "transform .5s cubic-bezier(.22,.61,.36,1)" }}
-            aria-hidden={i !== current}
+            className={`pdp-gallery__slide${i === current ? " active" : ""}`}
           >
             <Image
               src={img.url ?? PLACEHOLDER(i)}
@@ -39,26 +35,13 @@ export default function PDPGallery({
               fill
               priority={i === 0}
               className="object-cover"
-              sizes="(max-width: 900px) 100vw, 55vw"
+              sizes="(max-width: 768px) 100vw, 55vw"
             />
           </div>
         ))}
-
-        {/* Wrapper keeps the aspect ratio */}
-        <div className="pdp-gallery__slide" style={{ position: "relative", visibility: "hidden" }} aria-hidden="true" />
-
-        {slides.length > 1 && (
-          <>
-            <button className="pdp-gallery__arrow pdp-gallery__arrow--prev" onClick={prev} aria-label="Previous image">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M15 6l-6 6 6 6"/></svg>
-            </button>
-            <button className="pdp-gallery__arrow pdp-gallery__arrow--next" onClick={next} aria-label="Next image">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M9 6l6 6-6 6"/></svg>
-            </button>
-          </>
-        )}
       </div>
 
+      {/* Dots: hidden on desktop via CSS, pill-style on mobile */}
       {slides.length > 1 && (
         <div className="pdp-gallery__dots" role="tablist" aria-label="Image navigation">
           {slides.map((_, i) => (
