@@ -57,21 +57,19 @@ export default async function ProductRail({
 }) {
   let products: HttpTypes.StoreProduct[] = []
 
-  if (collection) {
-    try {
-      const res = await listProducts({
-        regionId: region.id,
-        queryParams: {
-          collection_id: collection.id,
-          fields: "*variants.calculated_price",
-          limit: 20,
-        },
-      })
-      products = res.response.products ?? []
-    } catch { /* fallback */ }
-  }
+  try {
+    const res = await listProducts({
+      regionId: region.id,
+      queryParams: {
+        ...(collection ? { collection_id: collection.id } : {}),
+        fields: "*variants.calculated_price",
+        limit: 20,
+      },
+    })
+    products = res.response.products ?? []
+  } catch { /* fallback */ }
 
-  // Pad real products to TARGET
+  // Pad real products to TARGET (cycles through them if fewer than 8)
   const filledProducts = fill(products, TARGET)
 
   const title = collection?.title ?? "Featured"
