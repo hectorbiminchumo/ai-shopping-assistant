@@ -4,7 +4,6 @@ import { StoreRegion } from "@medusajs/types"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import CartButton from "@modules/layout/components/cart-button"
 import HeaderSearch from "@modules/layout/components/header-search"
-import HeadNotch from "@modules/layout/components/head-notch"
 
 const NAV_LINKS = [
   { label: "New Arrivals", href: "/store" },
@@ -134,8 +133,8 @@ export default async function Nav() {
         </div>
       </div>
 
-      {/* Pull-down notch — opens chat assistant */}
-      <HeadNotch />
+      {/* Pull-down notch — opens chat assistant (hidden until implemented) */}
+      {/* <HeadNotch /> */}
     </header>
   )
 }

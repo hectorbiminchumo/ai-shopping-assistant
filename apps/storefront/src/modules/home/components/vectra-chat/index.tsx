@@ -52,7 +52,7 @@ function TypingDots() {
   )
 }
 
-function ProductCard({ p }: { p: ChatProduct }) {
+function ChatProductCard({ p }: { p: ChatProduct }) {
   const img =
     p.thumbnail ??
     `https://placehold.co/200x200/f6f6f4/6a6a67?text=${encodeURIComponent(p.title)}`
@@ -60,14 +60,13 @@ function ProductCard({ p }: { p: ChatProduct }) {
   return (
     <a
       href={`/products/${p.handle}`}
-      className="block"
+      className="vectra-card block"
       style={{
         flex: "0 0 calc((100% - 28px) / 3)",
         minWidth: 140,
         borderRadius: 14,
         overflow: "hidden",
-        background: "var(--surface)",
-        transition: "transform .2s",
+        transition: "transform .2s cubic-bezier(.22,.61,.36,1)",
         textDecoration: "none",
       }}
       onMouseEnter={(e) =>
@@ -77,47 +76,107 @@ function ProductCard({ p }: { p: ChatProduct }) {
         ((e.currentTarget as HTMLElement).style.transform = "translateY(0)")
       }
     >
-      <div style={{ aspectRatio: "1", background: "var(--surface-2)", position: "relative" }}>
+      {/* Image */}
+      <div
+        style={{
+          aspectRatio: "1",
+          background: "var(--surface)",
+          position: "relative",
+          borderRadius: 14,
+          overflow: "hidden",
+        }}
+      >
         <img
           src={img}
           alt={p.title}
-          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
         />
+        {/* ATC — navigates to PDP since we don't have variantId in chat context */}
+        <button
+          className="atc-btn"
+          aria-label={`Add ${p.title} to cart`}
+          onClick={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            window.location.href = `/products/${p.handle}`
+          }}
+          style={{
+            position: "absolute",
+            right: 6,
+            bottom: 6,
+            width: 32,
+            height: 32,
+            borderRadius: 10,
+            background: "var(--text)",
+            color: "var(--bg)",
+            border: "none",
+            cursor: "pointer",
+            display: "grid",
+            placeItems: "center",
+            boxShadow: "0 4px 16px rgba(0,0,0,.16)",
+            transition:
+              "background .2s, opacity .25s cubic-bezier(.22,.61,.36,1), transform .25s cubic-bezier(.22,.61,.36,1)",
+            zIndex: 2,
+          }}
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            style={{ width: 15, height: 15, pointerEvents: "none" }}
+            aria-hidden="true"
+          >
+            <path d="M6 7h13l-1.2 9.5a2 2 0 01-2 1.7H9.2a2 2 0 01-2-1.7L6 4H3" />
+            <circle cx="9" cy="21" r="1" />
+            <circle cx="17" cy="21" r="1" />
+          </svg>
+        </button>
       </div>
+
+      {/* Info */}
       <div
         style={{
-          padding: "12px 10px",
+          paddingTop: 12,
           display: "flex",
           justifyContent: "space-between",
           alignItems: "baseline",
           gap: 8,
         }}
       >
-        <div>
+        <div style={{ minWidth: 0 }}>
           <div
             style={{
               fontSize: 13,
               fontWeight: 600,
               color: "var(--text)",
               lineHeight: 1.3,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
             }}
           >
             {p.title}
           </div>
-          <div style={{ fontSize: 11.5, color: "var(--text-muted)", marginTop: 2 }}>
-            {p.category}
+          {p.category && (
+            <div style={{ fontSize: 11.5, color: "var(--text-muted)", marginTop: 2 }}>
+              {p.category}
+            </div>
+          )}
+        </div>
+        {p.price && (
+          <div
+            style={{
+              fontSize: 14,
+              fontWeight: 600,
+              color: "var(--text)",
+              whiteSpace: "nowrap",
+              flexShrink: 0,
+            }}
+          >
+            {p.price}
           </div>
-        </div>
-        <div
-          style={{
-            fontSize: 13,
-            fontWeight: 600,
-            color: "var(--text)",
-            whiteSpace: "nowrap",
-          }}
-        >
-          {p.price}
-        </div>
+        )}
       </div>
     </a>
   )
@@ -456,7 +515,7 @@ export default function VectraChat({ products }: { products: ChatProduct[] }) {
                         }}
                       >
                         {msg.products.map((p) => (
-                          <ProductCard key={p.id} p={p} />
+                          <ChatProductCard key={p.id} p={p} />
                         ))}
                       </div>
                     )}

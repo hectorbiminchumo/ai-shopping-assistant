@@ -110,6 +110,23 @@ html.dark {
   --clr-info-line: #1e3a6e;
 }
 
+/* Product card — ATC button show/hide on hover */
+.vectra-card .atc-btn {
+  opacity: 0;
+  transform: translateY(8px);
+}
+.vectra-card:hover .atc-btn,
+.vectra-card:focus-within .atc-btn {
+  opacity: 1;
+  transform: translateY(0);
+}
+@media (hover: none) {
+  .vectra-card .atc-btn {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* Vectra chat animations */
 @keyframes vectra-blink {
   0%, 60%, 100% { opacity: .25; }
