@@ -182,8 +182,8 @@ Each subfolder deploys independently on Vercel — one project per folder, same 
 ## Architecture
 
 ### Core Architectural Decisions
-1. **Medusa/Postgres is the source of truth** for the product catalog — products, variants, orders, inventory
-2. **Supabase/pgvector is the search intelligence layer** — embeddings, vector search, chat logs. These are intentionally separated — swapping either system does not affect the other
+1. **Supabase is the single database** — Medusa's `DATABASE_URL` points to Supabase PostgreSQL. All data lives in one place: Medusa tables (products, variants, orders), pgvector tables (product_embeddings, chat_logs), and Auth (auth.users). One connection string, one free tier, one deployment to manage.
+2. **Supabase/pgvector is the search intelligence layer** — embeddings, vector search, chat logs live in dedicated tables alongside Medusa data. The search layer is logically separated from the commerce layer even though they share the same Postgres instance.
 3. **No LangChain** — RAG pipeline implemented from scratch in Node.js for full control, transparency, and senior-level signal
 4. **Supabase Auth** handles all authentication (email + Google OAuth) — no custom JWT implementation
 5. **Monorepo** — backend and storefront in same repo, deployed independently on Vercel
@@ -205,8 +205,8 @@ RAG Pipeline:
   5. LLM call        → OpenAI gpt-4o-mini generates response
   6. Response fmt    → JSON + structured product cards + similarity scores
         ↓
-Data Layer:
-  - Medusa Postgres   → products, variants, orders
+Data Layer (all on Supabase PostgreSQL):
+  - Medusa tables     → products, variants, orders (DATABASE_URL → Supabase)
   - Supabase Auth     → users, sessions (email + Google OAuth)
   - Supabase pgvector → product_embeddings, chat_logs
 ```
@@ -271,7 +271,7 @@ CREATE POLICY "Users see own logs" ON chat_logs
   FOR SELECT USING (auth.uid() = user_id);
 ```
 
-### Medusa — Product structure (built-in)
+### Medusa — Product structure (built-in, stored in Supabase Postgres)
 ```
 Product
 ├── title, description, category, tags, thumbnail
@@ -280,6 +280,8 @@ Product
     ├── sku, price, inventory
     └── options: { size, color }
 ```
+
+> `DATABASE_URL` in `apps/backend/.env` points to the Supabase PostgreSQL connection string (Settings → Database → URI). Medusa runs its migrations there on first start.
 
 ### Supabase Auth — User management
 - Email + password registration
@@ -402,7 +404,7 @@ Focus unit tests on `chatbot-core/pipeline/` — these are the most critical and
 ## Key Decisions Log
 
 1. **Monorepo** — backend and storefront in same repo (recommended by Medusa community), deployed independently on Vercel per subfolder
-2. **Medusa as catalog source of truth** — products, variants, orders live in Medusa/Postgres; Supabase is search-only
+2. **Supabase as single database** — `DATABASE_URL` points to Supabase PostgreSQL; Medusa tables, pgvector tables, and Auth all live in one Supabase project. Simpler than maintaining two separate Postgres instances for the MVP.
 3. **Supabase Auth** — email + Google OAuth out of the box; JWT validated via Supabase SDK; RLS on chat_logs
 4. **No LangChain** — RAG implemented from scratch in Node.js for full control and transparency
 5. **Voyage AI for text embeddings** — free tier, high quality, purpose-built for retrieval

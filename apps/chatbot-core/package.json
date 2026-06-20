@@ -10,7 +10,10 @@
     "test": "jest",
     "lint": "eslint ."
   },
-  "dependencies": {},
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.4",
+    "voyageai": "^0.0.4"
+  },
   "devDependencies": {
     "@types/jest": "^29.5.13",
     "@types/node": "^20.12.11",
