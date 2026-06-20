@@ -82,10 +82,32 @@ const CartDropdown = ({
       <Popover className="relative h-full">
         <PopoverButton className="h-full">
           <LocalizedClientLink
-            className="hover:text-ui-fg-base"
             href="/cart"
+            className="relative grid w-[42px] h-[42px] place-items-center rounded-[16px] transition-colors duration-200 hover:bg-[var(--surface-2)]"
+            style={{ color: "var(--text)" }}
+            aria-label={`Cart (${totalItems})`}
             data-testid="nav-cart-link"
-          >{`Cart (${totalItems})`}</LocalizedClientLink>
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.7"
+              className="w-[21px] h-[21px]"
+              aria-hidden="true"
+            >
+              <path d="M6 7h13l-1.2 9.5a2 2 0 01-2 1.7H9.2a2 2 0 01-2-1.7L6 4H3" />
+              <circle cx="9" cy="21" r="1" />
+              <circle cx="17" cy="21" r="1" />
+            </svg>
+            <span
+              className="absolute top-[2px] right-[2px] grid w-4 h-4 place-items-center rounded-full text-[10px] font-bold"
+              style={{ background: "var(--text)", color: "var(--bg)" }}
+              data-testid="nav-cart-count"
+            >
+              {totalItems}
+            </span>
+          </LocalizedClientLink>
         </PopoverButton>
         <Transition
           show={cartDropdownOpen}

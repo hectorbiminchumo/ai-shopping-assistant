@@ -1,6 +1,8 @@
 "use client"
 
 import { useRef, useState, useEffect, useCallback } from "react"
+import { useParams } from "next/navigation"
+import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
 export type ChatProduct = {
   id: string
@@ -53,12 +55,13 @@ function TypingDots() {
 }
 
 function ChatProductCard({ p }: { p: ChatProduct }) {
+  const { countryCode } = useParams()
   const img =
     p.thumbnail ??
     `https://placehold.co/200x200/f6f6f4/6a6a67?text=${encodeURIComponent(p.title)}`
 
   return (
-    <a
+    <LocalizedClientLink
       href={`/products/${p.handle}`}
       className="vectra-card block"
       style={{
@@ -69,10 +72,10 @@ function ChatProductCard({ p }: { p: ChatProduct }) {
         transition: "transform .2s cubic-bezier(.22,.61,.36,1)",
         textDecoration: "none",
       }}
-      onMouseEnter={(e) =>
+      onMouseEnter={(e: React.MouseEvent<HTMLElement>) =>
         ((e.currentTarget as HTMLElement).style.transform = "translateY(-2px)")
       }
-      onMouseLeave={(e) =>
+      onMouseLeave={(e: React.MouseEvent<HTMLElement>) =>
         ((e.currentTarget as HTMLElement).style.transform = "translateY(0)")
       }
     >
@@ -98,7 +101,7 @@ function ChatProductCard({ p }: { p: ChatProduct }) {
           onClick={(e) => {
             e.preventDefault()
             e.stopPropagation()
-            window.location.href = `/products/${p.handle}`
+            window.location.href = `/${countryCode}/products/${p.handle}`
           }}
           style={{
             position: "absolute",
@@ -178,7 +181,7 @@ function ChatProductCard({ p }: { p: ChatProduct }) {
           </div>
         )}
       </div>
-    </a>
+    </LocalizedClientLink>
   )
 }
 

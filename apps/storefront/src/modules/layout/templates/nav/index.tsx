@@ -132,9 +132,6 @@ export default async function Nav() {
           </Suspense>
         </div>
       </div>
-
-      {/* Pull-down notch — opens chat assistant (hidden until implemented) */}
-      {/* <HeadNotch /> */}
     </header>
   )
 }
