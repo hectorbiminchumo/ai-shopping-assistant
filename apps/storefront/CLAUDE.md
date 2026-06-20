@@ -1,74 +1,60 @@
-# AI Shopping Assistant — Frontend
+# Storefront — Project Context for Claude Code
 
-## Project overview
-Next.js frontend for an AI-powered shopping assistant. Provides a conversational search UI,
-image-based product search, and a business insights dashboard for a sportswear e-commerce platform.
+Next.js storefront for the AI Shopping Assistant, built on the **Medusa V2 Next.js starter** and reskinned as **VECTRA** (essential sportswear). This file documents how this app actually works so changes stay consistent.
 
-## Tech stack
-- **Framework:** Next.js 14 (App Router)
-- **Styling:** Tailwind CSS
-- **Language:** TypeScript (strict mode)
-- **Testing:** Jest
-- **CI:** GitHub Actions
+## Stack
 
-## Folder structure
+- **Next.js 15.5** (App Router, `--turbopack`) + **React 19** + **TypeScript** (`strict: true`)
+- **Medusa V2** JS SDK (`@medusajs/js-sdk`) — catalog, cart, checkout
+- **Tailwind CSS** + `@medusajs/ui-preset` + **design tokens as CSS variables** (`src/styles/globals.css`)
+- **Headless UI** (`@headlessui/react`) for menus/popovers, **Stripe** for payments
+- **Jest** (`next/jest`) + Testing Library for unit tests
+
+## Layout & conventions
+
 ```
-app/
-  (chat)/       # Conversational search page
-  (image)/      # Image-based search page
-  (dashboard)/  # Business insights dashboard page
-components/
-  chat/         # Chat input, message list, message bubble
-  products/     # Product card, product grid, filters
-  image/        # Image upload, drag & drop, results grid
-  dashboard/    # Charts, summary cards, tables
-  ui/           # Shared UI primitives (button, input, skeleton)
-lib/
-  api.ts        # Backend API client
-  utils.ts      # Shared utility functions
-hooks/          # Custom React hooks
+src/
+├── app/[countryCode]/        → App Router, locale-prefixed routes
+│   ├── (main)/               → storefront pages (Nav + Footer + Ask Vectra)
+│   └── (checkout)/           → checkout flow (its own minimal layout, no chat)
+├── modules/                  → feature folders: home, products, cart, checkout,
+│                               layout, account, order, collections, categories,
+│                               common, store, shipping, skeletons
+├── lib/                      → data fetching (lib/data/*) + utils (lib/util/*)
+├── styles/globals.css        → design tokens (CSS vars) + base styles
+├── types/  middleware.ts
 ```
 
-## Environment variables
-Copy `.env.example` to `.env.local` before running locally.
-Never commit `.env.local` or any real credentials.
-Required variables:
-- `NEXT_PUBLIC_API_URL` — backend base URL
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- **Path aliases:** `@modules/*` → `src/modules/*`, `@lib/*` → `src/lib/*`. Use them, not relative `../../..`.
+- **Dev server runs on port 8000** (`npm run dev`). Build: `npm run build`. Bundle analysis: `npm run analyze`.
+- **Route groups decide global UI.** Anything that must appear on every storefront page (but not checkout) goes in `(main)/layout.tsx`; `(checkout)` is a separate group with no Nav/Footer/chat.
 
-## Commands
-```bash
-npm run dev       # Start development server
-npm run build     # Build for production
-npm run test      # Run Jest unit tests
-npm run lint      # Run ESLint
-```
+## Hard rules (learned the hard way)
 
-## Code conventions
-- All files in TypeScript — no plain `.js` files
-- Use the App Router — no `pages/` directory
-- Keep components small and focused — one responsibility per component
-- No business logic inside components — delegate to custom hooks or `lib/`
-- Use Tailwind utility classes only — no custom CSS files
-- No external UI component libraries — build from primitives
+- **Prices: never divide `calculated_amount` by 100.** Medusa V2 amounts are already in major units. Format with `convertToLocale` (`@lib/util/money`) or `getProductPrice` (`@lib/util/get-product-price`) — never a hand-rolled `Intl.NumberFormat` with `/100`.
+- **Internal links must carry the `countryCode`.** Use `LocalizedClientLink` (or `useParams().countryCode`) for navigation. Never a bare `<a href="/products/...">` or `window.location.href = "/products/..."` — it drops the locale prefix and breaks the region middleware.
+- **TypeScript errors fail the build** (`next.config.js → typescript.ignoreBuildErrors: false`). Run `npx tsc --noEmit` before declaring work done; keep it at 0 errors.
+- **ESLint is disabled during builds on purpose.** `next lint` currently crashes here (ajv `defaultMeta` error) and is deprecated in Next 16. Don't flip `eslint.ignoreDuringBuilds` back on until the config is migrated to the ESLint CLI.
+- **Commit messages in English**, even when the conversation is in Spanish.
 
-## Testing conventions
-- Every component must have a corresponding unit test
-- Test files live next to the component: `ProductCard.tsx` → `ProductCard.test.tsx`
-- Use Jest + React Testing Library for component tests
-- Test user interactions, not implementation details
-- Run `npm run test` before opening a PR
+## Styling
 
-## Git workflow
-- Branch naming: `feature/`, `fix/`, `chore/` prefixes (e.g. `feature/chat-ui`)
-- Every change goes through a PR — no direct pushes to `main`
-- PRs require 2 approvals + passing CI before merge
-- Reference the GitHub Issue in the PR description (e.g. `closes #12`)
+- Design tokens live as CSS variables in `src/styles/globals.css` (`--text`, `--surface`, `--accent`, `--mono`, `--clr-danger`, …). Reference them via `var(--…)` so light/dark and brand changes stay centralized.
+- The VECTRA components currently mix Tailwind classes, `style={{}}` inline styles, and a few injected `<style>` blocks. Match the surrounding file's approach when editing; prefer CSS variables + Tailwind over new inline styles for anything reusable.
+- Header icons follow `apps/design/index.html` (the reference design). Keep SVG paths/stroke widths in sync with it.
 
-## When using Claude Code
-- Always specify which component or hook you are working on
-- When generating a new component, ask Claude to generate the unit test in the same response
-- For code reviews, ask Claude to check: prop types, accessibility, and test coverage
-- Keep Tailwind class lists readable — ask Claude to group by category (layout, spacing, color)
-- Do not ask Claude to generate environment variable values or real API keys
+## Ask Vectra (chat assistant)
+
+- `VectraChat` (`modules/home/components/vectra-chat/`) is the floating assistant. It is mounted globally via the **`AskVectra` server loader** in `(main)/layout.tsx`, so it shows on every page **except checkout**.
+- `AskVectra` fetches the catalog (`listProducts`) + region and passes a lightweight `ChatProduct[]` to the UI.
+- **It is currently a frontend mock** — `localMatch()` does client-side keyword matching with a simulated delay. Wiring it to the real RAG backend (`chatbot-core`) is a separate task; keep data logic isolated so the swap is contained.
+
+## Testing
+
+- Jest is configured via `next/jest` (`jest.config.js`), which resolves the `@modules`/`@lib` aliases and runs the SWC transform. Setup: `jest.setup.js` (jest-dom).
+- Tests live in `__tests__/` next to the code, named `*.test.ts(x)`. They are **excluded from `tsconfig.json`** so they don't affect the production type-check; Jest transpiles them itself.
+- Run with `npm test` (needs `npm install` first to pull the test devDeps). Existing tests cover `convertToLocale` (price formatting) and `ProductCard`.
+
+## Environment
+
+Required: `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY` (enforced by `check-env-variables.js`). Also used: `NEXT_PUBLIC_MEDUSA_BACKEND_URL`, `NEXT_PUBLIC_BASE_URL`, `NEXT_PUBLIC_DEFAULT_REGION`, `NEXT_PUBLIC_STRIPE_KEY`. Local config in `.env.local`.
