@@ -110,6 +110,12 @@ html.dark {
   --clr-info-line: #1e3a6e;
 }
 
+/* Vectra chat animations */
+@keyframes vectra-blink {
+  0%, 60%, 100% { opacity: .25; }
+  30% { opacity: 1; }
+}
+
 /* Base reset matching VECTRA */
 *, *::before, *::after { box-sizing: border-box; }
 html { scroll-behavior: smooth; }

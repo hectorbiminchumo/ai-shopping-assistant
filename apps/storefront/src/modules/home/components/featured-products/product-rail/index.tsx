@@ -1,8 +1,6 @@
 import { listProducts } from "@lib/data/products"
 import { HttpTypes } from "@medusajs/types"
-import { Text } from "@modules/common/components/ui"
-
-import InteractiveLink from "@modules/common/components/interactive-link"
+import RailSection from "@modules/common/components/rail-section"
 import ProductPreview from "@modules/products/components/product-preview"
 
 export default async function ProductRail({
@@ -13,7 +11,7 @@ export default async function ProductRail({
   region: HttpTypes.StoreRegion
 }) {
   const {
-    response: { products: pricedProducts },
+    response: { products },
   } = await listProducts({
     regionId: region.id,
     queryParams: {
@@ -22,26 +20,27 @@ export default async function ProductRail({
     },
   })
 
-  if (!pricedProducts) {
-    return null
-  }
+  if (!products?.length) return null
 
   return (
-    <div className="content-container py-12 small:py-24">
-      <div className="flex justify-between mb-8">
-        <Text className="txt-xlarge">{collection.title}</Text>
-        <InteractiveLink href={`/collections/${collection.handle}`}>
-          View all
-        </InteractiveLink>
-      </div>
-      <ul className="grid grid-cols-2 small:grid-cols-3 gap-x-6 gap-y-24 small:gap-y-36">
-        {pricedProducts &&
-          pricedProducts.map((product) => (
-            <li key={product.id}>
-              <ProductPreview product={product} region={region} isFeatured />
-            </li>
-          ))}
-      </ul>
-    </div>
+    <RailSection
+      eyebrow="Selection"
+      title={collection.title}
+      viewAllHref={`/collections/${collection.handle}`}
+    >
+      {products.map((product) => (
+        <li
+          key={product.id}
+          className="shrink-0"
+          style={{
+            flex: "0 0 calc((100% - 66px) / 4)",
+            scrollSnapAlign: "start",
+            minWidth: 200,
+          }}
+        >
+          <ProductPreview product={product} region={region} isFeatured />
+        </li>
+      ))}
+    </RailSection>
   )
 }
