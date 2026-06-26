@@ -16,7 +16,6 @@
 import { readFileSync } from "node:fs"
 import { extname } from "node:path"
 import { VoyageAIClient } from "voyageai"
-import { createClient } from "@supabase/supabase-js"
 
 // ── CLI args ─────────────────────────────────────────────────────────────────
 
@@ -32,9 +31,12 @@ if (!fileArg) {
 
 // ── Env validation ────────────────────────────────────────────────────────────
 
-const VOYAGE_API_KEY = process.env.VOYAGE_API_KEY
-const SUPABASE_URL = process.env.SUPABASE_URL
+const VOYAGE_API_KEY            = process.env.VOYAGE_API_KEY
+const SUPABASE_URL              = process.env.SUPABASE_URL
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
+const MEDUSA_BACKEND_URL        = (process.env.MEDUSA_BACKEND_URL ?? "http://localhost:9000").replace(/\/$/, "")
+const MEDUSA_ADMIN_EMAIL        = process.env.MEDUSA_ADMIN_EMAIL
+const MEDUSA_ADMIN_PASSWORD     = process.env.MEDUSA_ADMIN_PASSWORD
 
 const missing = [
   !VOYAGE_API_KEY && "VOYAGE_API_KEY",
@@ -50,7 +52,66 @@ if (missing.length) {
 // ── Clients ───────────────────────────────────────────────────────────────────
 
 const voyage = new VoyageAIClient({ apiKey: VOYAGE_API_KEY })
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+
+// Use PostgREST directly — avoids the WebSocket/Realtime init that
+// @supabase/supabase-js triggers on Node.js < 22.
+const REST_URL     = `${SUPABASE_URL.replace(/\/$/, "")}/rest/v1`
+const SUPABASE_HEADERS = {
+  "Content-Type":  "application/json",
+  "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+  "apikey":        SUPABASE_SERVICE_ROLE_KEY,
+  "Prefer":        "resolution=merge-duplicates",
+}
+
+// ── Medusa ID lookup ──────────────────────────────────────────────────────────
+
+let medusaToken = null
+const medusaIdCache = new Map() // title → medusa product id
+
+async function getMedusaToken() {
+  if (medusaToken) return medusaToken
+  if (!MEDUSA_ADMIN_EMAIL || !MEDUSA_ADMIN_PASSWORD) return null
+
+  const res  = await fetch(`${MEDUSA_BACKEND_URL}/auth/user/emailpass`, {
+    method:  "POST",
+    headers: { "Content-Type": "application/json" },
+    body:    JSON.stringify({ email: MEDUSA_ADMIN_EMAIL, password: MEDUSA_ADMIN_PASSWORD }),
+  })
+  const data = await res.json()
+  medusaToken = data.token ?? null
+  return medusaToken
+}
+
+async function fetchMedusaProductId(title) {
+  if (medusaIdCache.has(title)) return medusaIdCache.get(title)
+
+  const token = await getMedusaToken()
+  if (!token) return null
+
+  const res  = await fetch(
+    `${MEDUSA_BACKEND_URL}/admin/products?q=${encodeURIComponent(title)}&limit=5`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  )
+  const data = await res.json()
+  const product = data.products?.find((p) => p.title === title)
+  const id = product?.id ?? null
+  if (id) medusaIdCache.set(title, id)
+  return id
+}
+
+// ── Supabase upsert ───────────────────────────────────────────────────────────
+
+async function upsertEmbedding(row) {
+  const res = await fetch(`${REST_URL}/product_embeddings`, {
+    method:  "POST",
+    headers: SUPABASE_HEADERS,
+    body:    JSON.stringify(row),
+  })
+  if (!res.ok) {
+    const body = await res.text()
+    throw new Error(`Supabase upsert failed: ${res.status} — ${body}`)
+  }
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -150,12 +211,9 @@ function splitCsvLine(line) {
 
 function validateProduct(product, index) {
   const errors = []
-  if (!product.medusa_product_id) errors.push("medusa_product_id is required")
   if (!product.title) errors.push("title is required")
   if (!product.description) errors.push("description is required")
-  if (errors.length) {
-    throw new Error(`Product at index ${index}: ${errors.join(", ")}`)
-  }
+  if (errors.length) throw new Error(`Product at index ${index}: ${errors.join(", ")}`)
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
@@ -175,51 +233,76 @@ async function main() {
   // Validate all rows upfront before touching any API
   products.forEach(validateProduct)
 
-  const stats = { ok: 0, skipped: 0, failed: 0 }
+  const stats = { ok: 0, failed: 0 }
 
+  // ── Step 1: resolve Medusa IDs upfront ───────────────────────────────────────
+  if (!dryRun) {
+    process.stdout.write(`🔑  Resolving Medusa product IDs… `)
+    for (const p of products) {
+      if (!p.medusa_product_id) {
+        p.medusa_product_id = await fetchMedusaProductId(p.title) ?? undefined
+      }
+    }
+    const missing = products.filter((p) => !p.medusa_product_id).length
+    if (missing > 0) console.log(`⚠️  ${missing} products not found in Medusa (will be skipped)`)
+    else console.log(`✅`)
+  }
+
+  // ── Step 2: batch embed all products in one Voyage AI request ─────────────
+  console.log(`\n🧠  Generating embeddings (1 batch request to Voyage AI)… `)
+  const chunks = products.map(buildEmbeddingText)
+
+  let embeddings
+  if (dryRun) {
+    // fake embeddings for dry-run
+    embeddings = products.map(() => Array(1024).fill(0))
+  } else {
+    embeddings = await withRetry(
+      () => voyage.embed({ input: chunks, model: "voyage-3" }).then((r) => {
+        if (!r.data?.length) throw new Error("Empty batch response from Voyage AI")
+        return r.data.map((d) => {
+          if (!d.embedding) throw new Error("Missing embedding in batch response")
+          return d.embedding
+        })
+      }),
+      "batch embed"
+    )
+  }
+  console.log(`✅  ${embeddings.length} embeddings generated (dim=${embeddings[0].length})\n`)
+
+  // ── Step 3: upsert each product into Supabase ─────────────────────────────
   for (let i = 0; i < products.length; i++) {
-    const p = products[i]
-    const label = `[${i + 1}/${products.length}] ${p.title}`
+    const p         = products[i]
+    const embedding = embeddings[i]
+    const label     = `[${i + 1}/${products.length}] ${p.title}`
 
     process.stdout.write(`  ${label}… `)
 
+    if (dryRun) {
+      console.log(`✅  (dry-run)`)
+      stats.ok++
+      continue
+    }
+
+    if (!p.medusa_product_id) {
+      console.log(`⏭️  skipped (not found in Medusa)`)
+      stats.failed++
+      continue
+    }
+
     try {
-      // 1. Generate embedding
-      const chunk = buildEmbeddingText(p)
-      const embedding = await withRetry(
-        () => voyage.embed({ input: [chunk], model: "voyage-3" }).then((r) => {
-          const vec = r.data?.[0]?.embedding
-          if (!vec) throw new Error("Empty embedding response")
-          return vec
-        }),
-        label
-      )
-
-      if (dryRun) {
-        console.log(`✅  (dry-run) embedding dim=${embedding.length}`)
-        stats.ok++
-        continue
-      }
-
-      // 2. Upsert into Supabase
-      const { error } = await supabase.from("product_embeddings").upsert(
-        {
-          medusa_product_id: p.medusa_product_id,
-          title: p.title,
-          description: p.description,
-          category: p.category ?? null,
-          tags: p.tags ?? [],
-          price_min: p.price_min ?? null,
-          price_max: p.price_max ?? null,
-          thumbnail_url: p.thumbnail_url ?? null,
-          embedding,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "medusa_product_id" }
-      )
-
-      if (error) throw new Error(error.message)
-
+      await upsertEmbedding({
+        medusa_product_id: p.medusa_product_id,
+        title:             p.title,
+        description:       p.description,
+        category:          p.category ?? null,
+        tags:              p.tags ?? [],
+        price_min:         p.price_min ?? null,
+        price_max:         p.price_max ?? null,
+        thumbnail_url:     p.thumbnail_url ?? null,
+        embedding,
+        updated_at:        new Date().toISOString(),
+      })
       console.log(`✅  upserted`)
       stats.ok++
     } catch (err) {
@@ -232,10 +315,7 @@ async function main() {
   console.log("\n─────────────────────────────────────────")
   console.log(`  ✅  OK      : ${stats.ok}`)
   console.log(`  ❌  Failed  : ${stats.failed}`)
-  if (stats.failed > 0) {
-    console.log("\n  Fix the errors above and re-run — duplicates will be skipped via upsert.")
-    process.exit(1)
-  }
+  if (stats.failed > 0) process.exit(1)
   console.log("\n  Done. product_embeddings table is ready for semantic search.")
 }
 

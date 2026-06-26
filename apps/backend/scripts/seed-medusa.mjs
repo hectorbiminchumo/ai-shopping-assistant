@@ -216,10 +216,15 @@ function slugify(str) {
 
 // ── Duplicate check ───────────────────────────────────────────────────────────
 
-async function productExists(title, token) {
-  const handle = slugify(title)
-  const { data } = await request("GET", `/admin/products?handle=${handle}`, null, token)
-  return (data.products?.length ?? 0) > 0
+async function findProduct(title, token) {
+  const { data } = await request(
+    "GET",
+    `/admin/products?q=${encodeURIComponent(title)}&limit=5`,
+    null,
+    token
+  )
+  // exact title match — avoids false positives from partial search
+  return data.products?.find((p) => p.title === title) ?? null
 }
 
 // ── CSV parser ────────────────────────────────────────────────────────────────
@@ -349,25 +354,31 @@ async function main() {
         continue
       }
 
-      // Skip if already exists
-      const exists = await withRetry(() => productExists(p.title, token), label)
-      if (exists) {
-        console.log("⏭️  skipped (already exists)")
-        stats.skipped++
-        continue
+      const existing = await withRetry(() => findProduct(p.title, token), label)
+      const payload  = await toMedusaPayload(p, token)
+
+      if (existing) {
+        // Update thumbnail + images only — variants and options stay unchanged
+        const { ok, data } = await withRetry(
+          () => request("POST", `/admin/products/${existing.id}`, {
+            thumbnail: payload.thumbnail,
+            images: payload.images,
+          }, token),
+          label
+        )
+        if (!ok) throw new Error(data.message ?? JSON.stringify(data))
+        console.log(`🔄  updated images`)
+        stats.ok++
+      } else {
+        // Create new product
+        const { ok, data } = await withRetry(
+          () => request("POST", "/admin/products", payload, token),
+          label
+        )
+        if (!ok) throw new Error(data.message ?? JSON.stringify(data))
+        console.log(`✅  created (id: ${data.product.id})`)
+        stats.ok++
       }
-
-      // Build payload and create
-      const payload = await toMedusaPayload(p, token)
-      const { ok, data } = await withRetry(
-        () => request("POST", "/admin/products", payload, token),
-        label
-      )
-
-      if (!ok) throw new Error(data.message ?? JSON.stringify(data))
-
-      console.log(`✅  created (id: ${data.product.id})`)
-      stats.ok++
     } catch (err) {
       console.log(`❌  FAILED — ${err.message}`)
       stats.failed++
@@ -376,9 +387,8 @@ async function main() {
 
   // Summary
   console.log("\n─────────────────────────────────────────────────────────")
-  console.log(`  ✅  Created  : ${stats.ok}`)
-  console.log(`  ⏭️   Skipped  : ${stats.skipped}`)
-  console.log(`  ❌  Failed   : ${stats.failed}`)
+  console.log(`  ✅  Created/Updated : ${stats.ok}`)
+  console.log(`  ❌  Failed          : ${stats.failed}`)
 
   if (!dryRun && stats.ok > 0) {
     console.log(`
