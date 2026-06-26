@@ -1,4 +1,5 @@
 import { VoyageAIClient } from "voyageai"
+import OpenAI from "openai"
 
 export const aiConfig = {
   openaiApiKey: process.env.OPENAI_API_KEY || "",
@@ -7,14 +8,16 @@ export const aiConfig = {
   voyageModel: process.env.VOYAGE_MODEL || "voyage-3",
 }
 
-// TODO: instantiate the real OpenAI client once the `openai` SDK is added
-export function getOpenAiClient(): never {
-  throw new Error("OpenAI client not configured yet")
-}
-
 export function getVoyageClient(): VoyageAIClient {
   if (!aiConfig.voyageApiKey) {
     throw new Error("VOYAGE_API_KEY is not set")
   }
   return new VoyageAIClient({ apiKey: aiConfig.voyageApiKey })
+}
+
+export function getOpenAiClient(): OpenAI {
+  if (!aiConfig.openaiApiKey) {
+    throw new Error("OPENAI_API_KEY is not set")
+  }
+  return new OpenAI({ apiKey: aiConfig.openaiApiKey })
 }

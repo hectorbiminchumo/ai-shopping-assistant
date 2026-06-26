@@ -12,11 +12,12 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.4",
+    "openai": "^6.44.0",
     "voyageai": "^0.0.4"
   },
   "devDependencies": {
     "@types/jest": "^29.5.13",
-    "@types/node": "^20.12.11",
+    "@types/node": "^20.19.43",
     "eslint": "^9.15.0",
     "eslint-config-prettier": "^9.1.0",
     "jest": "^29.7.0",
