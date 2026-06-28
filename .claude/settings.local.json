@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(rm -rf /Users/agustinmebar/ai-shopping-assistant/node_modules/@hookform/resolvers)",
-      "Bash(npm install *)"
+      "Bash(npm install *)",
+      "Bash(curl -s --max-time 8 -w \"\\\\nHTTP_STATUS:%{http_code}\" \"http://127.0.0.1:9000/health\")",
+      "Bash(timeout 15 node_modules/.bin/medusa develop)"
     ]
   }
 }

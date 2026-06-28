@@ -18,6 +18,8 @@ type Message =
   | { role: "user"; text: string; images?: string[] }
   | { role: "typing" }
 
+const BACKEND_URL = process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL ?? "http://localhost:9000"
+
 const SUGGESTS = [
   { label: "Long-distance running", query: "Shoes for long-distance running" },
   { label: "Waterproof outdoor", query: "Something waterproof for the mountains" },
@@ -196,6 +198,10 @@ export default function VectraChat({ products }: { products: ChatProduct[] }) {
   const [input, setInput] = useState("")
   const [busy, setBusy] = useState(false)
   const [attachImages, setAttachImages] = useState<string[]>([])
+  const [sessionId] = useState(() => crypto.randomUUID())
+  const chatHistory = messages
+    .filter((m): m is { role: "user" | "bot"; text: string } => m.role === "user" || m.role === "bot")
+    .map((m) => ({ role: m.role === "bot" ? "assistant" : "user" as const, content: m.text }))
   const chatScrollRef = useRef<HTMLDivElement>(null)
   const taRef = useRef<HTMLTextAreaElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -262,17 +268,40 @@ export default function VectraChat({ products }: { products: ChatProduct[] }) {
     setBusy(true)
 
     try {
-      await new Promise((r) => setTimeout(r, 600))
+      const res = await fetch(`${BACKEND_URL}/store/chat`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-publishable-api-key": process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY ?? "",
+        },
+        body: JSON.stringify({ query: q, sessionId, history: chatHistory }),
+      })
+      const data = await res.json()
+
+      if (!res.ok || !data.message) throw new Error(data.error ?? "No response from backend")
+
+      // Match returned products to local catalog to get handle + price
+      const matchedProducts: ChatProduct[] = (data.products ?? [])
+        .map((p: { id: string }) => products.find((lp) => lp.id === p.id))
+        .filter(Boolean)
+
+      setMessages((prev) => [
+        ...prev.filter((m) => m.role !== "typing"),
+        { role: "bot", text: data.message, products: matchedProducts },
+      ])
+    } catch {
+      // Fallback to local keyword match if backend is unreachable
       const picks = localMatch(q, products)
-      const botMsg: Message = {
-        role: "bot",
-        text:
-          picks.length
-            ? `I found ${picks.length} product${picks.length > 1 ? "s" : ""} that match your search:`
-            : "I couldn't find an exact match, but here are some items you might like:",
-        products: picks.length ? picks : products.slice(0, 3),
-      }
-      setMessages((prev) => [...prev.filter((m) => m.role !== "typing"), botMsg])
+      setMessages((prev) => [
+        ...prev.filter((m) => m.role !== "typing"),
+        {
+          role: "bot",
+          text: picks.length
+            ? `Encontré ${picks.length} producto${picks.length > 1 ? "s" : ""} que podrían interesarte:`
+            : "No encontré una coincidencia exacta, pero aquí hay algunas opciones:",
+          products: picks.length ? picks : products.slice(0, 3),
+        },
+      ])
     } finally {
       setBusy(false)
     }

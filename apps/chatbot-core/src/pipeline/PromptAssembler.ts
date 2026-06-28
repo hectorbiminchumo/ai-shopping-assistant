@@ -13,8 +13,6 @@ export class PromptAssembler {
     )
 
     return [
-      "You are a sportswear shopping assistant. Recommend products from the catalog below and explain your reasoning.",
-      "",
       "Catalog matches:",
       productContext || "(no matching products found)",
       "",

@@ -8,16 +8,21 @@ export const aiConfig = {
   voyageModel: process.env.VOYAGE_MODEL || "voyage-3",
 }
 
+let _voyageClient: VoyageAIClient | null = null
+let _openaiClient: OpenAI | null = null
+
 export function getVoyageClient(): VoyageAIClient {
   if (!aiConfig.voyageApiKey) {
     throw new Error("VOYAGE_API_KEY is not set")
   }
-  return new VoyageAIClient({ apiKey: aiConfig.voyageApiKey })
+  if (!_voyageClient) _voyageClient = new VoyageAIClient({ apiKey: aiConfig.voyageApiKey })
+  return _voyageClient
 }
 
 export function getOpenAiClient(): OpenAI {
   if (!aiConfig.openaiApiKey) {
     throw new Error("OPENAI_API_KEY is not set")
   }
-  return new OpenAI({ apiKey: aiConfig.openaiApiKey })
+  if (!_openaiClient) _openaiClient = new OpenAI({ apiKey: aiConfig.openaiApiKey })
+  return _openaiClient
 }

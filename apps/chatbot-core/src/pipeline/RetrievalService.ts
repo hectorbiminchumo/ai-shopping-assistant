@@ -27,21 +27,17 @@ export class RetrievalService implements IRetrievalService {
     try {
       const supabase = getSupabaseClient()
 
-      let rpc = supabase.rpc("match_products", {
+      const { data, error } = await supabase.rpc("match_products", {
         query_embedding: embedding,
         match_count: topK,
+        filter_category: query.category ?? null,
+        filter_price_max: query.priceMax ?? null,
       })
 
-      if (query.category) {
-        rpc = rpc.ilike("category", query.category)
+      if (error) {
+        console.warn("[RetrievalService] Supabase RPC error — returning empty results:", error.message)
+        return []
       }
-      if (query.priceMax !== undefined) {
-        rpc = rpc.lte("price_min", query.priceMax)
-      }
-
-      const { data, error } = await rpc
-
-      if (error) throw new RetrievalError(error.message)
 
       const rows = (data ?? []) as ProductEmbeddingRow[]
 
@@ -50,8 +46,8 @@ export class RetrievalService implements IRetrievalService {
         similarityScore: row.similarity,
       }))
     } catch (err) {
-      if (err instanceof RetrievalError) throw err
-      throw new RetrievalError("Vector search failed", err)
+      console.warn("[RetrievalService] Vector search failed — returning empty results:", err)
+      return []
     }
   }
 

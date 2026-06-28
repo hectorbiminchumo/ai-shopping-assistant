@@ -33,7 +33,7 @@ export class ChatOrchestrator {
     const llmMessage = await this.llmService.complete(prompt)
     const response = this.responseFormatter.format(llmMessage, retrieved)
 
-    await this.chatLogger.log({
+    void this.chatLogger.log({
       userId: session.userId,
       sessionId: session.sessionId,
       userQuery: rawQuery,

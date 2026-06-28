@@ -18,11 +18,11 @@ export class ResponseFormatter {
     const prices = result.product.variants.map((v) => v.price)
 
     return {
-      id: result.product.id,
+      id: result.product.medusaProductId,
       title: result.product.title,
       thumbnailUrl: result.product.thumbnailUrl,
-      priceMin: Math.min(...prices),
-      priceMax: Math.max(...prices),
+      priceMin: prices.length ? Math.min(...prices) : 0,
+      priceMax: prices.length ? Math.max(...prices) : 0,
       similarityScore: result.similarityScore,
     }
   }

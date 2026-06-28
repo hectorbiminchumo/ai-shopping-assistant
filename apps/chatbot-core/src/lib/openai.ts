@@ -1,15 +1,7 @@
-import OpenAI, { OpenAIError, RateLimitError } from "openai"
-import { aiConfig } from "../config"
+import { OpenAIError, RateLimitError } from "openai"
+import { aiConfig, getOpenAiClient } from "../config"
 import { ChatbotError } from "../errors"
 import type { Product } from "../types"
-
-function createOpenAiClient(): OpenAI {
-  if (!aiConfig.openaiApiKey) {
-    throw new ChatbotError("OPENAI_API_KEY is not configured")
-  }
-
-  return new OpenAI({ apiKey: aiConfig.openaiApiKey })
-}
 
 function formatProductContext(products: Product[]): string {
   if (products.length === 0) {
@@ -36,7 +28,7 @@ function buildPrompt(query: string, products: Product[]): string {
   const productContext = formatProductContext(products)
 
   return [
-    "Eres un asistente de compras de ropa deportiva.",
+    "Eres un asistente de compras de ropa deportiva. Recomienda productos del catálogo y explica por qué cada uno es una buena elección.",
     "Responde en español en un estilo amigable, claro y directo.",
     "Utiliza los resultados de búsqueda a continuación para recomendar los productos más relevantes.",
     "",
@@ -73,7 +65,7 @@ export async function generateResponse(
   promptOrQuery: string,
   products: Product[] = [],
 ): Promise<string> {
-  const client = createOpenAiClient()
+  const client = getOpenAiClient()
   const prompt = products.length
     ? buildPrompt(promptOrQuery, products)
     : promptOrQuery
@@ -84,7 +76,7 @@ export async function generateResponse(
       messages: [
         {
           role: "system",
-          content: "Eres un asistente de compras de ropa deportiva.",
+          content: "Eres un asistente de compras de ropa deportiva. Recomienda productos del catálogo y explica por qué cada uno es una buena elección.",
         },
         {
           role: "user",
@@ -111,7 +103,7 @@ export async function* streamResponse(
   promptOrQuery: string,
   products: Product[] = [],
 ): AsyncIterable<string> {
-  const client = createOpenAiClient()
+  const client = getOpenAiClient()
   const prompt = products.length
     ? buildPrompt(promptOrQuery, products)
     : promptOrQuery
@@ -122,7 +114,7 @@ export async function* streamResponse(
       messages: [
         {
           role: "system",
-          content: "Eres un asistente de compras de ropa deportiva.",
+          content: "Eres un asistente de compras de ropa deportiva. Recomienda productos del catálogo y explica por qué cada uno es una buena elección.",
         },
         { role: "user", content: prompt },
       ],
