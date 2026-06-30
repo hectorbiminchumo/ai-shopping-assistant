@@ -4,7 +4,8 @@ import LocalizedClientLink from "@modules/common/components/localized-client-lin
 import RailSection from "@modules/common/components/rail-section"
 import Image from "next/image"
 
-const TARGET = 5
+// Default Medusa starter categories — hidden from the storefront.
+const JUNK_HANDLES = new Set(["shirts", "sweatshirts", "pants", "merch"])
 
 const TILE_COLORS = [
   { bg: "1a1a17", fg: "f4f3f0" },
@@ -22,21 +23,16 @@ const STATIC_FALLBACK = [
   { name: "Equipment", handle: "equipment" },
 ]
 
-type Item = { name: string; handle: string; count: number }
+type Item = { name: string; handle: string; count: number; src: string }
 
-function fill(source: Item[], target: number): Item[] {
-  if (!source.length) return []
-  const result: Item[] = []
-  while (result.length < target) {
-    result.push(...source.slice(0, target - result.length))
-  }
-  return result
+// "running-shoes" → "Running Shoes"
+function prettyName(name: string): string {
+  return name
+    .replace(/[-_]/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
-function CategoryCard({ name, handle, count, colorIndex }: Item & { colorIndex: number }) {
-  const { bg, fg } = TILE_COLORS[colorIndex % TILE_COLORS.length]
-  const src = `https://placehold.co/400x400/${bg}/${fg}?text=${encodeURIComponent(name)}`
-
+function CategoryCard({ name, handle, count, src }: Item) {
   return (
     <LocalizedClientLink
       href={`/categories/${handle}`}
@@ -74,14 +70,32 @@ export default async function CategoryGrid() {
 
   try {
     const result = await listCategories({ limit: 20 })
-    fetched = (result ?? []).filter((c) => !c.parent_category)
+    fetched = (result ?? []).filter(
+      (c) => !c.parent_category && !JUNK_HANDLES.has(c.handle)
+    )
   } catch { /* fallback */ }
 
-  const base: Item[] = fetched.length
-    ? fetched.map((c) => ({ name: c.name, handle: c.handle, count: c.products?.length ?? 0 }))
-    : STATIC_FALLBACK.map((c) => ({ ...c, count: 0 }))
-
-  const items = fill(base, TARGET)
+  const items: Item[] = fetched.length
+    ? fetched.map((c, i) => {
+        const { bg, fg } = TILE_COLORS[i % TILE_COLORS.length]
+        return {
+          name: prettyName(c.name),
+          handle: c.handle,
+          count: c.products?.length ?? 0,
+          src:
+            c.products?.[0]?.thumbnail ??
+            `https://placehold.co/400x400/${bg}/${fg}?text=${encodeURIComponent(prettyName(c.name))}`,
+        }
+      })
+    : STATIC_FALLBACK.map((c, i) => {
+        const { bg, fg } = TILE_COLORS[i % TILE_COLORS.length]
+        return {
+          name: c.name,
+          handle: c.handle,
+          count: 0,
+          src: `https://placehold.co/400x400/${bg}/${fg}?text=${encodeURIComponent(c.name)}`,
+        }
+      })
 
   return (
     <RailSection eyebrow="Explore" title="Categories" background="var(--surface)">
@@ -91,7 +105,7 @@ export default async function CategoryGrid() {
           className="shrink-0"
           style={{ flex: "0 0 calc((100% - 88px) / 5)", scrollSnapAlign: "start", minWidth: 140 }}
         >
-          <CategoryCard {...item} colorIndex={i} />
+          <CategoryCard {...item} />
         </li>
       ))}
     </RailSection>

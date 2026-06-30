@@ -5,12 +5,14 @@ const NOTCH = 36
 export default function Hero() {
   return (
     <section aria-label="Hero" className="relative w-full overflow-hidden" style={{ minHeight: 440, maxHeight: 660 }}>
-      {/* Background — athletic dark gradient */}
+      {/* Background — branded athletic banner */}
       <div
         className="absolute inset-0"
         style={{
-          background:
-            "linear-gradient(135deg, #0a0a09 0%, #1a1a17 45%, #252521 100%)",
+          backgroundColor: "#0a0a09",
+          backgroundImage: "url(/banners/hero.svg)",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
         }}
         aria-hidden="true"
       />
@@ -24,24 +26,6 @@ export default function Hero() {
         }}
         aria-hidden="true"
       />
-
-      {/* Abstract motion lines — decorative */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
-        {[0, 1, 2, 3].map((i) => (
-          <div
-            key={i}
-            className="absolute"
-            style={{
-              top: `${20 + i * 18}%`,
-              left: `${30 + i * 12}%`,
-              width: `${200 + i * 80}px`,
-              height: "1px",
-              background: `rgba(255,255,255,${0.03 + i * 0.015})`,
-              transform: `rotate(-${8 + i * 3}deg)`,
-            }}
-          />
-        ))}
-      </div>
 
       {/* Content wrapper */}
       <div

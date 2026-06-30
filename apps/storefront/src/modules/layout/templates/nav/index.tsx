@@ -1,19 +1,31 @@
 import { Suspense } from "react"
 import { listRegions } from "@lib/data/regions"
+import { listCategories } from "@lib/data/categories"
 import { StoreRegion } from "@medusajs/types"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import CartButton from "@modules/layout/components/cart-button"
 import HeaderSearch from "@modules/layout/components/header-search"
 
-const NAV_LINKS = [
-  { label: "New Arrivals", href: "/store" },
-  { label: "Footwear", href: "/categories/footwear" },
-  { label: "Apparel", href: "/categories/apparel" },
-  { label: "Equipment", href: "/store" },
-]
+// Default Medusa starter categories — hidden from the storefront nav.
+const JUNK_HANDLES = new Set(["shirts", "sweatshirts", "pants", "merch"])
+
+// "running-shoes" → "Running Shoes"
+const prettyName = (name: string) =>
+  name.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
 
 export default async function Nav() {
   await listRegions().then((regions: StoreRegion[]) => regions)
+
+  let categoryLinks: { label: string; href: string }[] = []
+  try {
+    const categories = await listCategories({ limit: 20 })
+    categoryLinks = (categories ?? [])
+      .filter((c) => !c.parent_category && !JUNK_HANDLES.has(c.handle))
+      .slice(0, 4)
+      .map((c) => ({ label: prettyName(c.name), href: `/categories/${c.handle}` }))
+  } catch { /* nav still renders without category links */ }
+
+  const navLinks = [{ label: "New Arrivals", href: "/store" }, ...categoryLinks]
 
   return (
     <header
@@ -64,7 +76,7 @@ export default async function Nav() {
           className="hidden small:flex items-center gap-[30px]"
           aria-label="Main navigation"
         >
-          {NAV_LINKS.map(({ label, href }) => (
+          {navLinks.map(({ label, href }) => (
             <LocalizedClientLink
               key={label}
               href={href}

@@ -5,6 +5,9 @@ import ProductCard from "@modules/products/components/product-card"
 
 const TARGET = 8
 
+// Default Medusa starter products — hidden from the storefront.
+const JUNK_HANDLES = new Set(["t-shirt", "sweatshirt", "sweatpants", "shorts"])
+
 // Fallback placeholders when no real products exist
 const FALLBACK_PRODUCTS = [
   { title: "Aero Glide",           handle: "aero-glide",    category: "Running",   color: "1a1a17" },
@@ -66,7 +69,9 @@ export default async function ProductRail({
         limit: 20,
       },
     })
-    products = res.response.products ?? []
+    products = (res.response.products ?? []).filter(
+      (p) => !JUNK_HANDLES.has(p.handle ?? "")
+    )
   } catch { /* fallback */ }
 
   // Pad real products to TARGET (cycles through them if fewer than 8)

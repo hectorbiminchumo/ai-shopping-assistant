@@ -6,6 +6,9 @@ import Image from "next/image"
 
 const TARGET = 10
 
+// Default Medusa starter products — hidden from the storefront.
+const JUNK_HANDLES = new Set(["t-shirt", "sweatshirt", "sweatpants", "shorts"])
+
 const STATIC_ITEMS = [
   { label: "Trail Lightrange™", sub: "short-sleeve tee",  handle: "meridian-tee",  color: "1a1a17" },
   { label: "Packable polo",      sub: "short-sleeve",      handle: "meridian-tee",  color: "0f1a0f" },
@@ -56,7 +59,10 @@ export default async function Lookbook({ regionId }: { regionId: string }) {
       regionId,
       queryParams: { limit: 20, fields: "id,title,handle,thumbnail,collection,categories" },
     })
-    if (response.products?.length) base = fromProducts(response.products)
+    const products = (response.products ?? []).filter(
+      (p) => !JUNK_HANDLES.has(p.handle ?? "")
+    )
+    if (products.length) base = fromProducts(products)
   } catch { /* fallback */ }
 
   if (!base.length) base = fromStatic()

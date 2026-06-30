@@ -7,29 +7,17 @@ export default function Banner() {
       className="relative overflow-hidden flex items-center"
       style={{ minHeight: "clamp(360px, 46vw, 560px)" }}
     >
-      {/* Background */}
+      {/* Background — branded promo banner */}
       <div
         className="absolute inset-0"
         style={{
-          background:
-            "linear-gradient(135deg, #0a0a09 0%, #161614 50%, #1e1e1b 100%)",
+          backgroundColor: "#08120c",
+          backgroundImage: "url(/banners/promo.svg)",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
         }}
         aria-hidden="true"
       />
-
-      {/* Decorative large letter */}
-      <div
-        className="absolute right-0 top-1/2 -translate-y-1/2 select-none pointer-events-none font-bold leading-none"
-        style={{
-          fontSize: "clamp(200px, 28vw, 380px)",
-          letterSpacing: "-0.05em",
-          color: "rgba(255,255,255,.03)",
-          right: "-2vw",
-        }}
-        aria-hidden="true"
-      >
-        V
-      </div>
 
       {/* Left shade */}
       <div
