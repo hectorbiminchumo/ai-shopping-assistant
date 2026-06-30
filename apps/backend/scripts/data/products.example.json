@@ -1,0 +1,66 @@
+[
+  {
+    "title": "Trail Running Shoes Pro",
+    "description": "Lightweight trail running shoes with a multi-directional grippy outsole. Designed for mountain terrain and technical trails. Breathable mesh upper keeps feet cool on long runs. Ideal for intermediate trail runners who need reliable traction and cushioning.",
+    "category": "running-shoes",
+    "tags": ["trail", "running", "lightweight", "grip"],
+    "thumbnail": "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=600",
+    "images": [
+      "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=1200",
+      "https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=1200"
+    ],
+    "options": {
+      "Size": ["38", "39", "40", "41", "42", "43", "44"],
+      "Color": ["Black", "Blue"]
+    },
+    "variants": [
+      { "size": "40", "color": "Black", "price_usd": 89.99, "sku": "TRAIL-PRO-40-BLK" },
+      { "size": "41", "color": "Black", "price_usd": 89.99, "sku": "TRAIL-PRO-41-BLK" },
+      { "size": "42", "color": "Black", "price_usd": 89.99, "sku": "TRAIL-PRO-42-BLK" },
+      { "size": "40", "color": "Blue",  "price_usd": 89.99, "sku": "TRAIL-PRO-40-BLU" },
+      { "size": "41", "color": "Blue",  "price_usd": 89.99, "sku": "TRAIL-PRO-41-BLU" }
+    ]
+  },
+  {
+    "title": "Men's Training Shorts",
+    "description": "4-inch inseam training shorts built for high-intensity workouts. Moisture-wicking fabric pulls sweat away from skin. Elastic waistband with internal drawstring for a secure fit. Side pockets for phone and keys. Suitable for gym, CrossFit, and outdoor training.",
+    "category": "training-apparel",
+    "tags": ["shorts", "training", "gym", "moisture-wicking"],
+    "thumbnail": "https://images.unsplash.com/photo-1591195853828-11db59a44f43?w=600",
+    "images": [
+      "https://images.unsplash.com/photo-1591195853828-11db59a44f43?w=1200"
+    ],
+    "options": {
+      "Size": ["S", "M", "L", "XL"],
+      "Color": ["Black", "Navy", "Grey"]
+    },
+    "variants": [
+      { "size": "S",  "color": "Black", "price_usd": 34.99, "sku": "TRAIN-SHORT-S-BLK" },
+      { "size": "M",  "color": "Black", "price_usd": 34.99, "sku": "TRAIN-SHORT-M-BLK" },
+      { "size": "L",  "color": "Black", "price_usd": 34.99, "sku": "TRAIN-SHORT-L-BLK" },
+      { "size": "M",  "color": "Navy",  "price_usd": 34.99, "sku": "TRAIN-SHORT-M-NVY" },
+      { "size": "L",  "color": "Grey",  "price_usd": 34.99, "sku": "TRAIN-SHORT-L-GRY" }
+    ]
+  },
+  {
+    "title": "Windbreaker Running Jacket",
+    "description": "Packable windbreaker jacket for outdoor running in variable weather. Water-resistant coating repels light rain. Reflective details for low-light visibility. Packs into its own chest pocket for easy storage. Slim fit doesn't restrict movement during runs.",
+    "category": "jackets",
+    "tags": ["jacket", "running", "windbreaker", "packable", "waterproof"],
+    "thumbnail": "https://images.unsplash.com/photo-1544966503-7cc5ac882d5e?w=600",
+    "images": [
+      "https://images.unsplash.com/photo-1544966503-7cc5ac882d5e?w=1200"
+    ],
+    "options": {
+      "Size": ["S", "M", "L", "XL"],
+      "Color": ["Yellow", "Black", "Red"]
+    },
+    "variants": [
+      { "size": "S",  "color": "Yellow", "price_usd": 79.99, "sku": "WIND-JKT-S-YLW" },
+      { "size": "M",  "color": "Yellow", "price_usd": 79.99, "sku": "WIND-JKT-M-YLW" },
+      { "size": "M",  "color": "Black",  "price_usd": 79.99, "sku": "WIND-JKT-M-BLK" },
+      { "size": "L",  "color": "Black",  "price_usd": 79.99, "sku": "WIND-JKT-L-BLK" },
+      { "size": "L",  "color": "Red",    "price_usd": 79.99, "sku": "WIND-JKT-L-RED" }
+    ]
+  }
+]

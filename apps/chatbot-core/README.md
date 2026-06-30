@@ -28,7 +28,7 @@ tests/
   mocks/          # openai.mock.ts, voyageai.mock.ts, supabase.mock.ts
 ```
 
-`EmbeddingService`, `RetrievalService`, `LLMService`, `ImageEmbeddingService`, `ImageRetrievalService`, `ChatLogger`, `AnalyticsService`, `ProductIngester`, and `EmbeddingIndexer` are currently placeholders that throw `"<provider> not configured yet"` — they need their real SDK clients (OpenAI, Voyage AI, Supabase) wired up in `config/`. `QueryParser`, `PromptAssembler`, `ResponseFormatter`, and `ChunkBuilder` are pure logic and already implemented.
+`LLMService`, `ImageEmbeddingService`, `ImageRetrievalService`, and `ProductIngester` are still placeholders. `EmbeddingService`, `RetrievalService`, `EmbeddingIndexer`, `ChatLogger`, and `AnalyticsService` are fully implemented. `QueryParser`, `PromptAssembler`, `ResponseFormatter`, and `ChunkBuilder` are pure logic.
 
 ## Local setup
 
@@ -63,3 +63,58 @@ npm run build   # Compile TypeScript to dist/
 npm test        # Run Jest unit + integration tests
 npm run lint    # Run ESLint
 ```
+
+## Ingestion script — seed product_embeddings
+
+`scripts/ingest-products.mjs` reads a JSON or CSV file, generates a Voyage AI
+text embedding for each product, and upserts the row into Supabase
+`product_embeddings`. Re-running is safe — duplicates are updated via
+`ON CONFLICT (medusa_product_id)`.
+
+**Prerequisites:** `.env` with `VOYAGE_API_KEY`, `SUPABASE_URL`,
+`SUPABASE_SERVICE_ROLE_KEY` (copy from `.env.example`).
+
+```bash
+# Dry run — calls Voyage AI but writes nothing to Supabase
+node --env-file=.env scripts/ingest-products.mjs --file ./data/products.json --dry-run
+
+# Live run — upserts into Supabase
+node --env-file=.env scripts/ingest-products.mjs --file ./data/products.json
+node --env-file=.env scripts/ingest-products.mjs --file ./data/products.csv
+```
+
+### JSON format
+
+Array of objects. `medusa_product_id`, `title`, and `description` are required.
+
+```json
+[
+  {
+    "medusa_product_id": "prod_01JXYZ",
+    "title": "Trail Running Shoes",
+    "description": "Lightweight shoes with a grippy outsole…",
+    "category": "running",
+    "tags": ["trail", "road", "lightweight"],
+    "price_min": 89.99,
+    "price_max": 129.99,
+    "thumbnail_url": "https://example.com/img/trail-shoe.jpg"
+  }
+]
+```
+
+### CSV format
+
+Header row required. Use `|` as the tag separator (e.g. `trail|road|lightweight`)
+to avoid conflicts with the CSV comma delimiter.
+
+```csv
+medusa_product_id,title,description,category,tags,price_min,price_max,thumbnail_url
+prod_01JXYZ,Trail Running Shoes,"Lightweight shoes, grippy outsole",running,trail|road,89.99,129.99,https://…
+```
+
+### Error handling
+
+- **API failure** — retries up to 3 times with exponential backoff (1 s → 2 s → 4 s).
+- **Duplicate products** — upserted (row updated), not skipped.
+- **Validation errors** — caught upfront before any API call; the script exits with a clear message.
+- **Partial failure** — the script continues to the next product and prints a summary at the end. Exit code 1 if any product failed.
