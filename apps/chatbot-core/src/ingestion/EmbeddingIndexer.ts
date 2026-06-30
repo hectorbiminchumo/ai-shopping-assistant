@@ -1,9 +1,11 @@
+import { getSupabaseClient } from "../config"
 import type { IEmbeddingService } from "../interfaces"
 import type { Product } from "../types"
 import { ChunkBuilder } from "./ChunkBuilder"
 
-// Generates text embeddings (Voyage AI) and CLIP image embeddings for each
-// product, then upserts them into Supabase product_embeddings.
+// Generates text embeddings (Voyage AI) and upserts the product row into
+// Supabase product_embeddings. image_embedding (CLIP) is left null until
+// the image search feature is wired up.
 export class EmbeddingIndexer {
   constructor(
     private readonly embeddingService: IEmbeddingService,
@@ -12,8 +14,29 @@ export class EmbeddingIndexer {
 
   async indexProduct(product: Product): Promise<void> {
     const chunk = this.chunkBuilder.build(product)
-    await this.embeddingService.embedText(chunk)
-    // TODO: also generate the CLIP image embedding and upsert both into Supabase pgvector
-    throw new Error("Supabase client not configured yet")
+    const embedding = await this.embeddingService.embedText(chunk)
+
+    const prices = product.variants.map((v) => v.price).filter((p) => p > 0)
+    const priceMin = prices.length > 0 ? Math.min(...prices) : null
+    const priceMax = prices.length > 0 ? Math.max(...prices) : null
+
+    const supabase = getSupabaseClient()
+    const { error } = await supabase.from("product_embeddings").upsert(
+      {
+        medusa_product_id: product.medusaProductId,
+        title: product.title,
+        description: product.description,
+        category: product.category ?? null,
+        tags: product.tags,
+        price_min: priceMin,
+        price_max: priceMax,
+        thumbnail_url: product.thumbnailUrl ?? null,
+        embedding,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "medusa_product_id" }
+    )
+
+    if (error) throw new Error(`Supabase upsert failed for "${product.title}": ${error.message}`)
   }
 }
