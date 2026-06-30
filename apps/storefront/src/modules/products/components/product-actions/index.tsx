@@ -163,7 +163,6 @@ export default function ProductActions({
           <div key={option.id}>
             <div className="pdp__label">
               <span>Select {option.title?.toLowerCase() ?? "option"}</span>
-              <a href="#">Size guide</a>
             </div>
             <div className="sizes">
               {values.map((v) => {

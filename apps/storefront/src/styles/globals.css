@@ -127,6 +127,19 @@ html.dark {
   }
 }
 
+/* Product card — framed tile for grids (category, store, rails) */
+.vectra-pc {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-tile);
+  padding: 14px 14px 16px;
+  transition: border-color .18s var(--ease), box-shadow .18s var(--ease);
+}
+.vectra-pc:hover,
+.vectra-pc:focus-within {
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow);
+}
+
 /* Vectra chat animations */
 @keyframes vectra-blink {
   0%, 60%, 100% { opacity: .25; }
