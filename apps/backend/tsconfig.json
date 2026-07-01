@@ -18,7 +18,8 @@
     "resolveJsonModule": true,
     "checkJs": false,
     "strictNullChecks": true,
-    "isolatedModules": true
+    "isolatedModules": true,
+    "typeRoots": ["../../node_modules/@types", "./node_modules/@types"]
   },
   "ts-node": {
     "swc": true
