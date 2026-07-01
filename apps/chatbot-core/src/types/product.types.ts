@@ -18,6 +18,8 @@ export interface Product {
   category?: string
   tags: string[]
   thumbnailUrl?: string
+  priceMin?: number
+  priceMax?: number
   variants: ProductVariant[]
 }
 
