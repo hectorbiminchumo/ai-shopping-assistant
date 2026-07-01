@@ -93,14 +93,17 @@ export default function ProductCard({
     variants.length === 1 ? (variants[0].id ?? null) : null
 
   // Font sizes for compact (chat) vs default (rail/grid)
-  const nameSize = compact ? 13 : 15
-  const brandSize = compact ? 11.5 : 13
-  const priceSize = compact ? 14 : 15
+  const nameSize = compact ? 13 : 14.5
+  const eyebrowSize = compact ? 10 : 11
+  const priceSize = compact ? 14 : 16
+  const nameLineHeight = 1.35
+  // Reserve two lines so prices align across the grid even for short names.
+  const nameMinHeight = Math.round(nameSize * nameLineHeight * 2)
 
   return (
     <LocalizedClientLink
       href={`/products/${product.handle}`}
-      className="vectra-card group block"
+      className={`vectra-card group block${compact ? "" : " vectra-pc"}`}
       data-testid="product-wrapper"
     >
       {/* Image tile */}
@@ -112,7 +115,7 @@ export default function ProductCard({
           src={product.thumbnail ?? placeholder}
           alt={product.title}
           fill
-          className="object-cover object-center"
+          className="object-cover object-center pc-img"
           sizes={
             compact
               ? "(max-width: 560px) 50vw, 33vw"
@@ -145,62 +148,84 @@ export default function ProductCard({
         />
       </div>
 
-      {/* Info row */}
-      <div
-        className="flex justify-between items-baseline gap-3"
-        style={{ paddingTop: compact ? 12 : 16 }}
-      >
-        <div style={{ minWidth: 0 }}>
+      {/* Info */}
+      <div style={{ paddingTop: compact ? 12 : 18 }}>
+        {brand && (
           <p
-            className="font-semibold leading-snug truncate"
-            style={{ fontSize: nameSize, color: "var(--text)" }}
+            className="uppercase truncate"
+            style={{
+              fontFamily: "var(--mono)",
+              fontSize: eyebrowSize,
+              letterSpacing: ".09em",
+              color: "var(--text-muted)",
+              marginBottom: compact ? 5 : 7,
+            }}
+          >
+            {brand}
+          </p>
+        )}
+
+        <div
+          className={
+            compact
+              ? "flex items-center justify-between gap-3"
+              : "flex flex-col gap-1.5 small:flex-row small:items-start small:justify-between small:gap-4"
+          }
+        >
+          <p
+            className="font-normal"
+            style={{
+              fontSize: nameSize,
+              lineHeight: nameLineHeight,
+              color: "var(--text)",
+              minHeight: nameMinHeight,
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+            }}
             data-testid="product-title"
           >
             {product.title}
           </p>
-          {brand && (
-            <p
-              className="mt-0.5"
-              style={{ fontSize: brandSize, color: "var(--text-muted)" }}
-            >
-              {brand}
-            </p>
-          )}
-        </div>
 
-        {cheapestPrice && (
-          <div className="shrink-0 text-right">
-            {isSale ? (
-              <>
-                <p
-                  className="line-through"
-                  style={{
-                    fontSize: brandSize,
-                    color: "var(--text-muted)",
-                  }}
-                  data-testid="original-price"
-                >
-                  {cheapestPrice.original_price}
-                </p>
+          {cheapestPrice && (
+            <div
+              className={`shrink-0 leading-tight ${compact ? "text-right" : "small:text-right"}`}
+            >
+              {isSale ? (
+                <>
+                  <p
+                    className="line-through"
+                    style={{
+                      fontSize: eyebrowSize + 2,
+                      color: "var(--text-muted)",
+                      marginBottom: 2,
+                    }}
+                    data-testid="original-price"
+                  >
+                    {cheapestPrice.original_price}
+                  </p>
+                  <p
+                    className="font-semibold whitespace-nowrap"
+                    style={{ fontSize: priceSize, color: "var(--clr-danger)" }}
+                    data-testid="price"
+                  >
+                    {cheapestPrice.calculated_price}
+                  </p>
+                </>
+              ) : (
                 <p
                   className="font-semibold whitespace-nowrap"
-                  style={{ fontSize: priceSize, color: "var(--clr-danger)" }}
+                  style={{ fontSize: priceSize, color: "var(--text)" }}
                   data-testid="price"
                 >
                   {cheapestPrice.calculated_price}
                 </p>
-              </>
-            ) : (
-              <p
-                className="font-semibold whitespace-nowrap"
-                style={{ fontSize: priceSize, color: "var(--text)" }}
-                data-testid="price"
-              >
-                {cheapestPrice.calculated_price}
-              </p>
-            )}
-          </div>
-        )}
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </LocalizedClientLink>
   )

@@ -15,8 +15,6 @@ type Props = {
   }>
 }
 
-export const PRODUCT_LIMIT = 12
-
 export async function generateStaticParams() {
   const { collections } = await listCollections({
     fields: "*products",
@@ -59,7 +57,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   }
 
   const metadata = {
-    title: `${collection.title} | Medusa Store`,
+    title: `${collection.title} | VECTRA`,
     description: `${collection.title} collection`,
   } as Metadata
 

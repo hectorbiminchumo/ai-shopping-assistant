@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, FormEvent } from "react"
+import { useState, FormEvent, type CSSProperties } from "react"
 
 export default function Newsletter() {
   const [email, setEmail] = useState("")
@@ -20,11 +20,16 @@ export default function Newsletter() {
     >
       {/* Background */}
       <div
-        className="absolute inset-0"
-        style={{
-          background:
-            "linear-gradient(160deg, #0a0a09 0%, #161614 40%, #0d2620 100%)",
-        }}
+        className="absolute inset-0 bg-image-set"
+        style={
+          {
+            "--bg-webp": 'url("/banners/newsletter.webp")',
+            "--bg-fallback": 'url("/banners/newsletter.jpeg")',
+            backgroundColor: "#0a0a09",
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+          } as CSSProperties
+        }
         aria-hidden="true"
       />
       <div
@@ -35,15 +40,9 @@ export default function Newsletter() {
 
       {/* Content */}
       <div
-        className="relative z-10 text-white w-full max-w-[620px]"
+        className="v-reveal relative z-10 text-white w-full max-w-[620px]"
         style={{ paddingInline: 24 }}
       >
-        <span
-          className="block font-mono text-[11px] tracking-[.18em] uppercase mb-3"
-          style={{ color: "rgba(255,255,255,.65)" }}
-        >
-          Join
-        </span>
         <h2
           id="newsletter-heading"
           className="font-bold m-0 mb-2.5 text-white"
