@@ -80,7 +80,7 @@ export default async function Lookbook({ regionId }: { regionId: string }) {
           <LocalizedClientLink
             href={`/products/${item.handle}`}
             className="block group"
-            aria-label={`${item.label} — ${item.sub}`}
+            aria-label={`${item.label}, ${item.sub}`}
           >
             <div className="relative rounded-[14px] overflow-hidden" style={{ aspectRatio: "3/4" }}>
               <Image

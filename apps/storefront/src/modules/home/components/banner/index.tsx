@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
 export default function Banner() {
@@ -9,13 +10,16 @@ export default function Banner() {
     >
       {/* Background — branded promo banner */}
       <div
-        className="absolute inset-0"
-        style={{
-          backgroundColor: "#08120c",
-          backgroundImage: "url(/banners/promo.svg)",
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-        }}
+        className="absolute inset-0 bg-image-set"
+        style={
+          {
+            "--bg-webp": 'url("/banners/elevate.webp")',
+            "--bg-fallback": 'url("/banners/elevate.png")',
+            backgroundColor: "#08120c",
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+          } as CSSProperties
+        }
         aria-hidden="true"
       />
 
@@ -31,7 +35,7 @@ export default function Banner() {
 
       {/* Content */}
       <div
-        className="relative z-10 max-w-[1280px] mx-auto w-full"
+        className="v-reveal relative z-10 max-w-[1280px] mx-auto w-full"
         style={{ paddingInline: "var(--pad)" }}
       >
         <h2

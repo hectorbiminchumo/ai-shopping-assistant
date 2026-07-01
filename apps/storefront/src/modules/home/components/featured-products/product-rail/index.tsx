@@ -84,7 +84,7 @@ export default async function ProductRail({
     // No real products at all — use static placeholders
     const fallbacks = fill(FALLBACK_PRODUCTS, TARGET)
     return (
-      <RailSection eyebrow="Selection" title={title} viewAllHref={viewAll}>
+      <RailSection title={title} viewAllHref={viewAll}>
         {fallbacks.map((p, i) => (
           <li
             key={`${p.handle}-${i}`}

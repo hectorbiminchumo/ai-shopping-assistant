@@ -98,7 +98,7 @@ export default async function CategoryGrid() {
       })
 
   return (
-    <RailSection eyebrow="Explore" title="Categories" background="var(--surface)">
+    <RailSection title="Categories" background="var(--surface)">
       {items.map((item, i) => (
         <li
           key={`${item.handle}-${i}`}

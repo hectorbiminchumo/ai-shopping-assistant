@@ -1,7 +1,7 @@
 "use client"
 
 import { useRef, useState, useEffect, useCallback } from "react"
-import { useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
 export type ChatProduct = {
@@ -56,6 +56,7 @@ function TypingDots() {
 
 function ChatProductCard({ p }: { p: ChatProduct }) {
   const { countryCode } = useParams()
+  const router = useRouter()
   const img =
     p.thumbnail ??
     `https://placehold.co/200x200/f6f6f4/6a6a67?text=${encodeURIComponent(p.title)}`
@@ -101,7 +102,7 @@ function ChatProductCard({ p }: { p: ChatProduct }) {
           onClick={(e) => {
             e.preventDefault()
             e.stopPropagation()
-            window.location.href = `/${countryCode}/products/${p.handle}`
+            router.push(`/${countryCode}/products/${p.handle}`)
           }}
           style={{
             position: "absolute",
@@ -190,7 +191,7 @@ export default function VectraChat({ products }: { products: ChatProduct[] }) {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "bot",
-      text: "Hi! I'm Vectra, your shopping assistant. Tell me what you're after — like \"trail running shoes\" or \"something lightweight for summer runs\" — and I'll find the closest match.",
+      text: "Hi! I'm Vectra, your shopping assistant. Tell me what you're after (like \"trail running shoes\" or \"something lightweight for summer runs\") and I'll find the closest match.",
     },
   ])
   const [input, setInput] = useState("")
@@ -199,6 +200,8 @@ export default function VectraChat({ products }: { products: ChatProduct[] }) {
   const chatScrollRef = useRef<HTMLDivElement>(null)
   const taRef = useRef<HTMLTextAreaElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  const floatRef = useRef<HTMLButtonElement>(null)
+  const prevOpen = useRef(false)
 
   const scrollToBottom = useCallback(() => {
     chatScrollRef.current?.scrollTo({ top: chatScrollRef.current.scrollHeight })
@@ -209,7 +212,13 @@ export default function VectraChat({ products }: { products: ChatProduct[] }) {
   }, [messages, scrollToBottom])
 
   useEffect(() => {
-    if (open) setTimeout(() => taRef.current?.focus(), 420)
+    if (open) {
+      setTimeout(() => taRef.current?.focus(), 420)
+    } else if (prevOpen.current) {
+      // Return focus to the trigger when the dialog closes
+      floatRef.current?.focus()
+    }
+    prevOpen.current = open
   }, [open])
 
   useEffect(() => {
@@ -273,6 +282,14 @@ export default function VectraChat({ products }: { products: ChatProduct[] }) {
         products: picks.length ? picks : products.slice(0, 3),
       }
       setMessages((prev) => [...prev.filter((m) => m.role !== "typing"), botMsg])
+    } catch {
+      setMessages((prev) => [
+        ...prev.filter((m) => m.role !== "typing"),
+        {
+          role: "bot",
+          text: "Something went wrong on my end. Please try again.",
+        },
+      ])
     } finally {
       setBusy(false)
     }
@@ -292,15 +309,20 @@ export default function VectraChat({ products }: { products: ChatProduct[] }) {
     <>
       {/* ============ KEYFRAME STYLE ============ */}
       <style>{`
-        @keyframes vectra-blink{0%,60%,100%{opacity:.25}30%{opacity:1}}
-        .vectra-panel-scrim{position:fixed;inset:0;z-index:61;background:var(--overlay);opacity:0;pointer-events:none;transition:opacity .45s cubic-bezier(.22,.61,.36,1)}
+        @media (prefers-reduced-motion: no-preference) {
+          .vectra-panel-scrim{transition:opacity .45s cubic-bezier(.22,.61,.36,1)}
+          .vectra-panel{transition:transform .5s cubic-bezier(.22,.61,.36,1)}
+          .vectra-float{transition:transform .25s cubic-bezier(.22,.61,.36,1),opacity .3s,background .25s}
+          .vectra-float.hidden{transform:translateY(20px)}
+        }
+        .vectra-panel-scrim{position:fixed;inset:0;z-index:61;background:var(--overlay);opacity:0;pointer-events:none}
         .vectra-panel-scrim.open{opacity:1;pointer-events:auto}
-        .vectra-panel{position:fixed;left:0;right:0;bottom:0;z-index:62;background:var(--bg);border-top:1px solid var(--line);box-shadow:0 -8px 40px rgba(0,0,0,.12);transform:translateY(100%);transition:transform .5s cubic-bezier(.22,.61,.36,1);display:flex;flex-direction:column;height:100vh;height:100dvh}
+        .vectra-panel{position:fixed;left:0;right:0;bottom:0;z-index:62;background:var(--bg);border-top:1px solid var(--line);box-shadow:0 -8px 40px rgba(0,0,0,.12);transform:translateY(100%);display:flex;flex-direction:column;height:100vh;height:100dvh}
         .vectra-panel.open{transform:translateY(0)}
-        .vectra-float{position:fixed;right:28px;bottom:28px;z-index:55;display:inline-flex;align-items:center;gap:10px;height:52px;padding:0 24px;border-radius:999px;background:var(--btn-pri-bg);color:var(--btn-pri-fg);font-size:14px;font-weight:600;letter-spacing:-0.01em;font-family:inherit;box-shadow:0 4px 20px rgba(0,0,0,.15);border:none;cursor:pointer;transition:transform .25s cubic-bezier(.22,.61,.36,1),opacity .3s,background .25s}
+        .vectra-float{position:fixed;right:28px;bottom:28px;z-index:55;display:inline-flex;align-items:center;gap:10px;height:52px;padding:0 24px;border-radius:999px;background:var(--btn-pri-bg);color:var(--btn-pri-fg);font-size:14px;font-weight:600;letter-spacing:-0.01em;font-family:inherit;box-shadow:0 4px 20px rgba(0,0,0,.15);border:none;cursor:pointer}
         .vectra-float:hover{background:var(--btn-pri-bg-h)}
         .vectra-float:active{transform:translateY(1px)}
-        .vectra-float.hidden{opacity:0;pointer-events:none;transform:translateY(20px)}
+        .vectra-float.hidden{opacity:0;pointer-events:none}
         .composer-inner{border:1px solid var(--line-strong);border-radius:20px;background:var(--surface);padding:12px 12px 12px 18px;display:flex;flex-direction:column;gap:10px;transition:border-color .2s}
         .composer-inner:focus-within{border-color:var(--text)}
       `}</style>
@@ -315,6 +337,8 @@ export default function VectraChat({ products }: { products: ChatProduct[] }) {
       {/* ============ CHAT PANEL ============ */}
       <aside
         className={`vectra-panel${open ? " open" : ""}`}
+        role="dialog"
+        aria-modal="true"
         aria-label="Vectra search assistant"
         aria-hidden={!open}
       >
@@ -347,8 +371,8 @@ export default function VectraChat({ products }: { products: ChatProduct[] }) {
             aria-label="Close"
             style={{
               marginLeft: "auto",
-              width: 42,
-              height: 42,
+              width: 44,
+              height: 44,
               borderRadius: 16,
               display: "grid",
               placeItems: "center",
@@ -398,6 +422,7 @@ export default function VectraChat({ products }: { products: ChatProduct[] }) {
           style={{ flex: 1, overflowY: "auto", padding: "30px var(--pad) 12px" }}
         >
           <div
+            aria-live="polite"
             style={{
               maxWidth: 860,
               margin: "0 auto",
@@ -428,6 +453,7 @@ export default function VectraChat({ products }: { products: ChatProduct[] }) {
                       V
                     </div>
                     <div style={{ fontSize: 15, lineHeight: 1.6, paddingTop: 4 }}>
+                      <span className="sr-only">Vectra is typing</span>
                       <TypingDots />
                     </div>
                   </div>
@@ -611,21 +637,31 @@ export default function VectraChat({ products }: { products: ChatProduct[] }) {
                         aria-label="Remove image"
                         style={{
                           position: "absolute",
-                          top: 2,
-                          right: 2,
-                          width: 18,
-                          height: 18,
-                          borderRadius: "50%",
-                          background: "rgba(0,0,0,.6)",
-                          color: "#fff",
-                          fontSize: 11,
+                          top: -10,
+                          right: -10,
+                          width: 44,
+                          height: 44,
                           display: "grid",
                           placeItems: "center",
                           border: "none",
+                          background: "none",
                           cursor: "pointer",
                         }}
                       >
-                        ×
+                        <span
+                          style={{
+                            width: 18,
+                            height: 18,
+                            borderRadius: "50%",
+                            background: "rgba(0,0,0,.6)",
+                            color: "#fff",
+                            fontSize: 11,
+                            display: "grid",
+                            placeItems: "center",
+                          }}
+                        >
+                          ×
+                        </span>
                       </button>
                     </div>
                   ))}
@@ -654,9 +690,8 @@ export default function VectraChat({ products }: { products: ChatProduct[] }) {
                     border: "none",
                     background: "none",
                     resize: "none",
-                    outline: "none",
                     color: "var(--text)",
-                    fontSize: 15.5,
+                    fontSize: 16,
                     lineHeight: 1.5,
                     maxHeight: 120,
                     padding: "6px 0",
@@ -760,6 +795,7 @@ export default function VectraChat({ products }: { products: ChatProduct[] }) {
 
       {/* ============ FLOATING BUTTON ============ */}
       <button
+        ref={floatRef}
         className={`vectra-float${open ? " hidden" : ""}`}
         onClick={() => setOpen(true)}
         aria-label="Ask Vectra"

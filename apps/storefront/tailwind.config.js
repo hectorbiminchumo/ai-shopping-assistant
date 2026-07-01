@@ -94,12 +94,20 @@ module.exports = {
         "3xl": "2rem",
       },
       fontFamily: {
-        // VECTRA: system grotesque — no font loading needed
+        // VECTRA: Barlow Condensed for headings, Barlow for body (next/font)
         sans: [
+          "var(--font-body)",
           "Helvetica Neue",
           "Helvetica",
           "Arial",
           "Segoe UI",
+          "sans-serif",
+        ],
+        heading: [
+          "var(--font-heading)",
+          "Helvetica Neue",
+          "Helvetica",
+          "Arial",
           "sans-serif",
         ],
         // Used for eyebrows, labels, badges, price data

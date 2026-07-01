@@ -115,7 +115,7 @@ export default function ProductCard({
           src={product.thumbnail ?? placeholder}
           alt={product.title}
           fill
-          className="object-cover object-center"
+          className="object-cover object-center pc-img"
           sizes={
             compact
               ? "(max-width: 560px) 50vw, 33vw"
@@ -169,11 +169,11 @@ export default function ProductCard({
           className={
             compact
               ? "flex items-center justify-between gap-3"
-              : "flex flex-col gap-1.5 small:flex-row small:items-center small:justify-between small:gap-4"
+              : "flex flex-col gap-1.5 small:flex-row small:items-start small:justify-between small:gap-4"
           }
         >
           <p
-            className="font-semibold"
+            className="font-normal"
             style={{
               fontSize: nameSize,
               lineHeight: nameLineHeight,
