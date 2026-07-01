@@ -27,19 +27,12 @@ export class RetrievalService implements IRetrievalService {
     try {
       const supabase = getSupabaseClient()
 
-      let rpc = supabase.rpc("match_products", {
+      const { data, error } = await supabase.rpc("match_products", {
         query_embedding: embedding,
         match_count: topK,
+        filter_category: query.category ?? null,
+        filter_price_max: query.priceMax ?? null,
       })
-
-      if (query.category) {
-        rpc = rpc.ilike("category", query.category)
-      }
-      if (query.priceMax !== undefined) {
-        rpc = rpc.lte("price_min", query.priceMax)
-      }
-
-      const { data, error } = await rpc
 
       if (error) throw new RetrievalError(error.message)
 
@@ -64,6 +57,8 @@ export class RetrievalService implements IRetrievalService {
       category: row.category ?? undefined,
       tags: row.tags ?? [],
       thumbnailUrl: row.thumbnail_url ?? undefined,
+      priceMin: row.price_min ?? undefined,
+      priceMax: row.price_max ?? undefined,
       variants: [],
     }
   }

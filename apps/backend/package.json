@@ -24,6 +24,7 @@
     "test:unit": "TEST_TYPE=unit NODE_OPTIONS=--experimental-vm-modules jest --silent --runInBand --forceExit"
   },
   "dependencies": {
+    "@dtc/chatbot-core": "^0.0.1",
     "@medusajs/admin-sdk": "2.15.5",
     "@medusajs/admin-shared": "2.15.5",
     "@medusajs/caching": "2.15.5",
