@@ -215,8 +215,10 @@ export default function VectraChat({ products }: { products: ChatProduct[] }) {
     if (open) {
       setTimeout(() => taRef.current?.focus(), 420)
     } else if (prevOpen.current) {
-      // Return focus to the trigger when the dialog closes
+      // Return focus to the trigger and clear the composer when the dialog closes
       floatRef.current?.focus()
+      setInput("")
+      if (taRef.current) taRef.current.style.height = "auto"
     }
     prevOpen.current = open
   }, [open])
@@ -668,7 +670,7 @@ export default function VectraChat({ products }: { products: ChatProduct[] }) {
                 </div>
               )}
 
-              <div style={{ display: "flex", alignItems: "flex-end", gap: 10 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <textarea
                   ref={taRef}
                   rows={1}
@@ -694,8 +696,9 @@ export default function VectraChat({ products }: { products: ChatProduct[] }) {
                     fontSize: 16,
                     lineHeight: 1.5,
                     maxHeight: 120,
-                    padding: "6px 0",
+                    padding: "0",
                     fontFamily: "inherit",
+                    outline: "none",
                   }}
                 />
                 <input
