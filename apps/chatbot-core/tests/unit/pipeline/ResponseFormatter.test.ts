@@ -38,7 +38,7 @@ describe("ResponseFormatter", () => {
   })
 
   it("marks hasResults false when the top score is below the similarity threshold", () => {
-    const response = formatter.format("ok", [{ product, similarityScore: 0.4 }])
+    const response = formatter.format("ok", [{ product, similarityScore: 0.35 }])
     expect(response.hasResults).toBe(false)
   })
 
