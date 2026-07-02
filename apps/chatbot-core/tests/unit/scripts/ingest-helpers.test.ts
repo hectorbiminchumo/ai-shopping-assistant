@@ -322,6 +322,24 @@ describe("createSupabaseUpserter", () => {
     )
   })
 
+  it("sends a merge-duplicates Prefer header so re-ingesting an existing product updates it instead of erroring", async () => {
+    const fetchImpl = jest.fn().mockResolvedValue({ ok: true })
+    const upserter = createSupabaseUpserter({
+      url: "https://example.supabase.co",
+      serviceRoleKey: "service-role-key",
+      fetchImpl,
+    })
+
+    await upserter.upsertEmbedding({ medusa_product_id: "prod_1", title: "a" })
+
+    expect(fetchImpl).toHaveBeenCalledWith(
+      "https://example.supabase.co/rest/v1/product_embeddings",
+      expect.objectContaining({
+        headers: expect.objectContaining({ Prefer: "resolution=merge-duplicates" }),
+      })
+    )
+  })
+
   it("throws with the status and body when the response is not ok", async () => {
     const fetchImpl = jest.fn().mockResolvedValue({ ok: false, status: 409, text: async () => "conflict" })
     const upserter = createSupabaseUpserter({
@@ -331,6 +349,24 @@ describe("createSupabaseUpserter", () => {
     })
 
     await expect(upserter.upsertEmbedding({ title: "a" })).rejects.toThrow("Supabase upsert failed: 409")
+  })
+
+  it("surfaces a duplicate-key conflict from Postgres as an error", async () => {
+    const fetchImpl = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 409,
+      text: async () =>
+        'duplicate key value violates unique constraint "product_embeddings_medusa_product_id_key"',
+    })
+    const upserter = createSupabaseUpserter({
+      url: "https://example.supabase.co",
+      serviceRoleKey: "service-role-key",
+      fetchImpl,
+    })
+
+    await expect(
+      upserter.upsertEmbedding({ medusa_product_id: "prod_1", title: "Trail Runner" })
+    ).rejects.toThrow(/duplicate key value violates unique constraint/)
   })
 })
 
