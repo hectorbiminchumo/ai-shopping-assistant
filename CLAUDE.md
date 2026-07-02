@@ -105,7 +105,7 @@ apps/                               → workspace packages (Turborepo + npm work
 │   │   │
 │   │   └── utils/
 │   │       ├── formatProducts.ts   → formats products for prompt
-│   │       ├── scoreFilter.ts      → applies similarity threshold (0.60)
+│   │       ├── scoreFilter.ts      → applies similarity threshold (0.40)
 │   │       └── index.ts
 │   │
 │   ├── tests/
@@ -298,7 +298,7 @@ Natural language query → query parser extracts intent + filters → Voyage AI 
 
 **Key implementation notes:**
 - Query parsing happens BEFORE embedding — extract `category`, `price_max`, `size` as structured filters, apply as SQL `WHERE` clauses before vector search
-- Similarity threshold: if `top_score < 0.60` → mark `has_results = false` in chat_logs → return graceful "no exact match" response
+- Similarity threshold: if `top_score < 0.40` → mark `has_results = false` in chat_logs → return graceful "no exact match" response (calibrated for Voyage AI voyage-3, which compresses scores to ~0.35–0.55)
 - Top-k = 5: pass all 5 to LLM, let LLM rank and explain tradeoffs
 - Log every interaction to `chat_logs` for analytics
 
@@ -329,7 +329,7 @@ Panel for the store owner powered entirely by `chat_logs` queries:
 
 - **Embedding model consistency** — use `voyage-3` for BOTH indexing and querying. Never mix embedding models
 - **Query parsing before embedding** — structured filters applied as SQL `WHERE` before vector search significantly improves precision
-- **Similarity threshold at 0.60** — below this the query is a lost sale, logged accordingly
+- **Similarity threshold at 0.40** — below this the query is a lost sale, logged accordingly (Voyage AI voyage-3 compresses scores to ~0.35–0.55; 0.40 is calibrated from real data)
 - **Top-k = 5** — retrieve 5 products, pass all to LLM, let LLM reason over them
 - **Conversation history** — include last 3 turns in prompt assembly for context continuity
 - **No LangChain** — every step is explicit Node.js code — easier to debug, easier to explain in interviews and pitch
@@ -412,6 +412,6 @@ Focus unit tests on `chatbot-core/pipeline/` — these are the most critical and
 7. **CLIP for image embeddings** — enables multimodal search without training a custom model
 8. **Query parsing before embedding** — structured filters (price, category, size) applied as SQL WHERE before vector search
 9. **Hybrid retrieval for image search** — text and image searches run in parallel, merged before LLM call
-10. **Similarity threshold at 0.60** — below this = lost sale, logged in chat_logs, surfaced in dashboard
+10. **Similarity threshold at 0.40** — below this = lost sale, logged in chat_logs, surfaced in dashboard (calibrated for Voyage AI voyage-3 score compression)
 11. **Ingestion as separate cron job** — decoupled from main API, runs hourly, never blocks real-time queries
 12. **Jest for unit testing** — focus on RAG pipeline components (query parser, embedding service, retrieval, prompt assembly)

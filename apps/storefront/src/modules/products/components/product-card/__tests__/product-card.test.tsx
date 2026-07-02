@@ -1,10 +1,10 @@
 import { render, screen } from "@testing-library/react"
 import type { HttpTypes } from "@medusajs/types"
 import ProductCard from "../index"
-import { getProductPrice } from "@lib/util/get-product-price"
+import { getProductPrice } from "../../../../../lib/util/get-product-price"
 
 // Heavy/IO dependencies are mocked so the test focuses on ProductCard's own rendering.
-jest.mock("@lib/util/get-product-price", () => ({
+jest.mock("../../../../../lib/util/get-product-price", () => ({
   getProductPrice: jest.fn(),
 }))
 
