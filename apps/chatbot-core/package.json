@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.4",
+    "openai": "^6.45.0",
     "voyageai": "^0.0.4"
   },
   "devDependencies": {
