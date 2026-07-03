@@ -46,8 +46,10 @@ src/
 ## Ask Vectra (chat assistant)
 
 - `VectraChat` (`modules/home/components/vectra-chat/`) is the floating assistant. It is mounted globally via the **`AskVectra` server loader** in `(main)/layout.tsx`, so it shows on every page **except checkout**.
-- `AskVectra` fetches the catalog (`listProducts`) + region and passes a lightweight `ChatProduct[]` to the UI.
-- **Text search is wired to the real backend** — `send()` calls `search()` from `@lib/api`, which POSTs to `/search/semantic` on the Medusa backend (`NEXT_PUBLIC_API_URL`, default `http://localhost:9000`). Results are joined against the loader's catalog list by `medusaProductId` to recover handle, category and region-formatted price; results not in the catalog are dropped. Image search is still a placeholder (image-only messages get a "not available yet" reply).
+- `AskVectra` fetches the catalog (`listProducts`) + region and passes the full `StoreProduct[]` to the UI.
+- **Text search is wired to the real backend** — `send()` calls `search()` from `@lib/api`, which POSTs to `/search/semantic` on the Medusa backend (`NEXT_PUBLIC_API_URL`, default `http://localhost:9000`). Results are joined against the loader's catalog list by `medusaProductId` to recover the full Medusa product; results not in the catalog are dropped. Image search is still a placeholder (image-only messages get a "not available yet" reply).
+- **Results render with the shared `ProductCard`** (`compact` mode) — the same card as the category/store grids.
+- **Mini mode** — when the route changes while the panel is open (product card click, quick-add redirect), the chat docks to a corner widget on desktop (closes on mobile) so the new page stays visible. The header has minimize/maximize buttons; conversation and composer text persist across pages.
 
 ## Testing
 

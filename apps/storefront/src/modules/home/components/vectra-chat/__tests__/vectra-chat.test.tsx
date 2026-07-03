@@ -1,14 +1,25 @@
 import { render, screen, fireEvent } from "@testing-library/react"
+import { HttpTypes } from "@medusajs/types"
 import { search } from "@lib/api"
-import VectraChat, { ChatProduct } from "../index"
+import VectraChat from "../index"
 
 jest.mock("next/navigation", () => ({
   useParams: () => ({ countryCode: "us" }),
   useRouter: () => ({ push: jest.fn() }),
+  usePathname: () => "/us",
 }))
 
 jest.mock("@lib/api", () => ({
   search: jest.fn(),
+}))
+
+// The chat renders results with the shared ProductCard (same card as the
+// category pages). Its cart/price internals are covered by its own tests.
+jest.mock("@modules/products/components/product-card", () => ({
+  __esModule: true,
+  default: ({ product }: { product: HttpTypes.StoreProduct }) => (
+    <div data-testid="product-card">{product.title}</div>
+  ),
 }))
 
 const searchMock = search as jest.Mock
@@ -33,40 +44,39 @@ describe("VectraChat composer", () => {
     expect(getComposer()).toHaveValue("trail running shoes")
   })
 
-  it("clears the composer when the panel closes and stays empty on reopen", () => {
+  it("keeps the composer text when the panel closes and reopens", () => {
     render(<VectraChat products={[]} />)
     openChat()
     fireEvent.change(getComposer(), { target: { value: "trail running shoes" } })
 
     fireEvent.click(screen.getByRole("button", { name: "Close" }))
-    expect(getComposer()).toHaveValue("")
+    expect(getComposer()).toHaveValue("trail running shoes")
 
     openChat()
-    expect(getComposer()).toHaveValue("")
+    expect(getComposer()).toHaveValue("trail running shoes")
   })
 
-  it("also clears the composer when closed with Escape", () => {
+  it("also keeps the composer text when closed with Escape", () => {
     render(<VectraChat products={[]} />)
     openChat()
     fireEvent.change(getComposer(), { target: { value: "waterproof jacket" } })
 
     fireEvent.keyDown(document, { key: "Escape" })
 
-    expect(getComposer()).toHaveValue("")
+    expect(getComposer()).toHaveValue("waterproof jacket")
   })
 })
 
 describe("VectraChat semantic search", () => {
-  const catalog: ChatProduct[] = [
+  const catalog = [
     {
       id: "prod_1",
       title: "Trail Runner X",
       handle: "trail-runner-x",
-      price: "$95",
       thumbnail: null,
-      category: "Running",
+      variants: [],
     },
-  ]
+  ] as unknown as HttpTypes.StoreProduct[]
 
   const openChat = () =>
     fireEvent.click(screen.getByRole("button", { name: "Ask Vectra" }))
