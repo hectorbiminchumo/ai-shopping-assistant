@@ -48,6 +48,12 @@ jobs:
             ${{ runner.os }}-turbo-
 
       - name: Build changed packages
+        env:
+          # Build verification only — deploys run on Vercel with real env.
+          # The storefront builds without a live Medusa backend (build-time
+          # fetches are try/caught), it just needs the env check to pass.
+          # If the repo secret exists it is used; otherwise a dummy key.
+          NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY || 'pk_ci_build_only' }}
         run: npx turbo build --filter=...[origin/main]
 
       - name: Run linter
