@@ -19,11 +19,14 @@ export type SemanticSearchResponse = {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:9000"
 
-export async function search(query: string): Promise<SemanticSearchResponse> {
+export async function search(
+  query: string,
+  topK?: number
+): Promise<SemanticSearchResponse> {
   const res = await fetch(`${API_URL}/search/semantic`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ query }),
+    body: JSON.stringify(topK ? { query, topK } : { query }),
   })
 
   if (!res.ok) {
