@@ -6,6 +6,7 @@ import { HttpTypes } from "@medusajs/types"
 import { isEqual } from "lodash"
 import { useParams, usePathname, useSearchParams, useRouter } from "next/navigation"
 import { useEffect, useMemo, useRef, useState } from "react"
+import { toast } from "sonner"
 
 /* ─── helpers ─────────────────────────────────────────────── */
 const optionsAsKeymap = (opts: HttpTypes.StoreProductVariant["options"]) =>
@@ -103,10 +104,16 @@ export default function ProductActions({
   const handleAddToCart = async () => {
     if (!selectedVariant?.id) return
     setIsAdding(true)
-    await addToCart({ variantId: selectedVariant.id, quantity: 1, countryCode })
-    setIsAdding(false)
-    setAddedOk(true)
-    setTimeout(() => setAddedOk(false), 1600)
+    try {
+      await addToCart({ variantId: selectedVariant.id, quantity: 1, countryCode })
+      setIsAdding(false)
+      setAddedOk(true)
+      toast.success("Added to cart", { duration: 3000 })
+      setTimeout(() => setAddedOk(false), 1600)
+    } catch {
+      setIsAdding(false)
+      toast.error("Could not add to cart. Please try again.")
+    }
   }
 
   // Price
@@ -122,15 +129,31 @@ export default function ProductActions({
   const brand = product.collection?.title ?? product.categories?.[0]?.name ?? null
 
   // ATC button label
-  const ctaLabel = addedOk
-    ? "Added ✓"
-    : isAdding
-    ? "Adding…"
-    : !selectedVariant && (product.variants?.length ?? 0) > 1
-    ? "Select size"
-    : !inStock
-    ? "Out of stock"
-    : "Add to cart"
+  const ctaContent = addedOk ? (
+    <span className="inline-flex items-center justify-center gap-2">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        style={{ width: 18, height: 18 }}
+        aria-hidden="true"
+      >
+        <path d="M5 13l4 4L19 7" />
+      </svg>
+      Added
+    </span>
+  ) : isAdding ? (
+    "Adding…"
+  ) : !selectedVariant && (product.variants?.length ?? 0) > 1 ? (
+    "Select size"
+  ) : !inStock ? (
+    "Out of stock"
+  ) : (
+    "Add to cart"
+  )
 
   const ctaDisabled = disabled || isAdding || !inStock || (!selectedVariant && (product.variants?.length ?? 0) > 1)
 
@@ -163,7 +186,6 @@ export default function ProductActions({
           <div key={option.id}>
             <div className="pdp__label">
               <span>Select {option.title?.toLowerCase() ?? "option"}</span>
-              <a href="#">Size guide</a>
             </div>
             <div className="sizes">
               {values.map((v) => {
@@ -202,7 +224,7 @@ export default function ProductActions({
           </svg>
           <div>
             <div className="alert__title">Only {selectedVariant.inventory_quantity} left</div>
-            <div className="alert__body">This item is selling fast — secure yours now.</div>
+            <div className="alert__body">This item is selling fast. Secure yours now.</div>
           </div>
         </div>
       )}
@@ -252,7 +274,7 @@ export default function ProductActions({
         data-testid="add-product-button"
         style={addedOk ? { background: "var(--clr-success)", color: "#fff" } : undefined}
       >
-        {ctaLabel}
+        {ctaContent}
       </button>
 
       {/* Meta */}
@@ -286,7 +308,7 @@ export default function ProductActions({
           )}
         </AccItem>
         <AccItem title="Shipping & returns">
-          Standard shipping in 2–4 business days. Free over €50. Free returns within 30 days of delivery. No questions asked.
+          Standard shipping in 2-4 business days. Free over €50. Free returns within 30 days of delivery. No questions asked.
         </AccItem>
         <AccItem title="Materials & care">
           {product.material

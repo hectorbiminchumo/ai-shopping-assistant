@@ -73,6 +73,7 @@ export default function RailSection({
   return (
     <section
       aria-labelledby={`rail-${title.replace(/\s+/g, "-").toLowerCase()}`}
+      className="v-reveal"
       style={{
         paddingBlock: "clamp(56px, 7vw, 96px)",
         background,

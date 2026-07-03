@@ -63,7 +63,8 @@
   --radius-tile: 18px;
 
   /* Type */
-  --font: "Helvetica Neue", Helvetica, Arial, "Segoe UI", sans-serif;
+  --font: var(--font-body), "Helvetica Neue", Helvetica, Arial, "Segoe UI", sans-serif;
+  --font-heading: var(--font-heading), "Helvetica Neue", Helvetica, Arial, sans-serif;
   --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
 
   /* Motion */
@@ -110,6 +111,22 @@ html.dark {
   --clr-info-line: #1e3a6e;
 }
 
+/* Background image with WebP source + original fallback.
+   Set --bg-webp and --bg-fallback (both as url(...)) on the element.
+   First declaration is the hard fallback for engines without image-set();
+   second serves WebP where supported, original otherwise. */
+/* Global focus-visible ring — keyboard users must see where they are */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[tabindex]:not([tabindex="-1"]):focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
 /* Product card — ATC button show/hide on hover */
 .vectra-card .atc-btn {
   opacity: 0;
@@ -127,10 +144,73 @@ html.dark {
   }
 }
 
+/* Product card — subtle image zoom on hover/focus (matches lookbook + tiles) */
+.vectra-card .pc-img {
+  transition: transform .5s var(--ease);
+}
+.vectra-card:hover .pc-img,
+.vectra-card:focus-within .pc-img {
+  transform: scale(1.04);
+}
+@media (prefers-reduced-motion: reduce) {
+  .vectra-card .pc-img { transition: none; }
+  .vectra-card:hover .pc-img,
+  .vectra-card:focus-within .pc-img { transform: none; }
+}
+
+/* Product card — framed tile for grids (category, store, rails) */
+.vectra-pc {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-tile);
+  padding: 14px 14px 16px;
+  transition: border-color .18s var(--ease), box-shadow .18s var(--ease),
+    transform .18s var(--ease);
+}
+.vectra-pc:hover,
+.vectra-pc:focus-within {
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow);
+  transform: translateY(-2px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .vectra-pc { transition: border-color .18s var(--ease), box-shadow .18s var(--ease); }
+  .vectra-pc:hover,
+  .vectra-pc:focus-within { transform: none; }
+}
+
 /* Vectra chat animations */
-@keyframes vectra-blink {
-  0%, 60%, 100% { opacity: .25; }
-  30% { opacity: 1; }
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes vectra-blink {
+    0%, 60%, 100% { opacity: .25; }
+    30% { opacity: 1; }
+  }
+}
+
+/* ============================================================
+   Motion layer — entry + scroll reveal
+   CSS-only (no JS, no scroll listeners). Progressive enhancement:
+   content is fully visible when unsupported or reduced-motion.
+   ============================================================ */
+@media (prefers-reduced-motion: no-preference) {
+  /* Hero card entry on load */
+  .v-enter { animation: v-enter-up .7s var(--ease) both; }
+  @keyframes v-enter-up {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  /* Section reveal tied to scroll position via the view() timeline */
+  @supports (animation-timeline: view()) {
+    .v-reveal {
+      animation: v-reveal-up linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 55%;
+    }
+    @keyframes v-reveal-up {
+      from { opacity: 0; transform: translateY(26px); }
+      to   { opacity: 1; transform: none; }
+    }
+  }
 }
 
 /* ============================================================
@@ -181,6 +261,16 @@ html.dark {
   position: relative;
   background: var(--surface);
 }
+/* Cursor-following magnify — JS sets transform + transform-origin per pointer.
+   Only `transform` transitions (smooth scale in/out); transform-origin is left
+   untransitioned so the pan tracks the cursor instantly. */
+.pdp-gallery__slide img {
+  transition: transform .25s var(--ease);
+  will-change: transform;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pdp-gallery__slide img { transition: none; }
+}
 /* Arrows: never shown (CSS handles navigation on mobile only) */
 .pdp-gallery__arrow { display: none; }
 /* Dots: hidden on desktop */
@@ -230,7 +320,9 @@ html.dark {
     border-radius: 0;
     opacity: 0;
     visibility: hidden;
-    transition: opacity .5s var(--ease);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .pdp-gallery__slide { transition: opacity .5s var(--ease); }
   }
   .pdp-gallery__slide.active { opacity: 1; visibility: visible; }
 
@@ -248,7 +340,9 @@ html.dark {
     border-radius: 50%;
     background: var(--line-strong);
     border: none; cursor: pointer; padding: 0;
-    transition: all .3s var(--ease);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .pdp-gallery__dot { transition: all .3s var(--ease); }
   }
   .pdp-gallery__dot.active { background: var(--text); width: 26px; border-radius: 999px; }
 
@@ -307,9 +401,11 @@ html.dark {
   font-size: 13.5px;
   font-weight: 500;
   cursor: pointer;
-  transition: border-color .15s var(--ease), background .15s var(--ease), color .15s;
+  transition: border-color .15s var(--ease), background .15s var(--ease),
+    color .15s, transform .12s var(--ease);
 }
 .size:hover:not(:disabled) { border-color: var(--text); }
+.size:active:not(:disabled) { transform: translateY(1px); }
 .size.sel { background: var(--text); color: var(--bg); border-color: var(--text); }
 .size.oos { opacity: .35; text-decoration: line-through; cursor: not-allowed; }
 
@@ -347,11 +443,16 @@ html.dark {
   font-family: var(--font);
   border: none;
   cursor: pointer;
-  transition: background .2s var(--ease);
+  transition: background .2s var(--ease), transform .12s var(--ease);
   margin-bottom: 4px;
 }
 .pdp__cta:hover:not(:disabled) { background: var(--btn-pri-bg-h); }
+.pdp__cta:active:not(:disabled) { transform: translateY(1px); }
 .pdp__cta:disabled { opacity: .45; cursor: not-allowed; }
+@media (prefers-reduced-motion: reduce) {
+  .pdp__cta:active:not(:disabled),
+  .size:active:not(:disabled) { transform: none; }
+}
 
 /* Meta */
 .pdp__meta {
@@ -517,6 +618,14 @@ input, textarea { font-family: inherit; }
 @layer components {
   .content-container {
     @apply max-w-[1440px] w-full mx-auto px-6;
+  }
+
+  /* VECTRA catalog page title — matches the rail-section display voice */
+  .vectra-page-title {
+    @apply font-bold m-0;
+    font-size: clamp(26px, 3vw, 38px);
+    letter-spacing: -0.025em;
+    line-height: 1.05;
   }
 
   .contrast-btn {

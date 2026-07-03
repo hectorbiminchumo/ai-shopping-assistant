@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
 export default function Banner() {
@@ -7,29 +8,20 @@ export default function Banner() {
       className="relative overflow-hidden flex items-center"
       style={{ minHeight: "clamp(360px, 46vw, 560px)" }}
     >
-      {/* Background */}
+      {/* Background — branded promo banner */}
       <div
-        className="absolute inset-0"
-        style={{
-          background:
-            "linear-gradient(135deg, #0a0a09 0%, #161614 50%, #1e1e1b 100%)",
-        }}
+        className="absolute inset-0 bg-image-set"
+        style={
+          {
+            "--bg-webp": 'url("/banners/elevate.webp")',
+            "--bg-fallback": 'url("/banners/elevate.png")',
+            backgroundColor: "#08120c",
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+          } as CSSProperties
+        }
         aria-hidden="true"
       />
-
-      {/* Decorative large letter */}
-      <div
-        className="absolute right-0 top-1/2 -translate-y-1/2 select-none pointer-events-none font-bold leading-none"
-        style={{
-          fontSize: "clamp(200px, 28vw, 380px)",
-          letterSpacing: "-0.05em",
-          color: "rgba(255,255,255,.03)",
-          right: "-2vw",
-        }}
-        aria-hidden="true"
-      >
-        V
-      </div>
 
       {/* Left shade */}
       <div
@@ -43,7 +35,7 @@ export default function Banner() {
 
       {/* Content */}
       <div
-        className="relative z-10 max-w-[1280px] mx-auto w-full"
+        className="v-reveal relative z-10 max-w-[1280px] mx-auto w-full"
         style={{ paddingInline: "var(--pad)" }}
       >
         <h2
