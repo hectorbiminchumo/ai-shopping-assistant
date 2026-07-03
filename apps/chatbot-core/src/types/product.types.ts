@@ -25,6 +25,7 @@ export interface Product {
 
 export interface ProductCard {
   id: string
+  medusaProductId: string
   title: string
   thumbnailUrl?: string
   priceMin: number

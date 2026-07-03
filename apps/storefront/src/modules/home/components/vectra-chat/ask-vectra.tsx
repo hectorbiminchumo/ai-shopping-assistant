@@ -21,7 +21,9 @@ export default async function AskVectra({
     listProducts({
       countryCode,
       queryParams: {
-        limit: 20,
+        // Full catalog (~80-100 products): the chat joins backend search
+        // results against this list to build linked product cards.
+        limit: 100,
         fields:
           "id,title,handle,thumbnail,categories,collection,*variants.calculated_price",
       },

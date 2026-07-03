@@ -23,6 +23,7 @@ describe("ResponseFormatter", () => {
     expect(response.products).toEqual([
       {
         id: "prod_1",
+        medusaProductId: "medusa_1",
         title: "Trail Runner X",
         thumbnailUrl: undefined,
         priceMin: 85,

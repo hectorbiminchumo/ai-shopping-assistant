@@ -2,6 +2,7 @@
 
 import { useRef, useState, useEffect, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
+import { search, SemanticProduct } from "@lib/api"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
 export type ChatProduct = {
@@ -25,13 +26,19 @@ const SUGGESTS = [
   { label: "Everyday lifestyle", query: "A jacket for everyday wear" },
 ]
 
-function localMatch(query: string, products: ChatProduct[]): ChatProduct[] {
-  const q = query.toLowerCase()
-  let results = products.filter((p) =>
-    `${p.title} ${p.category}`.toLowerCase().includes(q)
-  )
-  if (!results.length) results = products.slice(0, 3)
-  return results.slice(0, 3)
+// The backend returns embedding-index products; join them against the
+// catalog the loader fetched to recover handle, category and the
+// region-formatted price. Results missing from the storefront catalog
+// (e.g. unpublished products still in the index) can't be linked or
+// purchased, so they are dropped.
+function toChatProducts(
+  results: SemanticProduct[],
+  catalog: ChatProduct[]
+): ChatProduct[] {
+  return results.flatMap((r) => {
+    const known = catalog.find((p) => p.id === r.medusaProductId)
+    return known ? [known] : []
+  })
 }
 
 function TypingDots() {
@@ -273,15 +280,27 @@ export default function VectraChat({ products }: { products: ChatProduct[] }) {
     setBusy(true)
 
     try {
-      await new Promise((r) => setTimeout(r, 600))
-      const picks = localMatch(q, products)
-      const botMsg: Message = {
-        role: "bot",
-        text:
-          picks.length
-            ? `I found ${picks.length} product${picks.length > 1 ? "s" : ""} that match your search:`
-            : "I couldn't find an exact match, but here are some items you might like:",
-        products: picks.length ? picks : products.slice(0, 3),
+      let botMsg: Message
+      if (!q) {
+        // Image-only message — image search isn't wired to the backend yet
+        botMsg = {
+          role: "bot",
+          text: "Image search isn't available just yet — try describing what you're looking for in words and I'll find the closest match.",
+        }
+      } else {
+        const result = await search(q)
+        const picks = toChatProducts(result.products, products)
+        botMsg =
+          result.hasResults && picks.length
+            ? {
+                role: "bot",
+                text: `I found ${picks.length} product${picks.length > 1 ? "s" : ""} that match your search:`,
+                products: picks,
+              }
+            : {
+                role: "bot",
+                text: "I couldn't find a close match in our catalog. Try describing it differently — the activity, conditions or product type all help.",
+              }
       }
       setMessages((prev) => [...prev.filter((m) => m.role !== "typing"), botMsg])
     } catch {

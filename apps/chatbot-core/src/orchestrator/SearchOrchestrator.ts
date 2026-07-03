@@ -31,6 +31,7 @@ export class SearchOrchestrator {
     return {
       products: relevant.map((r) => ({
         id: r.product.id,
+        medusaProductId: r.product.medusaProductId,
         title: r.product.title,
         thumbnailUrl: r.product.thumbnailUrl,
         priceMin: r.product.priceMin ?? 0,
