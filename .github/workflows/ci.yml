@@ -54,6 +54,9 @@ jobs:
           # fetches are try/caught), it just needs the env check to pass.
           # If the repo secret exists it is used; otherwise a dummy key.
           NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY || 'pk_ci_build_only' }}
+          # Skip the admin dashboard vite build: it isn't served from CI
+          # and roughly doubles the backend build time.
+          DISABLE_MEDUSA_ADMIN: "true"
         run: npx turbo build --filter=...[origin/main]
 
       - name: Run linter
