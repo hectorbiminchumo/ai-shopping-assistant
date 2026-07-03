@@ -29,11 +29,24 @@ const nextConfig = {
     ignoreBuildErrors: false,
   },
   images: {
-    unoptimized: true,
+    // Optimization ON: Next resizes per `sizes`, serves AVIF/WebP and caches.
+    formats: ["image/avif", "image/webp"],
+    minimumCacheTTL: 86400,
     remotePatterns: [
       {
         protocol: "http",
         hostname: "localhost",
+      },
+      {
+        // Medusa dev backend (local file provider serves /static/*)
+        protocol: "http",
+        hostname: "localhost",
+        port: "9000",
+      },
+      {
+        // Supabase Storage (used after step 2)
+        protocol: "https",
+        hostname: "*.supabase.co",
       },
       {
         protocol: "https",
@@ -46,6 +59,15 @@ const nextConfig = {
       {
         protocol: "https",
         hostname: "placehold.co",
+      },
+      {
+        // Product catalog photos seeded from Unsplash
+        protocol: "https",
+        hostname: "images.unsplash.com",
+      },
+      {
+        protocol: "https",
+        hostname: "plus.unsplash.com",
       },
       ...(S3_HOSTNAME && S3_PATHNAME
         ? [

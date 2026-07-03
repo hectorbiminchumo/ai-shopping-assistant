@@ -1,19 +1,39 @@
 import { Suspense } from "react"
 import { listRegions } from "@lib/data/regions"
+import { listCategories } from "@lib/data/categories"
+import { listLocales } from "@lib/data/locales"
+import { getLocale } from "@lib/data/locale-actions"
 import { StoreRegion } from "@medusajs/types"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import CartButton from "@modules/layout/components/cart-button"
 import HeaderSearch from "@modules/layout/components/header-search"
+import SideMenu from "@modules/layout/components/side-menu"
+import NavLink from "@modules/layout/components/nav-link"
 
-const NAV_LINKS = [
-  { label: "New Arrivals", href: "/store" },
-  { label: "Footwear", href: "/categories/footwear" },
-  { label: "Apparel", href: "/categories/apparel" },
-  { label: "Equipment", href: "/store" },
-]
+// Default Medusa starter categories — hidden from the storefront nav.
+const JUNK_HANDLES = new Set(["shirts", "sweatshirts", "pants", "merch"])
+
+// "running-shoes" → "Running Shoes"
+const prettyName = (name: string) =>
+  name.replace(/[-_]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
 
 export default async function Nav() {
-  await listRegions().then((regions: StoreRegion[]) => regions)
+  const [regions, localesRes, currentLocale] = await Promise.all([
+    listRegions().catch(() => [] as StoreRegion[]),
+    listLocales().catch(() => null),
+    getLocale().catch(() => null),
+  ])
+
+  let categoryLinks: { label: string; href: string }[] = []
+  try {
+    const categories = await listCategories({ limit: 20 })
+    categoryLinks = (categories ?? [])
+      .filter((c) => !c.parent_category && !JUNK_HANDLES.has(c.handle))
+      .slice(0, 4)
+      .map((c) => ({ label: prettyName(c.name), href: `/categories/${c.handle}` }))
+  } catch { /* nav still renders without category links */ }
+
+  const navLinks = [{ label: "New Arrivals", href: "/store" }, ...categoryLinks]
 
   return (
     <header
@@ -31,12 +51,20 @@ export default async function Nav() {
         className="flex items-center gap-9 h-[72px] max-w-[1280px] mx-auto"
         style={{ paddingInline: "var(--pad)" }}
       >
+        {/* Mobile hamburger */}
+        <div className="flex items-center small:hidden">
+          <SideMenu
+            regions={regions}
+            locales={localesRes}
+            currentLocale={currentLocale}
+          />
+        </div>
         {/* Brand */}
         <LocalizedClientLink
           href="/"
           className="flex items-center gap-2.5 font-bold text-xl tracking-[.06em] shrink-0"
           style={{ color: "var(--text)" }}
-          aria-label="VECTRA – go to homepage"
+          aria-label="VECTRA, go to homepage"
         >
           <span
             className="w-[30px] h-[30px] rounded-lg grid place-items-center shrink-0"
@@ -64,17 +92,8 @@ export default async function Nav() {
           className="hidden small:flex items-center gap-[30px]"
           aria-label="Main navigation"
         >
-          {NAV_LINKS.map(({ label, href }) => (
-            <LocalizedClientLink
-              key={label}
-              href={href}
-              className="relative text-sm font-medium py-1.5 transition-colors duration-200
-                         after:absolute after:bottom-0 after:left-0 after:h-[1.5px] after:bg-current
-                         after:w-0 hover:after:w-full after:transition-all after:duration-200"
-              style={{ color: "var(--text-muted)" }}
-            >
-              {label}
-            </LocalizedClientLink>
+          {navLinks.map(({ label, href }) => (
+            <NavLink key={label} href={href} label={label} />
           ))}
         </nav>
 

@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useParams } from "next/navigation"
 import { addToCart } from "@lib/data/cart"
+import { toast } from "sonner"
 
 export default function QuickAdd({
   variantId,
@@ -34,9 +35,11 @@ export default function QuickAdd({
     try {
       await addToCart({ variantId, quantity: 1, countryCode })
       setState("added")
+      toast.success("Added to cart", { duration: 3000 })
       setTimeout(() => setState("idle"), 1400)
     } catch {
       setState("idle")
+      toast.error("Could not add to cart")
     }
   }
 

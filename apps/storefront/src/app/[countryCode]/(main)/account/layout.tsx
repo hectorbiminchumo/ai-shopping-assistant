@@ -1,5 +1,4 @@
 import { retrieveCustomer } from "@lib/data/customer"
-// TODO: Re-add Toaster component when needed
 import AccountLayout from "@modules/account/templates/account-layout"
 
 export default async function AccountPageLayout({
@@ -14,7 +13,6 @@ export default async function AccountPageLayout({
   return (
     <AccountLayout customer={customer}>
       {customer ? dashboard : login}
-      {/* TODO: Re-add Toaster component when needed */}
     </AccountLayout>
   )
 }

@@ -1,11 +1,25 @@
 "use client"
 
 import { useRef, useState, useEffect } from "react"
+import { useRouter, useParams } from "next/navigation"
 
 export default function HeaderSearch() {
   const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState("")
+  const [reducedMotion, setReducedMotion] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const boxRef = useRef<HTMLDivElement>(null)
+  const router = useRouter()
+  const params = useParams()
+  const countryCode = params.countryCode as string
+
+  useEffect(() => {
+    const mql = window.matchMedia("(prefers-reduced-motion: reduce)")
+    setReducedMotion(mql.matches)
+    const handler = (e: MediaQueryListEvent) => setReducedMotion(e.matches)
+    mql.addEventListener("change", handler)
+    return () => mql.removeEventListener("change", handler)
+  }, [])
 
   useEffect(() => {
     if (open) {
@@ -30,43 +44,64 @@ export default function HeaderSearch() {
     }
   }, [open])
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (query.trim()) {
+      setOpen(false)
+      router.push(`/${countryCode}/search?q=${encodeURIComponent(query.trim())}`)
+      setQuery("")
+    }
+  }
+
   return (
     <div ref={boxRef} style={{ display: "flex", alignItems: "center" }}>
-      <input
-        ref={inputRef}
-        type="search"
-        placeholder="Search products…"
-        aria-label="Search products"
-        aria-hidden={!open}
-        tabIndex={open ? 0 : -1}
-        style={{
-          height: 42,
-          borderRadius: 16,
-          background: "var(--surface-2)",
-          color: "var(--text)",
+      <form onSubmit={handleSubmit}>
+        <input
+          ref={inputRef}
+          type="search"
+          name="q"
+          placeholder="Search products…"
+          aria-label="Search products"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          aria-hidden={!open}
+          tabIndex={open ? 0 : -1}
+          style={{
+            height: 42,
+            borderRadius: 16,
+            background: "var(--surface-2)",
+            color: "var(--text)",
           fontSize: 14,
-          outline: "none",
-          border: 0,
           fontFamily: "inherit",
-          transition:
-            "width .25s cubic-bezier(.22,.61,.36,1), padding .25s cubic-bezier(.22,.61,.36,1), opacity .2s cubic-bezier(.22,.61,.36,1)",
-          width: open ? 200 : 0,
-          padding: open ? "0 14px" : 0,
-          opacity: open ? 1 : 0,
-          pointerEvents: open ? "auto" : "none",
-          marginRight: open ? 4 : 0,
-        }}
-      />
+          border: 0,
+            transition: reducedMotion
+              ? "none"
+              : "width .25s cubic-bezier(.22,.61,.36,1), padding .25s cubic-bezier(.22,.61,.36,1), opacity .2s cubic-bezier(.22,.61,.36,1)",
+            width: open ? 200 : 0,
+            padding: open ? "0 14px" : 0,
+            opacity: open ? 1 : 0,
+            pointerEvents: open ? "auto" : "none",
+            marginRight: open ? 4 : 0,
+          }}
+        />
+      </form>
       <button
         aria-label={open ? "Close search" : "Search"}
         aria-expanded={open}
+        type="button"
         onClick={(e) => {
           e.stopPropagation()
-          setOpen((v) => !v)
+          if (open && query.trim()) {
+            router.push(`/${countryCode}/search?q=${encodeURIComponent(query.trim())}`)
+            setQuery("")
+            setOpen(false)
+          } else {
+            setOpen((v) => !v)
+          }
         }}
         style={{
-          width: 42,
-          height: 42,
+          width: 44,
+          height: 44,
           borderRadius: 16,
           display: "grid",
           placeItems: "center",
