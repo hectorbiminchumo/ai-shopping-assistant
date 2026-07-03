@@ -12,7 +12,15 @@ type PaginatedProductsParams = {
   category_id?: string[]
   id?: string[]
   order?: string
+  fields?: string
 }
+
+// Only what ProductCard renders. The default listProducts fields pull
+// variant images, metadata and inventory for the whole catalog — a
+// response too large for the Next data cache (2MB/entry), so every
+// store/category visit paid the full Medusa query (~30s) again.
+const GRID_FIELDS =
+  "id,title,handle,thumbnail,created_at,categories,collection,*variants.calculated_price"
 
 export default async function PaginatedProducts({
   sortBy,
@@ -31,6 +39,7 @@ export default async function PaginatedProducts({
 }) {
   const queryParams: PaginatedProductsParams = {
     limit: 12,
+    fields: GRID_FIELDS,
   }
 
   if (collectionId) {
