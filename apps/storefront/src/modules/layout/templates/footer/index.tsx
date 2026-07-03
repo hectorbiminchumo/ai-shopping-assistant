@@ -49,6 +49,7 @@ export default async function Footer() {
 
   return (
     <footer
+      className="v-reveal"
       style={{
         background: "var(--bg)",
         borderTop: "1px solid var(--line)",

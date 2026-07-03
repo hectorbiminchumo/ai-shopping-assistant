@@ -35,7 +35,7 @@ export default function ProductTemplate({
   return (
     <>
       <main
-        className="pdp"
+        className="pdp v-reveal"
         style={{ maxWidth: "var(--maxw)", margin: "0 auto", padding: "40px var(--pad) 100px" }}
         data-testid="product-container"
       >
