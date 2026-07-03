@@ -111,7 +111,7 @@ describe("VectraChat semantic search", () => {
     sendQuery("trail running shoes")
 
     expect(
-      await screen.findByText("I found 1 product that match your search:")
+      await screen.findByText("I found 1 product that matches your search:")
     ).toBeInTheDocument()
     expect(screen.getByText("Trail Runner X")).toBeInTheDocument()
     expect(searchMock).toHaveBeenCalledWith("trail running shoes")

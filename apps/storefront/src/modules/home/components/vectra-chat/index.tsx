@@ -192,7 +192,10 @@ export default function VectraChat({
           result.hasResults && picks.length
             ? {
                 role: "bot",
-                text: `I found ${picks.length} product${picks.length > 1 ? "s" : ""} that match your search:`,
+                text:
+                  picks.length === 1
+                    ? "I found 1 product that matches your search:"
+                    : `I found ${picks.length} products that match your search:`,
                 products: picks,
               }
             : {
