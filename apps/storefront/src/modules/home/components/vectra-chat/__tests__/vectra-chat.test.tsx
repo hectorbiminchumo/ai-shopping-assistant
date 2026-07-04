@@ -117,6 +117,35 @@ describe("VectraChat semantic search", () => {
     expect(searchMock).toHaveBeenCalledWith("trail running shoes")
   })
 
+  it("renders the user message in the conversation", async () => {
+    searchMock.mockResolvedValue({ products: [], hasResults: false })
+
+    render(<VectraChat products={catalog} />)
+    openChat()
+    sendQuery("trail running shoes")
+
+    expect(screen.getByText("trail running shoes")).toBeInTheDocument()
+    await screen.findByText(/couldn't find a close match/i)
+  })
+
+  it("shows the typing indicator while the search is in flight", async () => {
+    let resolveSearch!: (value: unknown) => void
+    searchMock.mockImplementation(
+      () => new Promise((resolve) => (resolveSearch = resolve))
+    )
+
+    render(<VectraChat products={catalog} />)
+    openChat()
+    sendQuery("trail running shoes")
+
+    expect(screen.getByText("Vectra is typing")).toBeInTheDocument()
+
+    resolveSearch({ products: [], hasResults: false })
+    await screen.findByText(/couldn't find a close match/i)
+
+    expect(screen.queryByText("Vectra is typing")).not.toBeInTheDocument()
+  })
+
   it("shows the empty state when the backend finds no close match", async () => {
     searchMock.mockResolvedValue({ products: [], hasResults: false })
 
