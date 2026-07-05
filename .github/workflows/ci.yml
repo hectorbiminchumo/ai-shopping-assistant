@@ -48,7 +48,17 @@ jobs:
             ${{ runner.os }}-turbo-
 
       - name: Build changed packages
-        run: npx turbo build --filter=...[origin/main]
+        env:
+          # Skip the admin dashboard vite build: it isn't served from CI
+          # and roughly doubles the backend build time.
+          DISABLE_MEDUSA_ADMIN: "true"
+        # The storefront is excluded on purpose: `next build` cannot run in
+        # the hoisted workspace tree (the Medusa admin pins React 18 at the
+        # root while the storefront uses React 19 — prerender crashes with
+        # React error #31). Vercel builds the storefront on every PR from
+        # apps/storefront with an isolated install, and the lint/test steps
+        # below still type-check and test it here.
+        run: npx turbo build --filter=...[origin/main] --filter=!@dtc/storefront
 
       - name: Run linter
         run: npx turbo lint --filter=...[origin/main]

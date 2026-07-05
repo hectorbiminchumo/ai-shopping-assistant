@@ -1,19 +1,12 @@
-import { listProductsWithSort } from "@lib/data/products"
+import { search } from "@lib/api"
+import { listProducts, listProductsWithSort } from "@lib/data/products"
 import { getRegion } from "@lib/data/regions"
+import { sortProducts } from "@lib/util/sort-products"
 import ProductPreview from "@modules/products/components/product-preview"
 import { Pagination } from "@modules/store/components/pagination"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
 
 const PRODUCT_LIMIT = 12
-
-type PaginatedProductsParams = {
-  limit: number
-  collection_id?: string[]
-  category_id?: string[]
-  id?: string[]
-  order?: string
-  q?: string
-}
 
 async function getSearchProducts({
   query,
@@ -26,31 +19,58 @@ async function getSearchProducts({
   page: number
   countryCode: string
 }) {
-  const queryParams: PaginatedProductsParams = {
-    limit: 12,
-    q: query,
-  }
-
-  if (sortBy === "created_at") {
-    queryParams["order"] = "created_at"
-  }
-
   const region = await getRegion(countryCode)
 
   if (!region) {
     return { products: [], count: 0, region: null }
   }
 
-  const {
-    response: { products, count },
-  } = await listProductsWithSort({
-    page,
-    queryParams,
-    sortBy,
-    countryCode,
-  })
+  // Semantic search (same backend the chat uses), so natural-language
+  // queries work here too. Results come back ranked by similarity.
+  try {
+    const { products: matches } = await search(query, PRODUCT_LIMIT)
 
-  return { products, count, region }
+    if (!matches.length) {
+      return { products: [], count: 0, region }
+    }
+
+    const {
+      response: { products },
+    } = await listProducts({
+      countryCode,
+      queryParams: {
+        id: matches.map((m) => m.medusaProductId),
+        limit: PRODUCT_LIMIT,
+      },
+    })
+
+    // Medusa returns them in arbitrary order — restore relevance order,
+    // unless the user explicitly sorted by price.
+    const byId = new Map(products.map((p) => [p.id, p]))
+    let ordered = matches.flatMap((m) => byId.get(m.medusaProductId) ?? [])
+    if (sortBy === "price_asc" || sortBy === "price_desc") {
+      ordered = sortProducts(ordered, sortBy)
+    }
+
+    return { products: ordered, count: ordered.length, region }
+  } catch {
+    // AI backend unavailable → fall back to Medusa keyword search so the
+    // page keeps working.
+    const queryParams: { limit: number; q?: string } = {
+      limit: PRODUCT_LIMIT,
+      q: query,
+    }
+    const {
+      response: { products, count },
+    } = await listProductsWithSort({
+      page,
+      queryParams,
+      sortBy,
+      countryCode,
+    })
+
+    return { products, count, region }
+  }
 }
 
 export default async function PaginatedSearch({
@@ -94,7 +114,7 @@ export default async function PaginatedSearch({
       >
         {products.map((p) => {
           return (
-            <li key={p.id}>
+            <li key={p.id} className="v-reveal">
               <ProductPreview product={p} region={region ?? undefined} />
             </li>
           )

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import { addToCart } from "@lib/data/cart"
 import { toast } from "sonner"
 
@@ -18,6 +18,7 @@ export default function QuickAdd({
 }) {
   const [state, setState] = useState<"idle" | "adding" | "added">("idle")
   const params = useParams()
+  const router = useRouter()
   const countryCode = params.countryCode as string
 
   const handleClick = async (e: React.MouseEvent) => {
@@ -25,7 +26,9 @@ export default function QuickAdd({
     e.stopPropagation()
 
     if (!variantId) {
-      window.location.href = `/${countryCode}/products/${productHandle}`
+      // Several variants: size/color must be picked on the product page
+      toast.info("Choose your size and color on the product page")
+      router.push(`/${countryCode}/products/${productHandle}`)
       return
     }
 

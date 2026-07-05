@@ -46,8 +46,10 @@ src/
 ## Ask Vectra (chat assistant)
 
 - `VectraChat` (`modules/home/components/vectra-chat/`) is the floating assistant. It is mounted globally via the **`AskVectra` server loader** in `(main)/layout.tsx`, so it shows on every page **except checkout**.
-- `AskVectra` fetches the catalog (`listProducts`) + region and passes a lightweight `ChatProduct[]` to the UI.
-- **It is currently a frontend mock** — `localMatch()` does client-side keyword matching with a simulated delay. Wiring it to the real RAG backend (`chatbot-core`) is a separate task; keep data logic isolated so the swap is contained.
+- `AskVectra` fetches the catalog (`listProducts`) + region and passes the full `StoreProduct[]` to the UI.
+- **Text search is wired to the real backend** — `send()` calls `search()` from `@lib/api`, which POSTs to `/search/semantic` on the Medusa backend (`NEXT_PUBLIC_API_URL`, default `http://localhost:9000`). Results are joined against the loader's catalog list by `medusaProductId` to recover the full Medusa product; results not in the catalog are dropped. Image search is still a placeholder (image-only messages get a "not available yet" reply).
+- **Results render with the shared `ProductCard`** (`compact` mode) — the same card as the category/store grids.
+- **Mini mode** — when the route changes while the panel is open (product card click, quick-add redirect), the chat docks to a corner widget on desktop (closes on mobile) so the new page stays visible. The header has minimize/maximize buttons; conversation and composer text persist across pages.
 
 ## Testing
 
@@ -57,4 +59,4 @@ src/
 
 ## Environment
 
-Required: `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY` (enforced by `check-env-variables.js`). Also used: `NEXT_PUBLIC_MEDUSA_BACKEND_URL`, `NEXT_PUBLIC_BASE_URL`, `NEXT_PUBLIC_DEFAULT_REGION`, `NEXT_PUBLIC_STRIPE_KEY`. Local config in `.env.local`.
+Required: `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY` (enforced by `check-env-variables.js`). Also used: `NEXT_PUBLIC_MEDUSA_BACKEND_URL`, `NEXT_PUBLIC_API_URL` (AI search endpoints, defaults to `http://localhost:9000`), `NEXT_PUBLIC_BASE_URL`, `NEXT_PUBLIC_DEFAULT_REGION`, `NEXT_PUBLIC_STRIPE_KEY`. Local config in `.env.local`.

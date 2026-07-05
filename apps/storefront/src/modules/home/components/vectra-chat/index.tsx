@@ -1,20 +1,13 @@
 "use client"
 
 import { useRef, useState, useEffect, useCallback } from "react"
-import { useParams, useRouter } from "next/navigation"
-import LocalizedClientLink from "@modules/common/components/localized-client-link"
-
-export type ChatProduct = {
-  id: string
-  title: string
-  handle: string
-  price: string
-  thumbnail: string | null
-  category: string
-}
+import { usePathname } from "next/navigation"
+import { HttpTypes } from "@medusajs/types"
+import { search, SemanticProduct } from "@lib/api"
+import ProductCard from "@modules/products/components/product-card"
 
 type Message =
-  | { role: "bot"; text: string; products?: ChatProduct[] }
+  | { role: "bot"; text: string; products?: HttpTypes.StoreProduct[] }
   | { role: "user"; text: string; images?: string[] }
   | { role: "typing" }
 
@@ -25,13 +18,19 @@ const SUGGESTS = [
   { label: "Everyday lifestyle", query: "A jacket for everyday wear" },
 ]
 
-function localMatch(query: string, products: ChatProduct[]): ChatProduct[] {
-  const q = query.toLowerCase()
-  let results = products.filter((p) =>
-    `${p.title} ${p.category}`.toLowerCase().includes(q)
-  )
-  if (!results.length) results = products.slice(0, 3)
-  return results.slice(0, 3)
+// The backend returns embedding-index products; join them against the
+// catalog the loader fetched to recover the full Medusa product (handle,
+// prices, badges). Results missing from the storefront catalog (e.g.
+// unpublished products still in the index) can't be linked or purchased,
+// so they are dropped.
+function toCatalogProducts(
+  results: SemanticProduct[],
+  catalog: HttpTypes.StoreProduct[]
+): HttpTypes.StoreProduct[] {
+  return results.flatMap((r) => {
+    const known = catalog.find((p) => p.id === r.medusaProductId)
+    return known ? [known] : []
+  })
 }
 
 function TypingDots() {
@@ -54,140 +53,25 @@ function TypingDots() {
   )
 }
 
-function ChatProductCard({ p }: { p: ChatProduct }) {
-  const { countryCode } = useParams()
-  const router = useRouter()
-  const img =
-    p.thumbnail ??
-    `https://placehold.co/200x200/f6f6f4/6a6a67?text=${encodeURIComponent(p.title)}`
-
+// Same card as the category/store grids (ProductCard in compact mode),
+// sized to fit three-up inside the chat thread.
+function ChatProductCard({ p }: { p: HttpTypes.StoreProduct }) {
   return (
-    <LocalizedClientLink
-      href={`/products/${p.handle}`}
-      className="vectra-card block"
-      style={{
-        flex: "0 0 calc((100% - 28px) / 3)",
-        minWidth: 140,
-        borderRadius: 14,
-        overflow: "hidden",
-        transition: "transform .2s cubic-bezier(.22,.61,.36,1)",
-        textDecoration: "none",
-      }}
-      onMouseEnter={(e: React.MouseEvent<HTMLElement>) =>
-        ((e.currentTarget as HTMLElement).style.transform = "translateY(-2px)")
-      }
-      onMouseLeave={(e: React.MouseEvent<HTMLElement>) =>
-        ((e.currentTarget as HTMLElement).style.transform = "translateY(0)")
-      }
-    >
-      {/* Image */}
-      <div
-        style={{
-          aspectRatio: "1",
-          background: "var(--surface)",
-          position: "relative",
-          borderRadius: 14,
-          overflow: "hidden",
-        }}
-      >
-        <img
-          src={img}
-          alt={p.title}
-          style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
-        />
-        {/* ATC — navigates to PDP since we don't have variantId in chat context */}
-        <button
-          className="atc-btn"
-          aria-label={`Add ${p.title} to cart`}
-          onClick={(e) => {
-            e.preventDefault()
-            e.stopPropagation()
-            router.push(`/${countryCode}/products/${p.handle}`)
-          }}
-          style={{
-            position: "absolute",
-            right: 6,
-            bottom: 6,
-            width: 32,
-            height: 32,
-            borderRadius: 10,
-            background: "var(--text)",
-            color: "var(--bg)",
-            border: "none",
-            cursor: "pointer",
-            display: "grid",
-            placeItems: "center",
-            boxShadow: "0 4px 16px rgba(0,0,0,.16)",
-            transition:
-              "background .2s, opacity .25s cubic-bezier(.22,.61,.36,1), transform .25s cubic-bezier(.22,.61,.36,1)",
-            zIndex: 2,
-          }}
-        >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.6"
-            style={{ width: 15, height: 15, pointerEvents: "none" }}
-            aria-hidden="true"
-          >
-            <path d="M6 7h13l-1.2 9.5a2 2 0 01-2 1.7H9.2a2 2 0 01-2-1.7L6 4H3" />
-            <circle cx="9" cy="21" r="1" />
-            <circle cx="17" cy="21" r="1" />
-          </svg>
-        </button>
-      </div>
-
-      {/* Info */}
-      <div
-        style={{
-          paddingTop: 12,
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "baseline",
-          gap: 8,
-        }}
-      >
-        <div style={{ minWidth: 0 }}>
-          <div
-            style={{
-              fontSize: 13,
-              fontWeight: 600,
-              color: "var(--text)",
-              lineHeight: 1.3,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {p.title}
-          </div>
-          {p.category && (
-            <div style={{ fontSize: 11.5, color: "var(--text-muted)", marginTop: 2 }}>
-              {p.category}
-            </div>
-          )}
-        </div>
-        {p.price && (
-          <div
-            style={{
-              fontSize: 14,
-              fontWeight: 600,
-              color: "var(--text)",
-              whiteSpace: "nowrap",
-              flexShrink: 0,
-            }}
-          >
-            {p.price}
-          </div>
-        )}
-      </div>
-    </LocalizedClientLink>
+    <div style={{ flex: "0 0 calc((100% - 28px) / 3)", minWidth: 140 }}>
+      <ProductCard product={p} compact />
+    </div>
   )
 }
 
-export default function VectraChat({ products }: { products: ChatProduct[] }) {
+export default function VectraChat({
+  products,
+}: {
+  products: HttpTypes.StoreProduct[]
+}) {
   const [open, setOpen] = useState(false)
+  // Docked-widget mode: the panel shrinks to a corner window so the page
+  // behind stays visible (e.g. after navigating to a product from the chat)
+  const [mini, setMini] = useState(false)
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "bot",
@@ -202,6 +86,8 @@ export default function VectraChat({ products }: { products: ChatProduct[] }) {
   const fileRef = useRef<HTMLInputElement>(null)
   const floatRef = useRef<HTMLButtonElement>(null)
   const prevOpen = useRef(false)
+  const pathname = usePathname()
+  const prevPathname = useRef(pathname)
 
   const scrollToBottom = useCallback(() => {
     chatScrollRef.current?.scrollTo({ top: chatScrollRef.current.scrollHeight })
@@ -215,26 +101,45 @@ export default function VectraChat({ products }: { products: ChatProduct[] }) {
     if (open) {
       setTimeout(() => taRef.current?.focus(), 420)
     } else if (prevOpen.current) {
-      // Return focus to the trigger and clear the composer when the dialog closes
+      // Return focus to the trigger when the dialog closes; the composer
+      // text is kept so the user can pick up where they left off.
       floatRef.current?.focus()
-      setInput("")
-      if (taRef.current) taRef.current.style.height = "auto"
     }
     prevOpen.current = open
   }, [open])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && open) setOpen(false)
+      // Escape only dismisses the full-screen (modal) mode — the docked
+      // widget doesn't capture the page's keyboard
+      if (e.key === "Escape" && open && !mini) setOpen(false)
     }
-    const onOpen = () => setOpen(true)
+    const onOpen = () => {
+      setMini(false)
+      setOpen(true)
+    }
     document.addEventListener("keydown", onKey)
     document.addEventListener("vectra:open", onOpen)
     return () => {
       document.removeEventListener("keydown", onKey)
       document.removeEventListener("vectra:open", onOpen)
     }
-  }, [open])
+  }, [open, mini])
+
+  // Navigating away from inside the chat (product card, quick-add) would
+  // otherwise leave the full-screen panel covering the new page: dock the
+  // chat to a corner widget instead (close it on mobile, where the docked
+  // window doesn't fit). The conversation is kept either way.
+  useEffect(() => {
+    if (prevPathname.current === pathname) return
+    prevPathname.current = pathname
+    if (!open) return
+    if (window.matchMedia("(max-width: 767px)").matches) {
+      setOpen(false)
+    } else {
+      setMini(true)
+    }
+  }, [pathname, open])
 
   const autosize = () => {
     const ta = taRef.current
@@ -273,15 +178,30 @@ export default function VectraChat({ products }: { products: ChatProduct[] }) {
     setBusy(true)
 
     try {
-      await new Promise((r) => setTimeout(r, 600))
-      const picks = localMatch(q, products)
-      const botMsg: Message = {
-        role: "bot",
-        text:
-          picks.length
-            ? `I found ${picks.length} product${picks.length > 1 ? "s" : ""} that match your search:`
-            : "I couldn't find an exact match, but here are some items you might like:",
-        products: picks.length ? picks : products.slice(0, 3),
+      let botMsg: Message
+      if (!q) {
+        // Image-only message — image search isn't wired to the backend yet
+        botMsg = {
+          role: "bot",
+          text: "Image search isn't available just yet — try describing what you're looking for in words and I'll find the closest match.",
+        }
+      } else {
+        const result = await search(q)
+        const picks = toCatalogProducts(result.products, products)
+        botMsg =
+          result.hasResults && picks.length
+            ? {
+                role: "bot",
+                text:
+                  picks.length === 1
+                    ? "I found 1 product that matches your search:"
+                    : `I found ${picks.length} products that match your search:`,
+                products: picks,
+              }
+            : {
+                role: "bot",
+                text: "I couldn't find a close match in our catalog. Try describing it differently — the activity, conditions or product type all help.",
+              }
       }
       setMessages((prev) => [...prev.filter((m) => m.role !== "typing"), botMsg])
     } catch {
@@ -321,6 +241,8 @@ export default function VectraChat({ products }: { products: ChatProduct[] }) {
         .vectra-panel-scrim.open{opacity:1;pointer-events:auto}
         .vectra-panel{position:fixed;left:0;right:0;bottom:0;z-index:62;background:var(--bg);border-top:1px solid var(--line);box-shadow:0 -8px 40px rgba(0,0,0,.12);transform:translateY(100%);display:flex;flex-direction:column;height:100vh;height:100dvh}
         .vectra-panel.open{transform:translateY(0)}
+        .vectra-panel.mini{--pad:16px;left:auto;top:auto;right:24px;bottom:24px;width:min(400px,calc(100vw - 48px));height:min(560px,calc(100dvh - 48px));border:1px solid var(--line);border-radius:20px;box-shadow:0 16px 56px rgba(0,0,0,.2);overflow:hidden}
+        .vectra-panel.mini .vectra-grip{display:none}
         .vectra-float{position:fixed;right:28px;bottom:28px;z-index:55;display:inline-flex;align-items:center;gap:10px;height:52px;padding:0 24px;border-radius:999px;background:var(--btn-pri-bg);color:var(--btn-pri-fg);font-size:14px;font-weight:600;letter-spacing:-0.01em;font-family:inherit;box-shadow:0 4px 20px rgba(0,0,0,.15);border:none;cursor:pointer}
         .vectra-float:hover{background:var(--btn-pri-bg-h)}
         .vectra-float:active{transform:translateY(1px)}
@@ -329,18 +251,18 @@ export default function VectraChat({ products }: { products: ChatProduct[] }) {
         .composer-inner:focus-within{border-color:var(--text)}
       `}</style>
 
-      {/* ============ SCRIM ============ */}
+      {/* ============ SCRIM (full-screen mode only) ============ */}
       <div
-        className={`vectra-panel-scrim${open ? " open" : ""}`}
+        className={`vectra-panel-scrim${open && !mini ? " open" : ""}`}
         onClick={() => setOpen(false)}
         aria-hidden="true"
       />
 
       {/* ============ CHAT PANEL ============ */}
       <aside
-        className={`vectra-panel${open ? " open" : ""}`}
+        className={`vectra-panel${open ? " open" : ""}${mini ? " mini" : ""}`}
         role="dialog"
-        aria-modal="true"
+        aria-modal={!mini}
         aria-label="Vectra search assistant"
         aria-hidden={!open}
       >
@@ -369,10 +291,55 @@ export default function VectraChat({ products }: { products: ChatProduct[] }) {
             {" · search with text or images"}
           </div>
           <button
+            onClick={() => setMini((m) => !m)}
+            aria-label={mini ? "Maximize chat" : "Minimize chat"}
+            style={{
+              marginLeft: "auto",
+              width: 44,
+              height: 44,
+              borderRadius: 16,
+              display: "grid",
+              placeItems: "center",
+              color: "var(--text)",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              transition: "background .15s",
+            }}
+            onMouseEnter={(e) =>
+              ((e.currentTarget as HTMLElement).style.background =
+                "var(--surface-2)")
+            }
+            onMouseLeave={(e) =>
+              ((e.currentTarget as HTMLElement).style.background = "none")
+            }
+          >
+            {mini ? (
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.7"
+                style={{ width: 19, height: 19 }}
+              >
+                <path d="M8 3H5a2 2 0 00-2 2v3M16 3h3a2 2 0 012 2v3M8 21H5a2 2 0 01-2-2v-3M16 21h3a2 2 0 002-2v-3" />
+              </svg>
+            ) : (
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.7"
+                style={{ width: 19, height: 19 }}
+              >
+                <path d="M5 12h14" />
+              </svg>
+            )}
+          </button>
+          <button
             onClick={() => setOpen(false)}
             aria-label="Close"
             style={{
-              marginLeft: "auto",
               width: 44,
               height: 44,
               borderRadius: 16,
@@ -404,6 +371,7 @@ export default function VectraChat({ products }: { products: ChatProduct[] }) {
           </button>
           {/* Grip indicator */}
           <div
+            className="vectra-grip"
             aria-hidden="true"
             style={{
               position: "absolute",
@@ -800,7 +768,10 @@ export default function VectraChat({ products }: { products: ChatProduct[] }) {
       <button
         ref={floatRef}
         className={`vectra-float${open ? " hidden" : ""}`}
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          setMini(false)
+          setOpen(true)
+        }}
         aria-label="Ask Vectra"
         aria-expanded={open}
       >

@@ -8,10 +8,11 @@ import {
   SearchOrchestrator,
 } from "@dtc/chatbot-core"
 
-const TOP_K = 5
+const DEFAULT_TOP_K = 5
 
 const searchBodySchema = z.object({
   query: z.string().trim().min(1, "query must not be empty"),
+  topK: z.number().int().min(1).max(20).optional(),
 })
 
 export async function POST(req: MedusaRequest, res: MedusaResponse) {
@@ -32,7 +33,10 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   )
 
   try {
-    const result = await orchestrator.search(parsed.data.query, TOP_K)
+    const result = await orchestrator.search(
+      parsed.data.query,
+      parsed.data.topK ?? DEFAULT_TOP_K
+    )
     res.status(200).json(result)
   } catch (err) {
     const message = err instanceof ChatbotError ? err.message : "Semantic search failed"

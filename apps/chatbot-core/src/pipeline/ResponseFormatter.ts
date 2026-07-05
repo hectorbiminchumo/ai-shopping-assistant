@@ -19,6 +19,7 @@ export class ResponseFormatter {
 
     return {
       id: result.product.id,
+      medusaProductId: result.product.medusaProductId,
       title: result.product.title,
       thumbnailUrl: result.product.thumbnailUrl,
       priceMin: Math.min(...prices),

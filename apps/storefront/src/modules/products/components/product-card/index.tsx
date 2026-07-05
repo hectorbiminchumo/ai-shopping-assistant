@@ -103,7 +103,7 @@ export default function ProductCard({
   return (
     <LocalizedClientLink
       href={`/products/${product.handle}`}
-      className={`vectra-card group block${compact ? "" : " vectra-pc"}`}
+      className="vectra-card group block vectra-pc"
       data-testid="product-wrapper"
     >
       {/* Image tile */}
