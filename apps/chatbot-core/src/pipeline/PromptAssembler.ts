@@ -8,14 +8,12 @@ const HISTORY_TURNS = 3
 export class PromptAssembler {
   assemble(context: PromptContext): string {
     const recentHistory = this.formatHistory(context.history)
-    const productContext = formatProductsForPrompt(
-      context.retrievedProducts.map((r) => r.product)
-    )
+    const productContext = formatProductsForPrompt(context.retrievedProducts)
 
     return [
       "You are a sportswear shopping assistant. Recommend products from the catalog below and explain your reasoning.",
       "",
-      "Catalog matches:",
+      "Catalog matches (ordered by relevance):",
       productContext || "(no matching products found)",
       "",
       recentHistory ? `Recent conversation:\n${recentHistory}` : "",

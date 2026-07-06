@@ -27,7 +27,7 @@ export interface ProductCard {
   id: string
   title: string
   thumbnailUrl?: string
-  priceMin: number
-  priceMax: number
+  priceMin?: number
+  priceMax?: number
   similarityScore: number
 }

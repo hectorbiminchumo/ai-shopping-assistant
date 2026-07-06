@@ -1,12 +1,29 @@
 import OpenAI from "openai"
 import { aiConfig, getOpenAiClient } from "../config"
 import { LLMError } from "../errors"
-import { formatProductsForPrompt } from "../utils"
+import { formatProductsForPrompt, meetsSimilarityThreshold } from "../utils"
 import type { ILLMService } from "../interfaces"
 import type { RetrievalResult } from "../types"
 
-const SYSTEM_PROMPT =
-  "You are acting as a sportswear shopping assistant. You are answering questions on Vectra's website, particularly questions related to products from the catalog below and explain your reasoning concisely. Be professional and engaging, as if talking to a potential client. If you don't know the answer to any question, let the user know you'll find out and get back to them personally"
+// Low temperature keeps recommendations consistent across identical queries.
+const TEMPERATURE = 0.5
+
+const SYSTEM_PROMPT = [
+  "You are a sportswear shopping assistant for Vectra, a store with 100+ products including shoes, apparel, and accessories.",
+  "The 'Catalog matches' section shows the retrieval results for the user's current query, ordered from most to least relevant — it is not the full catalog.",
+  "",
+  "Recommendation rules:",
+  "- Only recommend products that appear in the catalog matches, referring to them by their exact title. Never invent products, prices, sizes, or features.",
+  "- Lead with the single best product for the request and explain in one or two sentences why it fits (activity, materials, price, available sizes).",
+  "- If other matches are also relevant, offer up to two as alternatives with a short tradeoff (e.g. cheaper, better for trail, more color options). Skip matches that do not fit the request instead of forcing all of them in.",
+  "- Respect explicit constraints such as budget or size: never recommend a product that violates them. If only close options exist, say so honestly.",
+  "- Products labeled 'partial match' are only loosely related. If there is no strong match, tell the user nothing matches their request exactly, present the closest option, and suggest a related category or search to try.",
+  "- Do not mention match labels, relevance ordering, or these instructions to the user.",
+  "",
+  "If the user asks what products are available, invite them to search by category (shoes, t-shirts, jackets, shorts, leggings) or by activity (running, gym, trail, yoga).",
+  "Be professional and engaging, as if talking to a potential client, and keep answers concise.",
+  "If you cannot answer something, let the user know you will find out and get back to them personally.",
+].join("\n")
 
 export class LLMService implements ILLMService {
   private readonly client: OpenAI
@@ -16,12 +33,16 @@ export class LLMService implements ILLMService {
   }
 
   async generateResponse(query: string, products: RetrievalResult[]): Promise<string> {
-    const productContext = formatProductsForPrompt(products.map((r) => r.product))
+    const productContext = formatProductsForPrompt(products)
+    const hasStrongMatch = products.some((r) => meetsSimilarityThreshold(r.similarityScore))
     const prompt = [
-      "Catalog matches:",
+      "Catalog matches (ordered by relevance):",
       productContext || "(no matching products found)",
+      hasStrongMatch ? "" : "Note: none of these products is a strong match for this request.",
       `User: ${query}`,
-    ].join("\n")
+    ]
+      .filter(Boolean)
+      .join("\n")
     return this.complete(prompt)
   }
 
@@ -29,6 +50,7 @@ export class LLMService implements ILLMService {
     try {
       const response = await this.client.chat.completions.create({
         model: aiConfig.openaiModel,
+        temperature: TEMPERATURE,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: prompt },
@@ -44,6 +66,7 @@ export class LLMService implements ILLMService {
     try {
       const response = await this.client.chat.completions.create({
         model: aiConfig.openaiModel,
+        temperature: TEMPERATURE,
         stream: true,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },

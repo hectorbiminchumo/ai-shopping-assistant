@@ -15,14 +15,17 @@ export class ResponseFormatter {
   }
 
   private toProductCard(result: RetrievalResult): ProductCard {
-    const prices = result.product.variants.map((v) => v.price)
+    const { product } = result
+    const variantPrices = product.variants.map((v) => v.price)
+    const priceMin = variantPrices.length > 0 ? Math.min(...variantPrices) : product.priceMin
+    const priceMax = variantPrices.length > 0 ? Math.max(...variantPrices) : product.priceMax
 
     return {
-      id: result.product.id,
-      title: result.product.title,
-      thumbnailUrl: result.product.thumbnailUrl,
-      priceMin: Math.min(...prices),
-      priceMax: Math.max(...prices),
+      id: product.id,
+      title: product.title,
+      thumbnailUrl: product.thumbnailUrl,
+      priceMin,
+      priceMax,
       similarityScore: result.similarityScore,
     }
   }
