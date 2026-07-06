@@ -1,8 +1,11 @@
 import type { IChatLogger, IEmbeddingService, ILLMService, IRetrievalService } from "../interfaces"
-import type { PromptAssembler, QueryParser, ResponseFormatter } from "../pipeline"
+import type { PromptAssembler, QueryParser, Reranker, ResponseFormatter } from "../pipeline"
 import type { ChatResponse, ChatSession } from "../types"
 
-const TOP_K = 5
+// Retrieve more candidates than needed so the re-ranker has a meaningful set
+// to work with; RERANK_K is the final count passed to the LLM.
+const RETRIEVE_K = 10
+const RERANK_K = 5
 
 // Coordinates Feature 1 (conversational/semantic search) end to end.
 // Implements no business logic itself — each step is delegated to a
@@ -13,6 +16,7 @@ export class ChatOrchestrator {
     private readonly queryParser: QueryParser,
     private readonly embeddingService: IEmbeddingService,
     private readonly retrievalService: IRetrievalService,
+    private readonly reranker: Reranker,
     private readonly promptAssembler: PromptAssembler,
     private readonly llmService: ILLMService,
     private readonly responseFormatter: ResponseFormatter,
@@ -28,7 +32,11 @@ export class ChatOrchestrator {
     const standaloneQuery = await this.llmService.condenseQuery(rawQuery, session.history)
     const parsedQuery = this.queryParser.parse(standaloneQuery, knownCategories)
     const embedding = await this.embeddingService.embedText(parsedQuery.rawQuery)
-    const retrieved = await this.retrievalService.search(embedding, parsedQuery, TOP_K)
+    const candidates = await this.retrievalService.search(embedding, parsedQuery, RETRIEVE_K)
+    const retrieved = this.reranker.rerank(parsedQuery, candidates, RERANK_K)
+    // TEMPORAL — quitar después
+console.log("Before rerank:", candidates.map(r => ({ title: r.product.title, score: r.similarityScore })))
+console.log("After rerank:", retrieved.map(r => ({ title: r.product.title, score: r.similarityScore })))
 
     const prompt = this.promptAssembler.assemble({
       // The LLM answers the user's actual message; only retrieval uses the
