@@ -51,6 +51,58 @@ describe("ChatOrchestrator (integration, mocked providers)", () => {
     expect(response.hasResults).toBe(true)
   })
 
+  it("embeds the condensed standalone query for follow-up messages", async () => {
+    const embeddingService = createMockEmbeddingService()
+    const llmService = createMockLLMService()
+    ;(llmService.condenseQuery as jest.Mock).mockResolvedValue("gym shoes for women")
+
+    const orchestrator = new ChatOrchestrator(
+      new QueryParser(),
+      embeddingService,
+      createMockRetrievalService([retrievalResult]),
+      new PromptAssembler(),
+      llmService,
+      new ResponseFormatter(),
+      createMockChatLogger()
+    )
+
+    const historySession: ChatSession = {
+      sessionId: "session_1",
+      history: [
+        { role: "user", content: "I am looking for gym shoes" },
+        { role: "assistant", content: "For men, women or children?" },
+      ],
+    }
+
+    await orchestrator.handle("for women", historySession)
+
+    expect(llmService.condenseQuery).toHaveBeenCalledWith("for women", historySession.history)
+    expect(embeddingService.embedText).toHaveBeenCalledWith("gym shoes for women")
+  })
+
+  it("applies a category pre-filter when the query mentions a known catalog category", async () => {
+    const retrievalService = createMockRetrievalService([retrievalResult], ["Shoes", "Jackets"])
+
+    const orchestrator = new ChatOrchestrator(
+      new QueryParser(),
+      createMockEmbeddingService(),
+      retrievalService,
+      new PromptAssembler(),
+      createMockLLMService(),
+      new ResponseFormatter(),
+      createMockChatLogger()
+    )
+
+    await orchestrator.handle("gym shoes for training", session)
+
+    expect(retrievalService.listCategories).toHaveBeenCalled()
+    expect(retrievalService.search).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ category: "Shoes" }),
+      expect.anything()
+    )
+  })
+
   it("logs hasResults false when nothing meets the similarity threshold", async () => {
     const retrievalService = createMockRetrievalService([{ product, similarityScore: 0.3 }])
     const chatLogger = createMockChatLogger()

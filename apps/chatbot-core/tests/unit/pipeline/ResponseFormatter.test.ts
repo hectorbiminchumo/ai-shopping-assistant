@@ -47,4 +47,52 @@ describe("ResponseFormatter", () => {
     const response = formatter.format("no matches", [])
     expect(response.hasResults).toBe(false)
   })
+
+  describe("RECOMMENDED trailer", () => {
+    const second: Product = {
+      ...product,
+      id: "prod_2",
+      medusaProductId: "medusa_2",
+      title: "Gym Flex Trainer",
+    }
+    const retrieved: RetrievalResult[] = [
+      { product, similarityScore: 0.48 },
+      { product: second, similarityScore: 0.44 },
+    ]
+
+    it("keeps only the products the LLM recommended and strips the trailer", () => {
+      const response = formatter.format(
+        "The Gym Flex Trainer is your best option.\nRECOMMENDED: 2",
+        retrieved
+      )
+
+      expect(response.message).toBe("The Gym Flex Trainer is your best option.")
+      expect(response.products.map((p) => p.id)).toEqual(["prod_2"])
+    })
+
+    it("returns no cards when the LLM recommends none (e.g. clarifying question)", () => {
+      const response = formatter.format(
+        "Is this for men, women or children?\nRECOMMENDED: none",
+        retrieved
+      )
+
+      expect(response.message).toBe("Is this for men, women or children?")
+      expect(response.products).toEqual([])
+      expect(response.hasResults).toBe(true)
+    })
+
+    it("ignores out-of-range numbers in the trailer", () => {
+      const response = formatter.format("Take the first one.\nRECOMMENDED: 1, 7", retrieved)
+      expect(response.products.map((p) => p.id)).toEqual(["prod_1"])
+    })
+
+    it("falls back to the similarity threshold when no trailer is present", () => {
+      const response = formatter.format("Here are some options.", [
+        { product, similarityScore: 0.48 },
+        { product: second, similarityScore: 0.35 },
+      ])
+
+      expect(response.products.map((p) => p.id)).toEqual(["prod_1"])
+    })
+  })
 })

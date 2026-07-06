@@ -17,6 +17,17 @@ export type SemanticSearchResponse = {
   hasResults: boolean
 }
 
+export type ChatHistoryMessage = {
+  role: "user" | "assistant"
+  content: string
+}
+
+export type ChatResponse = {
+  message: string
+  products: SemanticProduct[]
+  hasResults: boolean
+}
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:9000"
 
 export async function search(
@@ -31,6 +42,26 @@ export async function search(
 
   if (!res.ok) {
     throw new Error(`Semantic search failed with status ${res.status}`)
+  }
+
+  return res.json()
+}
+
+// Conversational endpoint: same retrieval as search(), plus an LLM-written
+// reply. History lets the assistant keep context across turns.
+export async function chat(
+  query: string,
+  sessionId: string,
+  history: ChatHistoryMessage[]
+): Promise<ChatResponse> {
+  const res = await fetch(`${API_URL}/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ query, sessionId, history }),
+  })
+
+  if (!res.ok) {
+    throw new Error(`Chat failed with status ${res.status}`)
   }
 
   return res.json()

@@ -3,7 +3,7 @@
 import { useRef, useState, useEffect, useCallback } from "react"
 import { usePathname } from "next/navigation"
 import { HttpTypes } from "@medusajs/types"
-import { search, SemanticProduct } from "@lib/api"
+import { chat, ChatHistoryMessage, SemanticProduct } from "@lib/api"
 import ProductCard from "@modules/products/components/product-card"
 
 type Message =
@@ -80,6 +80,12 @@ export default function VectraChat({
   ])
   const [input, setInput] = useState("")
   const [busy, setBusy] = useState(false)
+  // Stable per-visit session id so the backend can group turns in chat_logs
+  const sessionIdRef = useRef(
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : Math.random().toString(36).slice(2)
+  )
   const [attachImages, setAttachImages] = useState<string[]>([])
   const chatScrollRef = useRef<HTMLDivElement>(null)
   const taRef = useRef<HTMLTextAreaElement>(null)
@@ -186,22 +192,25 @@ export default function VectraChat({
           text: "Image search isn't available just yet — try describing what you're looking for in words and I'll find the closest match.",
         }
       } else {
-        const result = await search(q)
+        // Last few turns give the assistant conversational context; the
+        // backend trims further to the window the prompt actually uses.
+        const history: ChatHistoryMessage[] = messages
+          .filter((m): m is Extract<Message, { role: "bot" | "user" }> => m.role !== "typing")
+          .map((m) => ({
+            role: m.role === "bot" ? ("assistant" as const) : ("user" as const),
+            content: m.text,
+          }))
+          .filter((m) => m.content)
+          .slice(-6)
+        const result = await chat(q, sessionIdRef.current, history)
         const picks = toCatalogProducts(result.products, products)
-        botMsg =
-          result.hasResults && picks.length
-            ? {
-                role: "bot",
-                text:
-                  picks.length === 1
-                    ? "I found 1 product that matches your search:"
-                    : `I found ${picks.length} products that match your search:`,
-                products: picks,
-              }
-            : {
-                role: "bot",
-                text: "I couldn't find a close match in our catalog. Try describing it differently — the activity, conditions or product type all help.",
-              }
+        botMsg = {
+          role: "bot",
+          text:
+            result.message ||
+            "I couldn't find a close match in our catalog. Try describing it differently — the activity, conditions or product type all help.",
+          products: result.hasResults && picks.length ? picks : undefined,
+        }
       }
       setMessages((prev) => [...prev.filter((m) => m.role !== "typing"), botMsg])
     } catch {

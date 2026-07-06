@@ -1,5 +1,6 @@
 import { getSupabaseClient } from "../config"
 import { RetrievalError } from "../errors"
+import { titleMatchesAudience } from "../utils/audience"
 import type { IRetrievalService } from "../interfaces"
 import type { ParsedQuery, RetrievalResult } from "../types"
 import type { Product } from "../types"
@@ -18,6 +19,15 @@ interface ProductEmbeddingRow {
   similarity: number
 }
 
+// When the user names an audience, fetch extra candidates so enough survive
+// the title-based audience filter to still fill topK.
+const AUDIENCE_OVERFETCH = 4
+
+// Categories change only when the catalog is re-ingested (hourly cron), so
+// cache them across requests instead of hitting Supabase on every message.
+let categoriesCache: { values: string[]; fetchedAt: number } | null = null
+const CATEGORIES_TTL_MS = 10 * 60 * 1000
+
 export class RetrievalService implements IRetrievalService {
   async search(
     embedding: number[],
@@ -27,9 +37,13 @@ export class RetrievalService implements IRetrievalService {
     try {
       const supabase = getSupabaseClient()
 
+      // The embeddings table has no audience column — the audience lives in
+      // the title ("Nike Women ..."). Over-fetch, then filter by title.
+      const matchCount = query.audience ? topK * AUDIENCE_OVERFETCH : topK
+
       const { data, error } = await supabase.rpc("match_products", {
         query_embedding: embedding,
-        match_count: topK,
+        match_count: matchCount,
         filter_category: query.category ?? null,
         filter_price_max: query.priceMax ?? null,
       })
@@ -38,13 +52,51 @@ export class RetrievalService implements IRetrievalService {
 
       const rows = (data ?? []) as ProductEmbeddingRow[]
 
-      return rows.map((row) => ({
+      let results = rows.map((row) => ({
         product: this.toProduct(row),
         similarityScore: row.similarity,
       }))
+
+      if (query.audience) {
+        const audience = query.audience
+        results = results
+          .filter((r) => titleMatchesAudience(r.product.title, audience))
+          .slice(0, topK)
+      }
+
+      return results
     } catch (err) {
       if (err instanceof RetrievalError) throw err
       throw new RetrievalError("Vector search failed", err)
+    }
+  }
+
+  async listCategories(): Promise<string[]> {
+    if (categoriesCache && Date.now() - categoriesCache.fetchedAt < CATEGORIES_TTL_MS) {
+      return categoriesCache.values
+    }
+
+    try {
+      const supabase = getSupabaseClient()
+      const { data, error } = await supabase
+        .from("product_embeddings")
+        .select("category")
+        .not("category", "is", null)
+
+      if (error) return []
+
+      const values = [
+        ...new Set(
+          ((data ?? []) as { category: string }[])
+            .map((row) => row.category.trim())
+            .filter(Boolean)
+        ),
+      ]
+      categoriesCache = { values, fetchedAt: Date.now() }
+      return values
+    } catch {
+      // Best-effort: without categories the search simply runs unfiltered
+      return []
     }
   }
 

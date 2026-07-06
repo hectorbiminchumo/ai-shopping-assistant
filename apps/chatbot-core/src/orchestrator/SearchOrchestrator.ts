@@ -22,7 +22,10 @@ export class SearchOrchestrator {
   ) {}
 
   async search(rawQuery: string, topK: number = DEFAULT_TOP_K): Promise<SearchResponse> {
-    const parsedQuery = this.queryParser.parse(rawQuery)
+    // Known categories let the parser emit a SQL pre-filter (e.g. "shoes"
+    // in the query → only shoe rows are vector-searched)
+    const knownCategories = await this.retrievalService.listCategories()
+    const parsedQuery = this.queryParser.parse(rawQuery, knownCategories)
     const embedding = await this.embeddingService.embedText(parsedQuery.rawQuery)
     const retrieved = await this.retrievalService.search(embedding, parsedQuery, topK)
 

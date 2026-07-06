@@ -1,6 +1,6 @@
 import { render, screen, fireEvent } from "@testing-library/react"
 import { HttpTypes } from "@medusajs/types"
-import { search } from "@lib/api"
+import { chat } from "@lib/api"
 import VectraChat from "../index"
 
 jest.mock("next/navigation", () => ({
@@ -10,7 +10,7 @@ jest.mock("next/navigation", () => ({
 }))
 
 jest.mock("@lib/api", () => ({
-  search: jest.fn(),
+  chat: jest.fn(),
 }))
 
 // The chat renders results with the shared ProductCard (same card as the
@@ -22,7 +22,7 @@ jest.mock("@modules/products/components/product-card", () => ({
   ),
 }))
 
-const searchMock = search as jest.Mock
+const chatMock = chat as jest.Mock
 
 // jsdom does not implement element scrolling; the chat autoscrolls on mount.
 beforeAll(() => {
@@ -67,7 +67,7 @@ describe("VectraChat composer", () => {
   })
 })
 
-describe("VectraChat semantic search", () => {
+describe("VectraChat conversation", () => {
   const catalog = [
     {
       id: "prod_1",
@@ -88,11 +88,12 @@ describe("VectraChat semantic search", () => {
   }
 
   beforeEach(() => {
-    searchMock.mockReset()
+    chatMock.mockReset()
   })
 
-  it("shows products returned by the backend, joined against the catalog", async () => {
-    searchMock.mockResolvedValue({
+  it("shows the assistant message and products joined against the catalog", async () => {
+    chatMock.mockResolvedValue({
+      message: "The Trail Runner X is a great fit for trail running.",
       products: [
         {
           id: "emb_1",
@@ -111,43 +112,61 @@ describe("VectraChat semantic search", () => {
     sendQuery("trail running shoes")
 
     expect(
-      await screen.findByText("I found 1 product that matches your search:")
+      await screen.findByText("The Trail Runner X is a great fit for trail running.")
     ).toBeInTheDocument()
-    expect(screen.getByText("Trail Runner X")).toBeInTheDocument()
-    expect(searchMock).toHaveBeenCalledWith("trail running shoes")
-  })
-
-  it("renders the user message in the conversation", async () => {
-    searchMock.mockResolvedValue({ products: [], hasResults: false })
-
-    render(<VectraChat products={catalog} />)
-    openChat()
-    sendQuery("trail running shoes")
-
-    expect(screen.getByText("trail running shoes")).toBeInTheDocument()
-    await screen.findByText(/couldn't find a close match/i)
-  })
-
-  it("shows the typing indicator while the search is in flight", async () => {
-    let resolveSearch!: (value: unknown) => void
-    searchMock.mockImplementation(
-      () => new Promise((resolve) => (resolveSearch = resolve))
+    expect(screen.getByTestId("product-card")).toHaveTextContent("Trail Runner X")
+    expect(chatMock).toHaveBeenCalledWith(
+      "trail running shoes",
+      expect.any(String),
+      expect.any(Array)
     )
+  })
+
+  it("shows the assistant message without product cards when hasResults is false", async () => {
+    chatMock.mockResolvedValue({
+      message: "Nothing matches that exactly — try a related category like jackets.",
+      products: [
+        {
+          id: "emb_1",
+          medusaProductId: "prod_1",
+          title: "Trail Runner X",
+          priceMin: 95,
+          priceMax: 95,
+          similarityScore: 0.3,
+        },
+      ],
+      hasResults: false,
+    })
 
     render(<VectraChat products={catalog} />)
     openChat()
-    sendQuery("trail running shoes")
+    sendQuery("submarine")
 
-    expect(screen.getByText("Vectra is typing")).toBeInTheDocument()
-
-    resolveSearch({ products: [], hasResults: false })
-    await screen.findByText(/couldn't find a close match/i)
-
-    expect(screen.queryByText("Vectra is typing")).not.toBeInTheDocument()
+    expect(
+      await screen.findByText(/nothing matches that exactly/i)
+    ).toBeInTheDocument()
+    expect(screen.queryByTestId("product-card")).not.toBeInTheDocument()
   })
 
-  it("shows the empty state when the backend finds no close match", async () => {
-    searchMock.mockResolvedValue({ products: [], hasResults: false })
+  it("answers greetings conversationally with the assistant message", async () => {
+    chatMock.mockResolvedValue({
+      message: "Hi! I'm Vectra. Tell me what you're looking for.",
+      products: [],
+      hasResults: false,
+    })
+
+    render(<VectraChat products={catalog} />)
+    openChat()
+    sendQuery("Hello")
+
+    expect(screen.getByText("Hello")).toBeInTheDocument()
+    expect(
+      await screen.findByText("Hi! I'm Vectra. Tell me what you're looking for.")
+    ).toBeInTheDocument()
+  })
+
+  it("falls back to the canned empty state when the message is empty", async () => {
+    chatMock.mockResolvedValue({ message: "", products: [], hasResults: false })
 
     render(<VectraChat products={catalog} />)
     openChat()
@@ -158,8 +177,26 @@ describe("VectraChat semantic search", () => {
     ).toBeInTheDocument()
   })
 
+  it("shows the typing indicator while the request is in flight", async () => {
+    let resolveChat!: (value: unknown) => void
+    chatMock.mockImplementation(
+      () => new Promise((resolve) => (resolveChat = resolve))
+    )
+
+    render(<VectraChat products={catalog} />)
+    openChat()
+    sendQuery("trail running shoes")
+
+    expect(screen.getByText("Vectra is typing")).toBeInTheDocument()
+
+    resolveChat({ message: "No luck this time.", products: [], hasResults: false })
+    await screen.findByText("No luck this time.")
+
+    expect(screen.queryByText("Vectra is typing")).not.toBeInTheDocument()
+  })
+
   it("shows an error message when the request fails", async () => {
-    searchMock.mockRejectedValue(new Error("boom"))
+    chatMock.mockRejectedValue(new Error("boom"))
 
     render(<VectraChat products={catalog} />)
     openChat()

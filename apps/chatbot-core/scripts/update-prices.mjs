@@ -1,5 +1,9 @@
 /**
- * Assigns realistic prices to product_embeddings rows based on title/category.
+ * Assigns realistic prices based on title/category to BOTH price stores:
+ *   - product_embeddings (Supabase rows the RAG pipeline reads)
+ *   - Medusa price table (what the storefront/product cards display)
+ * The Kaggle seed data carried INR-scale numbers (8999) that were stored
+ * as USD — this script replaces them with the rule-based prices below.
  *
  * Usage:
  *   node --env-file=.env scripts/update-prices.mjs --dry-run   ← preview only
@@ -102,6 +106,78 @@ async function updatePrice(id, priceMin, priceMax) {
   if (!res.ok) throw new Error(`Update failed: ${res.status} ${await res.text()}`)
 }
 
+// ── Medusa price table (what the storefront actually displays) ───────────────
+// Same Postgres instance: product → product_variant → product_variant_price_set
+// (link table) → price rows. The modules have no cross-FKs, so fetch each
+// table and join in JS.
+
+async function fetchTable(path) {
+  const res = await fetch(`${REST_URL}/${path}`, { headers: HEADERS })
+  if (!res.ok) throw new Error(`Fetch ${path} failed: ${res.status} ${await res.text()}`)
+  const rows = await res.json()
+  if (rows.length === 1000) {
+    console.warn(`  ⚠️  ${path} returned exactly 1000 rows — results may be truncated`)
+  }
+  return rows
+}
+
+async function updateMedusaPrices() {
+  const [medusaProducts, variants, links, prices] = await Promise.all([
+    fetchTable("product?select=id,title&deleted_at=is.null"),
+    fetchTable("product_variant?select=id,product_id&deleted_at=is.null"),
+    fetchTable("product_variant_price_set?select=variant_id,price_set_id"),
+    fetchTable("price?select=id,price_set_id,amount&deleted_at=is.null"),
+  ])
+
+  const productByVariant = new Map(variants.map((v) => [v.id, v.product_id]))
+  const titleByProduct = new Map(medusaProducts.map((p) => [p.id, p.title]))
+
+  // price id → target amount, via variant → product title → price rule
+  const targetByPriceId = new Map()
+  const linkByPriceSet = new Map(links.map((l) => [l.price_set_id, l.variant_id]))
+
+  let unchanged = 0
+  for (const price of prices) {
+    const variantId = linkByPriceSet.get(price.price_set_id)
+    const title = titleByProduct.get(productByVariant.get(variantId))
+    if (!title) continue
+
+    const { priceMin } = assignPrice(title, null)
+    if (price.amount === priceMin) {
+      unchanged++
+      continue
+    }
+    targetByPriceId.set(price.id, priceMin)
+  }
+
+  console.log(
+    `\n🏬  Medusa prices: ${prices.length} rows — ${targetByPriceId.size} to update, ${unchanged} already correct`
+  )
+
+  if (dryRun) return
+
+  // Batch: one PATCH per distinct amount (id=in.(...) filter)
+  const idsByAmount = new Map()
+  for (const [id, amount] of targetByPriceId) {
+    if (!idsByAmount.has(amount)) idsByAmount.set(amount, [])
+    idsByAmount.get(amount).push(id)
+  }
+
+  for (const [amount, ids] of idsByAmount) {
+    const res = await fetch(`${REST_URL}/price?id=in.(${ids.join(",")})`, {
+      method:  "PATCH",
+      headers: { ...HEADERS, "Prefer": "return=minimal" },
+      body:    JSON.stringify({
+        amount,
+        raw_amount: { value: String(amount), precision: 20 },
+      }),
+    })
+    if (!res.ok) throw new Error(`Medusa price update failed: ${res.status} ${await res.text()}`)
+  }
+
+  console.log(`  ✅  Updated ${targetByPriceId.size} Medusa price rows`)
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -131,10 +207,12 @@ async function main() {
 
   console.log(`\n─────────────────────────────────────────`)
   if (dryRun) {
-    console.log(`  Preview only — run without --dry-run to apply changes`)
+    console.log(`  Preview only (embeddings) — run without --dry-run to apply changes`)
   } else {
-    console.log(`  ✅  Updated ${updated} products`)
+    console.log(`  ✅  Updated ${updated} products in product_embeddings`)
   }
+
+  await updateMedusaPrices()
 }
 
 main().catch((err) => {

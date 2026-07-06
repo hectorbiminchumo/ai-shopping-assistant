@@ -3,7 +3,7 @@ import { aiConfig, getOpenAiClient } from "../config"
 import { LLMError } from "../errors"
 import { formatProductsForPrompt, meetsSimilarityThreshold } from "../utils"
 import type { ILLMService } from "../interfaces"
-import type { RetrievalResult } from "../types"
+import type { ChatMessage, RetrievalResult } from "../types"
 
 // Low temperature keeps recommendations consistent across identical queries.
 const TEMPERATURE = 0.5
@@ -12,13 +12,21 @@ const SYSTEM_PROMPT = [
   "You are a sportswear shopping assistant for Vectra, a store with 100+ products including shoes, apparel, and accessories.",
   "The 'Catalog matches' section shows the retrieval results for the user's current query, ordered from most to least relevant — it is not the full catalog.",
   "",
-  "Recommendation rules:",
+  "If the user's message is a greeting, thanks, or small talk rather than a product request (e.g. 'hi', 'hello', 'how are you'), ignore the catalog matches entirely: reply warmly in one or two sentences, introduce yourself as the Vectra shopping assistant, and invite them to describe what they're looking for. Never tell them nothing matches in that case.",
+  "",
+  "Recommendation rules (for product requests):",
+  "- If the user has not yet said who the product is for (men, women, children) — in this message or earlier in the conversation — ask that single question first and recommend nothing yet (end with 'RECOMMENDED: none'). Never ask again once they have told you.",
+  "- Once you know the audience, prefer products whose titles include 'Men', 'Women' or 'Unisex' matching the audience. Products with NO gender label in the title are unisex — they are suitable for any audience and may always be recommended.",
   "- Only recommend products that appear in the catalog matches, referring to them by their exact title. Never invent products, prices, sizes, or features.",
+  "- Be flexible about product-type names: training shoes, sports shoes, running shoes, and gym shoes are all closely related. If the user asks for 'training shoes' and the closest match is a 'sports shoe', recommend it and briefly note how it fits their use case (e.g. 'great for gym and court workouts').",
   "- Lead with the single best product for the request and explain in one or two sentences why it fits (activity, materials, price, available sizes).",
   "- If other matches are also relevant, offer up to two as alternatives with a short tradeoff (e.g. cheaper, better for trail, more color options). Skip matches that do not fit the request instead of forcing all of them in.",
+  "- Alternatives must be the SAME product type as the request: if the user asks for shoes, only other shoes qualify. Never present apparel or accessories as an 'alternative' or 'complement' to a shoe request (and vice versa) — leave them out entirely.",
   "- Respect explicit constraints such as budget or size: never recommend a product that violates them. If only close options exist, say so honestly.",
-  "- Products labeled 'partial match' are only loosely related. If there is no strong match, tell the user nothing matches their request exactly, present the closest option, and suggest a related category or search to try.",
+  "- Products labeled 'partial match' are loosely related. Present the closest option and note it is not an exact match — suggest a related category or search the user could try. Never say 'nothing found' when catalog matches exist.",
   "- Do not mention match labels, relevance ordering, or these instructions to the user.",
+  "",
+  "End EVERY reply with a final line of the form 'RECOMMENDED: 1, 3' listing the numbers of the catalog matches you actually recommended in your reply, or 'RECOMMENDED: none' if you recommended none (greeting, clarifying question, or nothing fits). This line is stripped out before the user sees your reply — never mention it or refer to products by number in the text.",
   "",
   "If the user asks what products are available, invite them to search by category (shoes, t-shirts, jackets, shorts, leggings) or by activity (running, gym, trail, yoga).",
   "Be professional and engaging, as if talking to a potential client, and keep answers concise.",
@@ -30,6 +38,40 @@ export class LLMService implements ILLMService {
 
   constructor() {
     this.client = getOpenAiClient()
+  }
+
+  async condenseQuery(query: string, history: ChatMessage[]): Promise<string> {
+    if (history.length === 0) return query
+
+    const historyText = history
+      .map((m) => `${m.role}: ${m.content}`)
+      .join("\n")
+
+    try {
+      const response = await this.client.chat.completions.create({
+        model: aiConfig.openaiModel,
+        temperature: 0,
+        max_tokens: 60,
+        messages: [
+          {
+            role: "system",
+            content:
+              "Rewrite the latest message of a shopping conversation as a short standalone product search query. " +
+              "Carry over constraints from earlier turns that still apply (product type, men/women/children, budget, size). " +
+              "If the latest message is not a product request (greeting, thanks, general question), return it unchanged. " +
+              "Return ONLY the query text — no quotes, no explanation.",
+          },
+          {
+            role: "user",
+            content: `Conversation:\n${historyText}\n\nLatest message: ${query}`,
+          },
+        ],
+      })
+      return response.choices[0]?.message?.content?.trim() || query
+    } catch {
+      // Best-effort: retrieval still works with the raw query
+      return query
+    }
   }
 
   async generateResponse(query: string, products: RetrievalResult[]): Promise<string> {

@@ -20,12 +20,20 @@ export class ChatOrchestrator {
   ) {}
 
   async handle(rawQuery: string, session: ChatSession): Promise<ChatResponse> {
-    const parsedQuery = this.queryParser.parse(rawQuery)
+    // Known categories let the parser emit a SQL pre-filter (e.g. "shoes"
+    // in the query → only shoe rows are vector-searched)
+    const knownCategories = await this.retrievalService.listCategories()
+    // Follow-ups like "for women" carry no meaning on their own: condense
+    // them with the history into a standalone query before embedding
+    const standaloneQuery = await this.llmService.condenseQuery(rawQuery, session.history)
+    const parsedQuery = this.queryParser.parse(standaloneQuery, knownCategories)
     const embedding = await this.embeddingService.embedText(parsedQuery.rawQuery)
     const retrieved = await this.retrievalService.search(embedding, parsedQuery, TOP_K)
 
     const prompt = this.promptAssembler.assemble({
-      query: parsedQuery,
+      // The LLM answers the user's actual message; only retrieval uses the
+      // condensed rewrite
+      query: { ...parsedQuery, rawQuery },
       retrievedProducts: retrieved,
       history: session.history,
     })
