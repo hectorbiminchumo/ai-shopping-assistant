@@ -32,6 +32,19 @@ describe("QueryParser", () => {
     expect(result.category).toBe("training-apparel")
   })
 
+  it("matches categories with reordered or stemmed words", () => {
+    const categories = ["running-shoes", "training-apparel", "jackets"]
+    expect(parser.parse("women shoes for run", categories).category).toBe("running-shoes")
+    expect(parser.parse("shoes for running", categories).category).toBe("running-shoes")
+    expect(parser.parse("a warm jacket", categories).category).toBe("jackets")
+  })
+
+  it("does not match a category when only part of its name appears", () => {
+    const categories = ["running-shoes", "training-apparel"]
+    // "training" alone must not trigger training-apparel for a shoe request
+    expect(parser.parse("training shoes for women", categories).category).toBeUndefined()
+  })
+
   it("detects the audience mentioned in the query", () => {
     expect(parser.parse("training shoes for women").audience).toBe("women")
     expect(parser.parse("running shoes for men").audience).toBe("men")

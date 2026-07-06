@@ -20,8 +20,10 @@ interface ProductEmbeddingRow {
 }
 
 // When the user names an audience, fetch extra candidates so enough survive
-// the title-based audience filter to still fill topK.
-const AUDIENCE_OVERFETCH = 4
+// the title-based audience filter to still fill topK. 8× topK covers an
+// entire category (~32 rows), so paraphrased queries with the same filters
+// see the same candidate pool instead of clipping it differently.
+const AUDIENCE_OVERFETCH = 8
 
 // Categories change only when the catalog is re-ingested (hourly cron), so
 // cache them across requests instead of hitting Supabase on every message.

@@ -10,6 +10,21 @@ function normalize(text: string): string {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()
 }
 
+// Loose stem match so "run" ≈ "running" and "shoe" ≈ "shoes". Requiring at
+// least 3 characters keeps short words from matching everything.
+function stemsMatch(a: string, b: string): boolean {
+  if (a === b) return true
+  return (a.length >= 3 && b.startsWith(a)) || (b.length >= 3 && a.startsWith(b))
+}
+
+// A category applies when EVERY word of its name appears (stemmed, any
+// order) in the query: "women shoes for run" → "running-shoes".
+function matchesCategory(queryTokens: string[], category: string): boolean {
+  return normalize(category)
+    .split(" ")
+    .every((catToken) => queryTokens.some((qt) => stemsMatch(qt, catToken)))
+}
+
 // Single responsibility: turn a raw user query into structured filters
 // applied as SQL WHERE clauses before the vector search, plus the text
 // that still gets embedded for semantic matching.
@@ -17,10 +32,8 @@ export class QueryParser {
   parse(rawQuery: string, knownCategories: string[] = []): ParsedQuery {
     const priceMatch = rawQuery.match(PRICE_PATTERN)
     const sizeMatch = rawQuery.match(SIZE_PATTERN)
-    const normalizedQuery = normalize(rawQuery)
-    const category = knownCategories.find((c) =>
-      normalizedQuery.includes(normalize(c))
-    )
+    const queryTokens = normalize(rawQuery).split(" ")
+    const category = knownCategories.find((c) => matchesCategory(queryTokens, c))
 
     return {
       rawQuery,
