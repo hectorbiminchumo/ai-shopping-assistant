@@ -1,9 +1,13 @@
 import type { IChatLogger, IRetrievalService } from "../../src/interfaces"
 import type { RetrievalResult } from "../../src/types"
 
-export function createMockRetrievalService(results: RetrievalResult[] = []): IRetrievalService {
+export function createMockRetrievalService(
+  results: RetrievalResult[] = [],
+  categories: string[] = []
+): IRetrievalService {
   return {
     search: jest.fn().mockResolvedValue(results),
+    listCategories: jest.fn().mockResolvedValue(categories),
   }
 }
 

@@ -1,21 +1,19 @@
 import { formatProductsForPrompt } from "../utils"
 import type { ChatMessage, PromptContext } from "../types"
 
-const HISTORY_TURNS = 3
+const HISTORY_TURNS = 6
 
 // Builds the final prompt sent to the LLM: system instructions + retrieved
 // product context + recent conversation history + the user's query.
 export class PromptAssembler {
   assemble(context: PromptContext): string {
     const recentHistory = this.formatHistory(context.history)
-    const productContext = formatProductsForPrompt(
-      context.retrievedProducts.map((r) => r.product)
-    )
+    const productContext = formatProductsForPrompt(context.retrievedProducts)
 
+    // Persona and recommendation rules live in LLMService's system prompt —
+    // this only supplies the per-turn context (matches + history + query).
     return [
-      "You are a sportswear shopping assistant. Recommend products from the catalog below and explain your reasoning.",
-      "",
-      "Catalog matches:",
+      "Catalog matches (ordered by relevance):",
       productContext || "(no matching products found)",
       "",
       recentHistory ? `Recent conversation:\n${recentHistory}` : "",

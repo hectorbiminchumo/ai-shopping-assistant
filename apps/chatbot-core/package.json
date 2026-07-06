@@ -7,11 +7,13 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
+    "chat": "npm run build && node --env-file=.env scripts/chat.mjs",
     "test": "jest",
     "lint": "tsc --noEmit"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.4",
+    "openai": "^6.45.0",
     "voyageai": "^0.0.4"
   },
   "devDependencies": {
