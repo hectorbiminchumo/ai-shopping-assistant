@@ -33,9 +33,6 @@ export class SearchOrchestrator {
     const embedding = await this.embeddingService.embedText(parsedQuery.rawQuery)
     const candidates = await this.retrievalService.search(embedding, parsedQuery, RETRIEVE_K)
     const reranked = this.reranker.rerank(parsedQuery, candidates, RERANK_K)
-    // TEMPORAL
-console.log("Before rerank:", candidates.map(r => ({ title: r.product.title, score: r.similarityScore })))
-console.log("After rerank:", reranked.map(r => ({ title: r.product.title, score: r.similarityScore })))
 
     const relevant = reranked.filter((r) => meetsSimilarityThreshold(r.similarityScore))
 

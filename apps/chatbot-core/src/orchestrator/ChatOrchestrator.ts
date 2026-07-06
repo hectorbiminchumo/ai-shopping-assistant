@@ -34,9 +34,6 @@ export class ChatOrchestrator {
     const embedding = await this.embeddingService.embedText(parsedQuery.rawQuery)
     const candidates = await this.retrievalService.search(embedding, parsedQuery, RETRIEVE_K)
     const retrieved = this.reranker.rerank(parsedQuery, candidates, RERANK_K)
-    // TEMPORAL — quitar después
-console.log("Before rerank:", candidates.map(r => ({ title: r.product.title, score: r.similarityScore })))
-console.log("After rerank:", retrieved.map(r => ({ title: r.product.title, score: r.similarityScore })))
 
     const prompt = this.promptAssembler.assemble({
       // The LLM answers the user's actual message; only retrieval uses the
