@@ -21,9 +21,10 @@ export class ResponseFormatter {
     const priceMax = variantPrices.length > 0 ? Math.max(...variantPrices) : product.priceMax
 
     return {
-      id: product.id,
-      title: product.title,
-      thumbnailUrl: product.thumbnailUrl,
+      id: result.product.id,
+      medusaProductId: result.product.medusaProductId,
+      title: result.product.title,
+      thumbnailUrl: result.product.thumbnailUrl,
       priceMin,
       priceMax,
       similarityScore: result.similarityScore,

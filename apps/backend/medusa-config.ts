@@ -12,5 +12,10 @@ module.exports = defineConfig({
       jwtSecret: process.env.JWT_SECRET || "supersecret",
       cookieSecret: process.env.COOKIE_SECRET || "supersecret",
     }
+  },
+  admin: {
+    // The admin dashboard is only needed where it is served; CI sets
+    // this to skip the admin vite build (see .github/workflows/ci.yml).
+    disable: process.env.DISABLE_MEDUSA_ADMIN === "true",
   }
 })

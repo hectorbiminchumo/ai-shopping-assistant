@@ -10,7 +10,7 @@ import { listCollections } from "@lib/data/collections"
 import { getRegion } from "@lib/data/regions"
 
 export const metadata: Metadata = {
-  title: "VECTRA — Essential Sportswear",
+  title: "VECTRA - Essential Sportswear",
   description:
     "Essential sportswear. Clean design, honest materials. Shop running shoes, training apparel, outdoor gear and accessories.",
 }
@@ -41,8 +41,8 @@ export default async function Home(props: {
         <ProductRail region={region} />
       )}
 
-      <Lookbook regionId={region.id} />
       <Banner />
+      <Lookbook regionId={region.id} />
       <Newsletter />
     </>
   )

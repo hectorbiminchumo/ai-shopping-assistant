@@ -15,8 +15,17 @@ jest.mock("../quick-add", () => ({
 
 jest.mock("@modules/common/components/localized-client-link", () => ({
   __esModule: true,
-  default: ({ href, children, ...rest }: { href: string; children: React.ReactNode; [key: string]: unknown }) => (
-    <a href={href} {...rest}>{children}</a>
+  default: ({
+    href,
+    children,
+    ...rest
+  }: {
+    href: string
+    children: React.ReactNode
+  } & Record<string, unknown>) => (
+    <a href={href} {...rest}>
+      {children}
+    </a>
   ),
 }))
 

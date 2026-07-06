@@ -5,6 +5,10 @@ on:
     branches:
       - main
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   ci:
     name: Lint & Unit Tests
@@ -13,11 +17,14 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
 
       - name: Cache node_modules
         id: cache-node-modules
@@ -30,15 +37,33 @@ jobs:
 
       - name: Install dependencies
         if: steps.cache-node-modules.outputs.cache-hit != 'true'
-        run: npm ci
+        run: npm ci --no-audit --no-fund
 
-      - name: Build chatbot-core
-        run: npx turbo build --filter=@dtc/chatbot-core
+      - name: Cache turbo build outputs
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-
+
+      - name: Build changed packages
+        env:
+          # Skip the admin dashboard vite build: it isn't served from CI
+          # and roughly doubles the backend build time.
+          DISABLE_MEDUSA_ADMIN: "true"
+        # The storefront is excluded on purpose: `next build` cannot run in
+        # the hoisted workspace tree (the Medusa admin pins React 18 at the
+        # root while the storefront uses React 19 — prerender crashes with
+        # React error #31). Vercel builds the storefront on every PR from
+        # apps/storefront with an isolated install, and the lint/test steps
+        # below still type-check and test it here.
+        run: npx turbo build --filter=...[origin/main] --filter=!@dtc/storefront
 
       - name: Run linter
-        run: npm run lint
+        run: npx turbo lint --filter=...[origin/main]
 
       - name: Run unit tests
         env:
           TEST_TYPE: unit
-        run: npm run test
+        run: npx turbo test --filter=...[origin/main]

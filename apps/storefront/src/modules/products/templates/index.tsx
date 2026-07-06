@@ -24,13 +24,18 @@ export default function ProductTemplate({
 }: ProductTemplateProps) {
   if (!product?.id) return notFound()
 
-  const category =
-    product.collection?.title ?? product.categories?.[0]?.name ?? null
+  const collection = product.collection
+  const cat = product.categories?.[0]
+  const crumb = collection?.handle
+    ? { label: collection.title, href: `/collections/${collection.handle}` }
+    : cat?.handle
+    ? { label: cat.name, href: `/categories/${cat.handle}` }
+    : { label: "Store", href: "/store" }
 
   return (
     <>
       <main
-        className="pdp"
+        className="pdp v-reveal"
         style={{ maxWidth: "var(--maxw)", margin: "0 auto", padding: "40px var(--pad) 100px" }}
         data-testid="product-container"
       >
@@ -38,17 +43,8 @@ export default function ProductTemplate({
         <nav className="breadcrumbs" aria-label="Breadcrumb">
           <LocalizedClientLink href="/">Home</LocalizedClientLink>
           <span style={{ color: "var(--line-strong)" }}>/</span>
-          {category ? (
-            <>
-              <LocalizedClientLink href="/store">{category}</LocalizedClientLink>
-              <span style={{ color: "var(--line-strong)" }}>/</span>
-            </>
-          ) : (
-            <>
-              <LocalizedClientLink href="/store">Store</LocalizedClientLink>
-              <span style={{ color: "var(--line-strong)" }}>/</span>
-            </>
-          )}
+          <LocalizedClientLink href={crumb.href}>{crumb.label}</LocalizedClientLink>
+          <span style={{ color: "var(--line-strong)" }}>/</span>
           <span>{product.title}</span>
         </nav>
 
