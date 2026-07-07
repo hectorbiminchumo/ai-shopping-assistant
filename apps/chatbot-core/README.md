@@ -11,7 +11,7 @@ src/
   config/         # Env vars + client setup (OpenAI, Voyage AI, Supabase)
   pipeline/       # RAG steps — each class has a single responsibility
     QueryParser, EmbeddingService, RetrievalService,
-    PromptAssembler, LLMService, ResponseFormatter
+    Reranker, PromptAssembler, LLMService, ResponseFormatter
   image/          # Feature 2: image-based search (CLIP embeddings)
   orchestrator/   # Coordinates the pipeline end to end — no business logic of its own
     ChatOrchestrator (text), ImageOrchestrator (image, hybrid retrieval)
@@ -20,7 +20,7 @@ src/
   interfaces/     # Contracts (IEmbeddingService, IRetrievalService, ILLMService, IChatLogger)
                    # — providers are injected, never hardcoded (Dependency Inversion)
   errors/         # ChatbotError and subclasses
-  utils/          # formatProducts, scoreFilter (similarity threshold = 0.60)
+  utils/          # formatProducts, scoreFilter (similarity threshold = 0.40)
   index.ts        # Public package entry point
 tests/
   unit/           # Per-class tests, mirrors src/
@@ -28,7 +28,27 @@ tests/
   mocks/          # openai.mock.ts, voyageai.mock.ts, supabase.mock.ts
 ```
 
-`LLMService`, `ImageEmbeddingService`, `ImageRetrievalService`, and `ProductIngester` are still placeholders. `EmbeddingService`, `RetrievalService`, `EmbeddingIndexer`, `ChatLogger`, and `AnalyticsService` are fully implemented. `QueryParser`, `PromptAssembler`, `ResponseFormatter`, and `ChunkBuilder` are pure logic.
+`LLMService`, `ImageEmbeddingService`, `ImageRetrievalService`, and `ProductIngester` are still placeholders. `EmbeddingService`, `RetrievalService`, `EmbeddingIndexer`, `ChatLogger`, and `AnalyticsService` are fully implemented. `QueryParser`, `PromptAssembler`, `ResponseFormatter`, `Reranker`, and `ChunkBuilder` are pure logic.
+
+## Re-ranking strategy
+
+Raw pgvector results are re-ranked before being passed to the LLM, improving relevance beyond vector similarity alone.
+
+**Pipeline:** retrieve top 10 from pgvector → `Reranker.rerank()` → top 5 to the LLM.
+
+**Composite score formula:**
+
+```
+score = 0.60 × similarity + 0.25 × priceScore + 0.15 × categoryScore
+```
+
+| Signal | Weight | Description |
+|--------|--------|-------------|
+| `similarity` | 0.60 | Raw Voyage AI cosine similarity from pgvector |
+| `priceScore` | 0.25 | `1 - price / priceMax`; neutral (0.5) when no budget is set or product has no price |
+| `categoryScore` | 0.15 | 1.0 if product category matches parsed query category, 0.0 otherwise; neutral (0.5) when query has no category |
+
+The original `similarityScore` is preserved on each result — only the ordering changes. The similarity threshold for lost-sale detection (0.40) is applied after re-ranking on the raw similarity score, not the composite score.
 
 ## Local setup
 

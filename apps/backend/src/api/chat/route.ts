@@ -7,6 +7,7 @@ import {
   LLMService,
   PromptAssembler,
   QueryParser,
+  Reranker,
   ResponseFormatter,
   RetrievalService,
 } from "@dtc/chatbot-core"
@@ -47,6 +48,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     new QueryParser(),
     new EmbeddingService(),
     new RetrievalService(),
+    new Reranker(),
     new PromptAssembler(),
     new LLMService(),
     new ResponseFormatter(),

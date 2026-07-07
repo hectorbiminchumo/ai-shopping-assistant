@@ -1,5 +1,6 @@
 import { PromptAssembler } from "../../src/pipeline/PromptAssembler"
 import { QueryParser } from "../../src/pipeline/QueryParser"
+import { Reranker } from "../../src/pipeline/Reranker"
 import { ResponseFormatter } from "../../src/pipeline/ResponseFormatter"
 import { ChatOrchestrator } from "../../src/orchestrator/ChatOrchestrator"
 import type { ChatSession, Product, RetrievalResult } from "../../src/types"
@@ -31,6 +32,7 @@ describe("ChatOrchestrator (integration, mocked providers)", () => {
       new QueryParser(),
       embeddingService,
       retrievalService,
+      new Reranker(),
       new PromptAssembler(),
       llmService,
       new ResponseFormatter(),
@@ -60,6 +62,7 @@ describe("ChatOrchestrator (integration, mocked providers)", () => {
       new QueryParser(),
       embeddingService,
       createMockRetrievalService([retrievalResult]),
+      new Reranker(),
       new PromptAssembler(),
       llmService,
       new ResponseFormatter(),
@@ -87,6 +90,7 @@ describe("ChatOrchestrator (integration, mocked providers)", () => {
       new QueryParser(),
       createMockEmbeddingService(),
       retrievalService,
+      new Reranker(),
       new PromptAssembler(),
       createMockLLMService(),
       new ResponseFormatter(),
@@ -111,6 +115,7 @@ describe("ChatOrchestrator (integration, mocked providers)", () => {
       new QueryParser(),
       createMockEmbeddingService(),
       retrievalService,
+      new Reranker(),
       new PromptAssembler(),
       createMockLLMService(),
       new ResponseFormatter(),
