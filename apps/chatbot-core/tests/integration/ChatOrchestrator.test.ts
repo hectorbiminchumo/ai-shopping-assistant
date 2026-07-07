@@ -67,6 +67,7 @@ describe("ChatOrchestrator (integration, mocked providers)", () => {
       new QueryParser(),
       createMockEmbeddingService(),
       createMockRetrievalService([retrievalResult]),
+      new Reranker(),
       new PromptAssembler(),
       createMockLLMService("Sure!"),
       new ResponseFormatter(),
