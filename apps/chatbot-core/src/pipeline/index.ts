@@ -1,6 +1,7 @@
 export * from "./QueryParser"
 export * from "./EmbeddingService"
 export * from "./RetrievalService"
+export * from "./Reranker"
 export * from "./PromptAssembler"
 export * from "./LLMService"
 export * from "./ResponseFormatter"

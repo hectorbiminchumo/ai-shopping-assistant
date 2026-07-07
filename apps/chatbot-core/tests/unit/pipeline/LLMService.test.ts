@@ -81,4 +81,28 @@ describe("LLMService", () => {
     await expect(service.complete("query")).rejects.toThrow(LLMError)
     await expect(service.complete("query")).rejects.toThrow("API key")
   })
+
+  it("throws LLMError for unexpected non-API errors (e.g. network failure)", async () => {
+    mockCreate.mockRejectedValue(new Error("Network failure"))
+
+    await expect(service.complete("query")).rejects.toThrow(LLMError)
+    await expect(service.complete("query")).rejects.toThrow("Unexpected error")
+  })
+
+  it("condenseQuery() falls back to the raw query when the LLM call fails", async () => {
+    mockCreate.mockRejectedValue(new Error("Network failure"))
+
+    const result = await service.condenseQuery("for women", [
+      { role: "user", content: "gym shoes" },
+    ])
+
+    expect(result).toBe("for women")
+  })
+
+  it("condenseQuery() returns the raw query unchanged when history is empty", async () => {
+    const result = await service.condenseQuery("trail shoes size 42", [])
+
+    expect(result).toBe("trail shoes size 42")
+    expect(mockCreate).not.toHaveBeenCalled()
+  })
 })
