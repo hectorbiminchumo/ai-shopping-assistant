@@ -26,6 +26,8 @@ export type ChatResponse = {
   message: string
   products: SemanticProduct[]
   hasResults: boolean
+  // Updated history (previous turns + this exchange) to send on the next turn
+  history?: ChatHistoryMessage[]
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:9000"
@@ -54,7 +56,7 @@ export async function chat(
   sessionId: string,
   history: ChatHistoryMessage[]
 ): Promise<ChatResponse> {
-  const res = await fetch(`${API_URL}/chat`, {
+  const res = await fetch(`${API_URL}/search/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ query, sessionId, history }),

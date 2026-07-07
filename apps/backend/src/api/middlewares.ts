@@ -5,8 +5,8 @@ import { parseCorsOrigins } from "@medusajs/framework/utils"
 import cors from "cors"
 
 // Medusa only applies CORS to /store, /admin and /auth. The custom /search
-// and /chat routes are called directly from the storefront browser, so they
-// need the same store CORS policy.
+// routes (semantic search + chat) are called directly from the storefront
+// browser, so they need the same store CORS policy.
 const storeCors = (req: MedusaRequest, res: MedusaResponse, next: MedusaNextFunction) => {
   const configModule: ConfigModule = req.scope.resolve("configModule")
 
@@ -17,8 +17,5 @@ const storeCors = (req: MedusaRequest, res: MedusaResponse, next: MedusaNextFunc
 }
 
 export default defineMiddlewares({
-  routes: [
-    { matcher: "/search*", middlewares: [storeCors] },
-    { matcher: "/chat*", middlewares: [storeCors] },
-  ],
+  routes: [{ matcher: "/search*", middlewares: [storeCors] }],
 })
