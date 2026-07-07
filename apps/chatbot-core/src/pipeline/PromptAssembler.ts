@@ -1,7 +1,9 @@
 import { formatProductsForPrompt } from "../utils"
 import type { ChatMessage, PromptContext } from "../types"
 
-const HISTORY_TURNS = 6
+// W3 spec: keep the last 10 turns to stay within token limits. Shared with
+// ChatOrchestrator so the returned history uses the same window.
+export const HISTORY_TURNS = 10
 
 // Builds the final prompt sent to the LLM: system instructions + retrieved
 // product context + recent conversation history + the user's query.
