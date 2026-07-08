@@ -92,6 +92,7 @@ export default function ProductCard({
               : "(max-width: 640px) 100vw, (max-width: 1024px) 33vw, 25vw"
           }
           priority={priority}
+          fetchPriority={priority ? "high" : undefined}
           draggable={false}
         />
 

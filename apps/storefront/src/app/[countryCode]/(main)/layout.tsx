@@ -4,7 +4,6 @@ import { Suspense } from "react"
 import { listCartOptions, retrieveCart } from "@lib/data/cart"
 import { retrieveCustomer } from "@lib/data/customer"
 import { getBaseURL } from "@lib/util/env"
-import { StoreCartShippingOption } from "@medusajs/types"
 import CartMismatchBanner from "@modules/layout/components/cart-mismatch-banner"
 import Footer from "@modules/layout/templates/footer"
 import Nav from "@modules/layout/templates/nav"
@@ -16,35 +15,44 @@ export const metadata: Metadata = {
   metadataBase: new URL(getBaseURL()),
 }
 
+// Cart-dependent overlays in their own Suspense boundary: these fetches are
+// cookie-scoped (uncacheable) and each pays a round trip to Medusa backed by
+// a remote database (~0.5-1s). Awaiting them in the layout body blocked the
+// document shell — and the LCP — on every single navigation.
+async function CartOverlays() {
+  const [customer, cart] = await Promise.all([
+    retrieveCustomer(),
+    retrieveCart(),
+  ])
+
+  if (!cart) return null
+
+  const { shipping_options: shippingOptions } = await listCartOptions()
+
+  return (
+    <>
+      {customer && <CartMismatchBanner customer={customer} cart={cart} />}
+      <FreeShippingPriceNudge
+        variant="popup"
+        cart={cart}
+        shippingOptions={shippingOptions}
+      />
+    </>
+  )
+}
+
 export default async function PageLayout(props: {
   children: React.ReactNode
   params: Promise<{ countryCode: string }>
 }) {
   const { countryCode } = await props.params
-  const customer = await retrieveCustomer()
-  const cart = await retrieveCart()
-  let shippingOptions: StoreCartShippingOption[] = []
-
-  if (cart) {
-    const { shipping_options } = await listCartOptions()
-
-    shippingOptions = shipping_options
-  }
 
   return (
     <>
       <Nav />
-      {customer && cart && (
-        <CartMismatchBanner customer={customer} cart={cart} />
-      )}
-
-      {cart && (
-        <FreeShippingPriceNudge
-          variant="popup"
-          cart={cart}
-          shippingOptions={shippingOptions}
-        />
-      )}
+      <Suspense fallback={null}>
+        <CartOverlays />
+      </Suspense>
       {props.children}
       <Footer />
       {/* Streams in after the page: the floating chat button must never

@@ -73,6 +73,9 @@ export default function PDPGallery({
               alt={`${title}, image ${i + 1}`}
               fill
               priority={i === 0}
+              // priority alone doesn't set fetchpriority=high on the preload
+              // in Next 15 — Lighthouse flags the LCP image without it
+              fetchPriority={i === 0 ? "high" : undefined}
               className="object-cover"
               sizes="(max-width: 768px) 100vw, 55vw"
             />
