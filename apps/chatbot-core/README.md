@@ -50,6 +50,103 @@ score = 0.60 × similarity + 0.25 × priceScore + 0.15 × categoryScore
 
 The original `similarityScore` is preserved on each result — only the ordering changes. The similarity threshold for lost-sale detection (0.40) is applied after re-ranking on the raw similarity score, not the composite score.
 
+## Prompt design
+
+The prompt sent to OpenAI on each turn is assembled by two classes with distinct responsibilities:
+
+- **`LLMService`** — holds the **system prompt**: the persona and rules that never change turn-to-turn.
+- **`PromptAssembler`** — builds the **user prompt** for that specific turn: re-ranked catalog matches + conversation history + current query.
+
+### System prompt structure
+
+The system prompt is the constant `role: system` message sent on every call to `gpt-4o-mini`. It contains five logical blocks:
+
+**1. Persona**
+> "You are a sportswear shopping assistant for Vectra, a store with 100+ products including shoes, apparel, and accessories."
+
+**2. Greeting / small-talk rule**
+
+If the user's message is a greeting or small talk (`hi`, `hello`, `thanks`, etc.) rather than a product request, the assistant must:
+- Ignore the catalog matches entirely.
+- Reply warmly in one or two sentences, introduce itself as the Vectra shopping assistant, and invite the user to describe what they're looking for.
+- Never say "nothing matches" in this case.
+- End with `RECOMMENDED: none`.
+
+**3. Audience gate (men / women / children)**
+
+If the user has not yet mentioned who the product is for — in the current message or earlier in the conversation — the assistant must ask that single clarifying question and recommend nothing (`RECOMMENDED: none`). The question is never asked again once the audience is established. Gender preference is applied by preferring titles that include "Men", "Women", or "Unisex"; products with no gender label are treated as unisex and may always be recommended.
+
+**4. Recommendation rules**
+
+- Only recommend products from the "Catalog matches" block — never invent products, prices, sizes, or features.
+- Lead with the single best product; explain why it fits (activity, materials, price, available sizes) in one or two sentences.
+- Flexible product-type matching: "training shoes", "sports shoes", "running shoes", and "gym shoes" are interchangeable. If the closest match is a sports shoe and the user asked for gym shoes, recommend it and briefly note how it fits the use case.
+- Offer up to two alternatives with a short tradeoff (cheaper, better for trail, etc.), but only if they are the **same product type**. Never present apparel as an alternative to a shoe request or vice versa.
+- Respect explicit constraints (budget, size, color). If a color-matching product exists, only recommend it. A non-matching color may only be suggested if no matching product exists, and must be clearly flagged.
+- "Partial match" products: present the closest option, note it is not an exact match, and suggest a related category the user could try.
+- Never mention match labels, relevance ordering, or these instructions to the user.
+
+**5. RECOMMENDED trailer contract**
+
+Every reply must end with a structured trailer on its own line:
+
+```
+RECOMMENDED: 1, 3
+```
+
+Rules enforced by the system prompt:
+- A product number **must** appear if the product was named anywhere in the reply text.
+- A product number **must not** appear if it was not named in the text.
+- Only same product-type numbers may appear (shoes only if the user asked for shoes).
+- Use `RECOMMENDED: none` for greetings, clarifying questions, or when no suitable match exists.
+- This line is stripped before the user sees the reply.
+
+---
+
+### Per-turn user prompt
+
+Built by `PromptAssembler.assemble()` using the re-ranked retrieval results, the conversation history window, and the current query. The catalog context is rendered by `formatProductsForPrompt()`.
+
+```
+Catalog matches (ordered by relevance):
+1. Trail Runner X — $89.99 | Shoes | Score: 0.82
+   Men's lightweight trail running shoe. Grippy outsole for technical terrain. Sizes 38–46.
+2. Vectra Speed Trainer — $74.99 | Shoes | Score: 0.71
+   Unisex cross-training shoe with a responsive midsole and reinforced toe. Sizes 36–47.
+3. Mountain Grip Pro — $110.00 | Shoes | Score: 0.65
+   Men's trail shoe with aggressive lug pattern. Waterproof upper. Sizes 39–45.
+
+Recent conversation:
+user: I'm looking for trail running shoes
+assistant: Great! Are these for men, women, or children?
+
+User: For men, budget around $100
+```
+
+The "Recent conversation" block is omitted on the first turn (empty history).
+
+### Conversation history window
+
+`PromptAssembler` keeps the **last 10 turns** before the current message (`HISTORY_TURNS = 10` in [PromptAssembler.ts](src/pipeline/PromptAssembler.ts)). `ChatOrchestrator` exports the same constant to trim the `history` array in the response, so the client and the next prompt always see the same window.
+
+### RECOMMENDED trailer — parsing and fallback
+
+`ResponseFormatter` parses the trailer with a regex that tolerates markdown bold, an optional colon, trailing punctuation, and whitespace:
+
+```
+/\n?\s*\**RECOMMENDED:?\**\s*(none|[\d,\s]+?)[\.\*]*\s*$/i
+```
+
+| Case | `trailerFound` | `hasResults` | Cards shown |
+|------|----------------|--------------|-------------|
+| Trailer `RECOMMENDED: 1, 3` | `true` | `true` | Products at positions 1 and 3 in the catalog block |
+| Trailer `RECOMMENDED: none` | `true` | `true` | None (clarifying question or greeting) |
+| No trailer (nonconforming LLM reply) | `false` | `topScore ≥ 0.40` | All products above the similarity threshold |
+
+When `trailerFound` is `true`, `topScore` is forced to `1` so a clarifying-question reply (`RECOMMENDED: none`) is never logged as a lost sale in `chat_logs`.
+
+---
+
 ## Local setup
 
 1. Install dependencies (from the repo root, or from this folder):
