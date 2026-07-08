@@ -86,6 +86,9 @@ export default function VectraChat({
       ? crypto.randomUUID()
       : Math.random().toString(36).slice(2)
   )
+  // Conversation history as maintained by the backend: each response returns
+  // the updated history (last 10 turns), which we send back on the next turn
+  const historyRef = useRef<ChatHistoryMessage[]>([])
   const [attachImages, setAttachImages] = useState<string[]>([])
   const chatScrollRef = useRef<HTMLDivElement>(null)
   const taRef = useRef<HTMLTextAreaElement>(null)
@@ -192,17 +195,16 @@ export default function VectraChat({
           text: "Image search isn't available just yet — try describing what you're looking for in words and I'll find the closest match.",
         }
       } else {
-        // Last few turns give the assistant conversational context; the
-        // backend trims further to the window the prompt actually uses.
-        const history: ChatHistoryMessage[] = messages
-          .filter((m): m is Extract<Message, { role: "bot" | "user" }> => m.role !== "typing")
-          .map((m) => ({
-            role: m.role === "bot" ? ("assistant" as const) : ("user" as const),
-            content: m.text,
-          }))
-          .filter((m) => m.content)
-          .slice(-6)
-        const result = await chat(q, sessionIdRef.current, history)
+        const result = await chat(q, sessionIdRef.current, historyRef.current)
+        // Adopt the backend's updated history (last 10 turns) for the next
+        // turn; fall back to appending locally if the field is missing
+        historyRef.current =
+          result.history ??
+          [
+            ...historyRef.current,
+            { role: "user" as const, content: q },
+            { role: "assistant" as const, content: result.message },
+          ].slice(-10)
         const picks = toCatalogProducts(result.products, products)
         botMsg = {
           role: "bot",

@@ -51,6 +51,37 @@ describe("ChatOrchestrator (integration, mocked providers)", () => {
     expect(response.message).toBe("Trail Runner X is a great match.")
     expect(response.products[0].title).toBe("Trail Runner X")
     expect(response.hasResults).toBe(true)
+    expect(response.history).toEqual([
+      { role: "user", content: "trail shoes size 42" },
+      { role: "assistant", content: "Trail Runner X is a great match." },
+    ])
+  })
+
+  it("returns the updated history trimmed to the last 10 turns", async () => {
+    const longHistory = Array.from({ length: 12 }, (_, i) => ({
+      role: "user" as const,
+      content: `turn ${i + 1}`,
+    }))
+
+    const orchestrator = new ChatOrchestrator(
+      new QueryParser(),
+      createMockEmbeddingService(),
+      createMockRetrievalService([retrievalResult]),
+      new Reranker(),
+      new PromptAssembler(),
+      createMockLLMService("Sure!"),
+      new ResponseFormatter(),
+      createMockChatLogger()
+    )
+
+    const response = await orchestrator.handle("one more", {
+      sessionId: "session_1",
+      history: longHistory,
+    })
+
+    expect(response.history).toHaveLength(10)
+    expect(response.history?.[0]).toEqual({ role: "user", content: "turn 5" })
+    expect(response.history?.at(-1)).toEqual({ role: "assistant", content: "Sure!" })
   })
 
   it("embeds the condensed standalone query for follow-up messages", async () => {

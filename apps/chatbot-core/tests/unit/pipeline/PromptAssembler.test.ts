@@ -27,8 +27,8 @@ describe("PromptAssembler", () => {
     expect(prompt).toContain("Trail Runner X")
   })
 
-  it("includes only the last 6 turns of conversation history", () => {
-    const history = [1, 2, 3, 4, 5, 6, 7].map((n) => ({
+  it("includes only the last 10 turns of conversation history", () => {
+    const history = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((n) => ({
       role: "user" as const,
       content: `turn ${n}`,
     }))
@@ -39,9 +39,10 @@ describe("PromptAssembler", () => {
       history,
     })
 
-    expect(prompt).not.toContain("turn 1")
+    // "turn 1\n" avoids matching the "turn 1" prefix of "turn 10"/"turn 11"
+    expect(prompt).not.toContain("turn 1\n")
     expect(prompt).toContain("turn 2")
-    expect(prompt).toContain("turn 7")
+    expect(prompt).toContain("turn 11")
   })
 
   it("notes when no products were retrieved", () => {

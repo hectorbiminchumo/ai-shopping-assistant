@@ -1,3 +1,4 @@
+import { HISTORY_TURNS } from "../pipeline/PromptAssembler"
 import type { IChatLogger, IEmbeddingService, ILLMService, IRetrievalService } from "../interfaces"
 import type { PromptAssembler, QueryParser, Reranker, ResponseFormatter } from "../pipeline"
 import type { ChatResponse, ChatSession } from "../types"
@@ -45,6 +46,14 @@ export class ChatOrchestrator {
 
     const llmMessage = await this.llmService.complete(prompt)
     const response = this.responseFormatter.format(llmMessage, retrieved)
+
+    // W3 spec: return the updated history so the client can send it back on
+    // the next turn, trimmed to the same window the prompt uses
+    response.history = [
+      ...session.history,
+      { role: "user" as const, content: rawQuery },
+      { role: "assistant" as const, content: response.message },
+    ].slice(-HISTORY_TURNS)
 
     await this.chatLogger.log({
       userId: session.userId,
