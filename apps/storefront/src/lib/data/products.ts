@@ -51,6 +51,10 @@ export const listProducts = async ({
 
   const next = {
     ...(await getCacheOptions("products")),
+    // Cache with 5-min revalidation instead of no-store (#52): refetching
+    // calculated prices on every navigation dominated LCP. Freshly seeded
+    // products show up within 5 minutes (or on dev-server restart).
+    revalidate: 300,
   }
 
   return sdk.client
@@ -68,7 +72,6 @@ export const listProducts = async ({
         },
         headers,
         next,
-        cache: "no-store",
       }
     )
     .then(({ products, count }) => {

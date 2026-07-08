@@ -1,4 +1,5 @@
 import { Metadata } from "next"
+import { Suspense } from "react"
 
 import { listCartOptions, retrieveCart } from "@lib/data/cart"
 import { retrieveCustomer } from "@lib/data/customer"
@@ -46,7 +47,11 @@ export default async function PageLayout(props: {
       )}
       {props.children}
       <Footer />
-      <AskVectra countryCode={countryCode} />
+      {/* Streams in after the page: the floating chat button must never
+          block the route's first paint on its catalog fetch */}
+      <Suspense fallback={null}>
+        <AskVectra countryCode={countryCode} />
+      </Suspense>
       <ScrollReveal />
     </>
   )

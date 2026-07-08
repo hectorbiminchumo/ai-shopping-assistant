@@ -81,10 +81,11 @@ export default async function PaginatedProducts({
         className="grid grid-cols-2 w-full small:grid-cols-3 medium:grid-cols-4 gap-x-6 gap-y-8"
         data-testid="products-list"
       >
-        {products.map((p) => {
+        {products.map((p, i) => {
           return (
             <li key={p.id} className="v-reveal">
-              <ProductPreview product={p} region={region} />
+              {/* First row is the LCP on grid pages: preload those images */}
+              <ProductPreview product={p} region={region} priority={i < 4} />
             </li>
           )
         })}

@@ -46,34 +46,19 @@ export default function QuickAdd({
     }
   }
 
-  const size = compact ? 32 : 42
-  const br = compact ? 10 : 16
-  const icon = compact ? 15 : 21
+  const iconClass = compact
+    ? "w-[15px] h-[15px] pointer-events-none"
+    : "w-[21px] h-[21px] pointer-events-none"
 
   return (
     <button
       onClick={handleClick}
       aria-label={`Add ${productTitle} to cart`}
-      className="atc-btn"
-      style={{
-        position: "absolute",
-        right: compact ? 6 : 12,
-        bottom: compact ? 6 : 12,
-        width: size,
-        height: size,
-        borderRadius: br,
-        background: state === "added" ? "var(--clr-success)" : "var(--text)",
-        color: "var(--bg)",
-        border: "none",
-        cursor: "pointer",
-        display: "grid",
-        placeItems: "center",
-        boxShadow: "0 4px 16px rgba(0,0,0,.16)",
-        transition:
-          "background .2s, opacity .25s cubic-bezier(.22,.61,.36,1), transform .25s cubic-bezier(.22,.61,.36,1)",
-        zIndex: 2,
-        flexShrink: 0,
-      }}
+      className={`atc-btn absolute grid place-items-center border-none cursor-pointer z-[2] shrink-0 text-[var(--bg)] shadow-[0_4px_16px_rgba(0,0,0,.16)] ${
+        compact
+          ? "right-[6px] bottom-[6px] w-8 h-8 rounded-[10px]"
+          : "right-3 bottom-3 w-[42px] h-[42px] rounded-2xl"
+      } ${state === "added" ? "bg-[var(--clr-success)]" : "bg-[var(--text)]"}`}
     >
       {state === "added" ? (
         <svg
@@ -81,7 +66,7 @@ export default function QuickAdd({
           fill="none"
           stroke="currentColor"
           strokeWidth="2.2"
-          style={{ width: icon, height: icon, pointerEvents: "none" }}
+          className={iconClass}
           aria-hidden="true"
         >
           <path d="M5 13l4 4L19 7" />
@@ -92,7 +77,7 @@ export default function QuickAdd({
           fill="none"
           stroke="currentColor"
           strokeWidth="1.6"
-          style={{ width: icon, height: icon, pointerEvents: "none" }}
+          className={iconClass}
           aria-hidden="true"
         >
           <path d="M6 7h13l-1.2 9.5a2 2 0 01-2 1.7H9.2a2 2 0 01-2-1.7L6 4H3" />

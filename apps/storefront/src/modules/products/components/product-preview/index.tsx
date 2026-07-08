@@ -9,10 +9,12 @@ export default function ProductPreview({
   product,
   region,
   isFeatured: _isFeatured,
+  priority,
 }: {
   product: HttpTypes.StoreProduct
   region?: HttpTypes.StoreRegion
   isFeatured?: boolean
+  priority?: boolean
 }) {
-  return <ProductCard product={product} region={region} />
+  return <ProductCard product={product} region={region} priority={priority} />
 }
