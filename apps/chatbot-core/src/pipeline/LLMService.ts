@@ -64,6 +64,8 @@ export class LLMService implements ILLMService {
             content:
               "Rewrite the latest message of a shopping conversation as a short standalone product search query. " +
               "Carry over constraints from earlier turns that still apply (product type, men/women/children, budget, size). " +
+              "Never invent a specific number (price, size, quantity) that was not explicitly stated in the conversation. " +
+              "If the user asks for something relative like 'cheaper' or 'smaller' without giving a number, keep it relative in the rewrite (e.g. 'cheaper men's t-shirts') — do not turn it into a specific threshold like 'under $20'. " +
               "If the latest message is not a product request (greeting, thanks, general question), return it unchanged. " +
               "Return ONLY the query text — no quotes, no explanation.",
           },
