@@ -20,6 +20,14 @@ export class EmbeddingIndexer {
     const priceMin = prices.length > 0 ? Math.min(...prices) : null
     const priceMax = prices.length > 0 ? Math.max(...prices) : null
 
+    const availableSizes = [
+      ...new Set(
+        product.variants
+          .map((v) => v.options.size)
+          .filter((s): s is string => Boolean(s))
+      ),
+    ]
+
     const supabase = getSupabaseClient()
     const { error } = await supabase.from("product_embeddings").upsert(
       {
@@ -28,6 +36,7 @@ export class EmbeddingIndexer {
         description: product.description,
         category: product.category ?? null,
         tags: product.tags,
+        available_sizes: availableSizes.length > 0 ? availableSizes : null,
         price_min: priceMin,
         price_max: priceMax,
         thumbnail_url: product.thumbnailUrl ?? null,

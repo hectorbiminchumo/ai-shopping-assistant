@@ -13,6 +13,7 @@ interface ProductEmbeddingRow {
   description: string
   category: string | null
   tags: string[] | null
+  available_sizes: string[] | null
   price_min: number | null
   price_max: number | null
   thumbnail_url: string | null
@@ -46,8 +47,10 @@ export class RetrievalService implements IRetrievalService {
       const { data, error } = await supabase.rpc("match_products", {
         query_embedding: embedding,
         match_count: matchCount,
-        filter_category: query.category ?? null,
-        filter_price_max: query.priceMax ?? null,
+        filter_category:  query.category  ?? null,
+        filter_price_max: query.priceMax  ?? null,
+        filter_price_min: query.priceMin  ?? null,
+        filter_size:      query.size      ?? null,
       })
 
       if (error) throw new RetrievalError(error.message)
