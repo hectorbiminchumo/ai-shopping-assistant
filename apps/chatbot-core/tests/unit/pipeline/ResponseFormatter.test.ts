@@ -86,6 +86,27 @@ describe("ResponseFormatter", () => {
       expect(response.products.map((p) => p.id)).toEqual(["prod_1"])
     })
 
+    it("similarityThresholdMet is true when the recommended product's real score meets the threshold", () => {
+      const response = formatter.format(
+        "The Gym Flex Trainer is your best option.\nRECOMMENDED: 2",
+        retrieved
+      )
+      expect(response.similarityThresholdMet).toBe(true)
+    })
+
+    it("similarityThresholdMet reflects the recommended product's real score, unlike hasResults", () => {
+      const weakMatch: RetrievalResult[] = [{ product, similarityScore: 0.32 }]
+      const response = formatter.format(
+        "The Trail Runner X is a decent option.\nRECOMMENDED: 1",
+        weakMatch
+      )
+
+      // The LLM chose to recommend it anyway — the storefront still shows the card
+      expect(response.hasResults).toBe(true)
+      // But the real score is below SIMILARITY_THRESHOLD — analytics should see this as a weak match
+      expect(response.similarityThresholdMet).toBe(false)
+    })
+
     it("falls back to the similarity threshold when no trailer is present", () => {
       const response = formatter.format("Here are some options.", [
         { product, similarityScore: 0.48 },

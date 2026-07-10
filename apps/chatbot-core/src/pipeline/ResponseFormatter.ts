@@ -25,10 +25,20 @@ export class ResponseFormatter {
       ? 1
       : Math.max(0, ...retrieved.map((r) => r.similarityScore))
 
+    // Real retrieval confidence: the best score among what was ACTUALLY
+    // recommended (not hardcoded to 1 like topScore above). A weak match the
+    // LLM chose to recommend anyway should still count as a low-confidence
+    // retrieval for analytics, even though the storefront still shows its card.
+    const realTopScore =
+      recommended.length > 0
+        ? Math.max(...recommended.map((r) => r.similarityScore))
+        : Math.max(0, ...retrieved.map((r) => r.similarityScore))
+
     return {
       message,
       products: recommended.map((r) => this.toProductCard(r)),
       hasResults: meetsSimilarityThreshold(topScore),
+      similarityThresholdMet: meetsSimilarityThreshold(realTopScore),
     }
   }
 

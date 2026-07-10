@@ -28,6 +28,7 @@ export class ChatOrchestrator {
     // Known categories let the parser emit a SQL pre-filter (e.g. "shoes"
     // in the query → only shoe rows are vector-searched)
     const knownCategories = await this.retrievalService.listCategories()
+
     // Follow-ups like "for women" carry no meaning on their own: condense
     // them with the history into a standalone query before embedding
     const standaloneQuery = await this.llmService.condenseQuery(rawQuery, session.history)
@@ -61,7 +62,7 @@ export class ChatOrchestrator {
       userQuery: rawQuery,
       retrievedIds: retrieved.map((r) => r.product.medusaProductId),
       topScore: retrieved[0]?.similarityScore ?? 0,
-      hasResults: response.hasResults,
+      hasResults: response.similarityThresholdMet,
       categoryHint: parsedQuery.category,
     })
 
