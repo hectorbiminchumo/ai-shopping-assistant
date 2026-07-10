@@ -11,6 +11,13 @@ function isNew(product: HttpTypes.StoreProduct) {
   return days <= 30
 }
 
+const BADGE_COLORS: Record<"new" | "sale" | "low" | "oos", string> = {
+  new: "bg-[var(--accent-bg)] text-[var(--accent)] border-[var(--accent-line)]",
+  sale: "bg-[var(--clr-danger-bg)] text-[var(--clr-danger)] border-[var(--clr-danger-line)]",
+  low: "bg-[var(--clr-warning-bg)] text-[var(--clr-warning)] border-[var(--clr-warning-line)]",
+  oos: "bg-[var(--surface-2)] text-[var(--text-muted)] border-[var(--line-strong)]",
+}
+
 function Badge({
   variant,
   dot,
@@ -20,44 +27,14 @@ function Badge({
   dot?: boolean
   children: React.ReactNode
 }) {
-  const colorMap: Record<string, { bg: string; color: string; border: string }> = {
-    new:  { bg: "var(--accent-bg)",       color: "var(--accent)",       border: "var(--accent-line)"       },
-    sale: { bg: "var(--clr-danger-bg)",   color: "var(--clr-danger)",   border: "var(--clr-danger-line)"   },
-    low:  { bg: "var(--clr-warning-bg)",  color: "var(--clr-warning)",  border: "var(--clr-warning-line)"  },
-    oos:  { bg: "var(--surface-2)",       color: "var(--text-muted)",   border: "var(--line-strong)"       },
-  }
-  const c = colorMap[variant]
   return (
     <span
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 5,
-        height: 22,
-        padding: "0 8px",
-        borderRadius: 999,
-        fontFamily: "var(--mono)",
-        fontSize: 10,
-        fontWeight: 600,
-        letterSpacing: ".08em",
-        textTransform: "uppercase",
-        whiteSpace: "nowrap",
-        border: `1px solid ${c.border}`,
-        background: c.bg,
-        color: c.color,
-      }}
+      className={`inline-flex items-center gap-[5px] h-[22px] px-2 rounded-full border [font-family:var(--mono)] text-[10px] font-semibold tracking-[.08em] uppercase whitespace-nowrap ${BADGE_COLORS[variant]}`}
     >
       {dot && (
         <span
           aria-hidden="true"
-          style={{
-            width: 5,
-            height: 5,
-            borderRadius: "50%",
-            background: "currentColor",
-            opacity: 0.85,
-            flexShrink: 0,
-          }}
+          className="w-[5px] h-[5px] rounded-full bg-current opacity-[.85] shrink-0"
         />
       )}
       {children}
@@ -69,10 +46,14 @@ function Badge({
 export default function ProductCard({
   product,
   compact = false,
+  priority = false,
 }: {
   product: HttpTypes.StoreProduct
   region?: HttpTypes.StoreRegion
   compact?: boolean
+  // Preload the image (disables lazy-loading) — set on above-the-fold
+  // cards, which are the LCP element on grid pages
+  priority?: boolean
 }) {
   const { cheapestPrice } = getProductPrice({ product })
   const isSale = cheapestPrice?.price_type === "sale"
@@ -92,14 +73,6 @@ export default function ProductCard({
   const firstVariantId =
     variants.length === 1 ? (variants[0].id ?? null) : null
 
-  // Font sizes for compact (chat) vs default (rail/grid)
-  const nameSize = compact ? 13 : 14.5
-  const eyebrowSize = compact ? 10 : 11
-  const priceSize = compact ? 14 : 16
-  const nameLineHeight = 1.35
-  // Reserve two lines so prices align across the grid even for short names.
-  const nameMinHeight = Math.round(nameSize * nameLineHeight * 2)
-
   return (
     <LocalizedClientLink
       href={`/products/${product.handle}`}
@@ -107,10 +80,7 @@ export default function ProductCard({
       data-testid="product-wrapper"
     >
       {/* Image tile */}
-      <div
-        className="relative rounded-[14px] overflow-hidden"
-        style={{ aspectRatio: "1 / 1", background: "var(--surface)" }}
-      >
+      <div className="relative rounded-[14px] overflow-hidden aspect-square bg-[var(--surface)]">
         <Image
           src={product.thumbnail ?? placeholder}
           alt={product.title}
@@ -121,6 +91,8 @@ export default function ProductCard({
               ? "(max-width: 560px) 50vw, 33vw"
               : "(max-width: 640px) 100vw, (max-width: 1024px) 33vw, 25vw"
           }
+          priority={priority}
+          fetchPriority={priority ? "high" : undefined}
           draggable={false}
         />
 
@@ -148,18 +120,13 @@ export default function ProductCard({
         />
       </div>
 
-      {/* Info */}
-      <div style={{ paddingTop: compact ? 12 : 18 }}>
+      {/* Info — font sizes for compact (chat) vs default (rail/grid) */}
+      <div className={compact ? "pt-3" : "pt-[18px]"}>
         {brand && (
           <p
-            className="uppercase truncate"
-            style={{
-              fontFamily: "var(--mono)",
-              fontSize: eyebrowSize,
-              letterSpacing: ".09em",
-              color: "var(--text-muted)",
-              marginBottom: compact ? 5 : 7,
-            }}
+            className={`uppercase truncate [font-family:var(--mono)] tracking-[.09em] text-[var(--text-muted)] ${
+              compact ? "text-[10px] mb-[5px]" : "text-[11px] mb-[7px]"
+            }`}
           >
             {brand}
           </p>
@@ -172,18 +139,12 @@ export default function ProductCard({
               : "flex flex-col gap-1.5 small:flex-row small:items-start small:justify-between small:gap-4"
           }
         >
+          {/* min-h reserves two lines so prices align across the grid even
+              for short names (2 × font-size × 1.35 line-height) */}
           <p
-            className="font-normal"
-            style={{
-              fontSize: nameSize,
-              lineHeight: nameLineHeight,
-              color: "var(--text)",
-              minHeight: nameMinHeight,
-              display: "-webkit-box",
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: "vertical",
-              overflow: "hidden",
-            }}
+            className={`font-normal leading-[1.35] text-[var(--text)] line-clamp-2 ${
+              compact ? "text-[13px] min-h-[35px]" : "text-[14.5px] min-h-[39px]"
+            }`}
             data-testid="product-title"
           >
             {product.title}
@@ -196,19 +157,17 @@ export default function ProductCard({
               {isSale ? (
                 <>
                   <p
-                    className="line-through"
-                    style={{
-                      fontSize: eyebrowSize + 2,
-                      color: "var(--text-muted)",
-                      marginBottom: 2,
-                    }}
+                    className={`line-through text-[var(--text-muted)] mb-[2px] ${
+                      compact ? "text-[12px]" : "text-[13px]"
+                    }`}
                     data-testid="original-price"
                   >
                     {cheapestPrice.original_price}
                   </p>
                   <p
-                    className="font-semibold whitespace-nowrap"
-                    style={{ fontSize: priceSize, color: "var(--clr-danger)" }}
+                    className={`font-semibold whitespace-nowrap text-[var(--clr-danger)] ${
+                      compact ? "text-[14px]" : "text-[16px]"
+                    }`}
                     data-testid="price"
                   >
                     {cheapestPrice.calculated_price}
@@ -216,8 +175,9 @@ export default function ProductCard({
                 </>
               ) : (
                 <p
-                  className="font-semibold whitespace-nowrap"
-                  style={{ fontSize: priceSize, color: "var(--text)" }}
+                  className={`font-semibold whitespace-nowrap text-[var(--text)] ${
+                    compact ? "text-[14px]" : "text-[16px]"
+                  }`}
                   data-testid="price"
                 >
                   {cheapestPrice.calculated_price}

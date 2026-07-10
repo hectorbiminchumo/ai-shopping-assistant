@@ -48,6 +48,7 @@ export default function Hero() {
             alt=""
             fill
             priority={i === 0}
+            fetchPriority={i === 0 ? "high" : undefined}
             className="object-cover"
             sizes="100vw"
           />
