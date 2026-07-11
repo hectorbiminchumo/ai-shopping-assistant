@@ -1,4 +1,4 @@
-import { PromptAssembler } from "../../src/pipeline/PromptAssembler"
+import { HISTORY_TURNS, PromptAssembler } from "../../src/pipeline/PromptAssembler"
 import { QueryParser } from "../../src/pipeline/QueryParser"
 import { Reranker } from "../../src/pipeline/Reranker"
 import { ResponseFormatter } from "../../src/pipeline/ResponseFormatter"
@@ -157,5 +157,203 @@ describe("ChatOrchestrator (integration, mocked providers)", () => {
 
     expect(response.hasResults).toBe(false)
     expect(chatLogger.log).toHaveBeenCalledWith(expect.objectContaining({ hasResults: false }))
+  })
+
+  describe("explicit filters", () => {
+    it("overrides the text-inferred category with the explicit one", async () => {
+      const retrievalService = createMockRetrievalService([retrievalResult], ["running-shoes", "jackets"])
+
+      const orchestrator = new ChatOrchestrator(
+        new QueryParser(),
+        createMockEmbeddingService(),
+        retrievalService,
+        new Reranker(),
+        new PromptAssembler(),
+        createMockLLMService(),
+        new ResponseFormatter(),
+        createMockChatLogger()
+      )
+
+      await orchestrator.handle("give me some running-shoes please", session, { category: "jackets" })
+
+      expect(retrievalService.search).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ category: "jackets" }),
+        expect.anything()
+      )
+    })
+
+    it("overrides the text-inferred price with the explicit one", async () => {
+      const retrievalService = createMockRetrievalService([retrievalResult])
+
+      const orchestrator = new ChatOrchestrator(
+        new QueryParser(),
+        createMockEmbeddingService(),
+        retrievalService,
+        new Reranker(),
+        new PromptAssembler(),
+        createMockLLMService(),
+        new ResponseFormatter(),
+        createMockChatLogger()
+      )
+
+      await orchestrator.handle("running shoes under $80", session, { priceMax: 150 })
+
+      expect(retrievalService.search).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ priceMax: 150 }),
+        expect.anything()
+      )
+    })
+
+    it("merges an explicit filter with the fields still inferred from text", async () => {
+      const retrievalService = createMockRetrievalService([retrievalResult], ["running-shoes"])
+
+      const orchestrator = new ChatOrchestrator(
+        new QueryParser(),
+        createMockEmbeddingService(),
+        retrievalService,
+        new Reranker(),
+        new PromptAssembler(),
+        createMockLLMService(),
+        new ResponseFormatter(),
+        createMockChatLogger()
+      )
+
+      await orchestrator.handle("running-shoes under $80", session, { size: "44" })
+
+      expect(retrievalService.search).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ category: "running-shoes", priceMax: 80, size: "44" }),
+        expect.anything()
+      )
+    })
+
+    it("reports the merged filters in response.appliedFilters", async () => {
+      const retrievalService = createMockRetrievalService([retrievalResult], ["running-shoes"])
+
+      const orchestrator = new ChatOrchestrator(
+        new QueryParser(),
+        createMockEmbeddingService(),
+        retrievalService,
+        new Reranker(),
+        new PromptAssembler(),
+        createMockLLMService(),
+        new ResponseFormatter(),
+        createMockChatLogger()
+      )
+
+      const response = await orchestrator.handle("running-shoes under $80", session, { size: "44" })
+
+      expect(response.appliedFilters).toEqual({
+        category: "running-shoes",
+        priceMax: 80,
+        size: "44",
+      })
+    })
+  })
+
+  describe("conversation history edge cases", () => {
+    it("handles an explicit empty history with no errors", async () => {
+      const orchestrator = new ChatOrchestrator(
+        new QueryParser(),
+        createMockEmbeddingService(),
+        createMockRetrievalService([retrievalResult]),
+        new Reranker(),
+        new PromptAssembler(),
+        createMockLLMService("Sure!"),
+        new ResponseFormatter(),
+        createMockChatLogger()
+      )
+
+      const response = await orchestrator.handle("hello", { sessionId: "session_1", history: [] })
+
+      expect(response.history).toEqual([
+        { role: "user", content: "hello" },
+        { role: "assistant", content: "Sure!" },
+      ])
+    })
+
+    it("trims a very long history (>20 turns) down to HISTORY_TURNS", async () => {
+      const longHistory = Array.from({ length: 25 }, (_, i) => ({
+        role: "user" as const,
+        content: `turn ${i + 1}`,
+      }))
+
+      const orchestrator = new ChatOrchestrator(
+        new QueryParser(),
+        createMockEmbeddingService(),
+        createMockRetrievalService([retrievalResult]),
+        new Reranker(),
+        new PromptAssembler(),
+        createMockLLMService("Sure!"),
+        new ResponseFormatter(),
+        createMockChatLogger()
+      )
+
+      const response = await orchestrator.handle("one more", {
+        sessionId: "session_1",
+        history: longHistory,
+      })
+
+      expect(response.history).toHaveLength(HISTORY_TURNS)
+      expect(response.history?.[0]).toEqual({ role: "user", content: "turn 18" })
+      expect(response.history?.at(-1)).toEqual({ role: "assistant", content: "Sure!" })
+    })
+
+    it("trims alternating user/assistant messages by message count, not by pair", async () => {
+      // 11 alternating messages ending on "user" (msg 1, 3, 5, 7, 9, 11 are
+      // "user"; 2, 4, 6, 8, 10 are "assistant") — an odd count so the trim
+      // boundary falls mid-pair, proving a "turn" is one message, not a pair.
+      const alternatingHistory = Array.from({ length: 11 }, (_, i) => ({
+        role: i % 2 === 0 ? ("user" as const) : ("assistant" as const),
+        content: `msg ${i + 1}`,
+      }))
+
+      const orchestrator = new ChatOrchestrator(
+        new QueryParser(),
+        createMockEmbeddingService(),
+        createMockRetrievalService([retrievalResult]),
+        new Reranker(),
+        new PromptAssembler(),
+        createMockLLMService("Sure!"),
+        new ResponseFormatter(),
+        createMockChatLogger()
+      )
+
+      const response = await orchestrator.handle("one more", {
+        sessionId: "session_1",
+        history: alternatingHistory,
+      })
+
+      expect(response.history).toHaveLength(HISTORY_TURNS)
+      // The dangling first kept message is an "assistant" reply whose
+      // preceding "user" message was trimmed away.
+      expect(response.history?.[0]).toEqual({ role: "assistant", content: "msg 4" })
+      expect(response.history?.at(-1)).toEqual({ role: "assistant", content: "Sure!" })
+    })
+
+    it("passes the full, untrimmed history to condenseQuery even when longer than HISTORY_TURNS", async () => {
+      const longHistory = Array.from({ length: 15 }, (_, i) => ({
+        role: "user" as const,
+        content: `turn ${i + 1}`,
+      }))
+      const llmService = createMockLLMService()
+
+      const orchestrator = new ChatOrchestrator(
+        new QueryParser(),
+        createMockEmbeddingService(),
+        createMockRetrievalService([retrievalResult]),
+        new Reranker(),
+        new PromptAssembler(),
+        llmService,
+        new ResponseFormatter(),
+        createMockChatLogger()
+      )
+
+      await orchestrator.handle("for women", { sessionId: "session_1", history: longHistory })
+
+      expect(llmService.condenseQuery).toHaveBeenCalledWith("for women", longHistory)
+    })
   })
 })

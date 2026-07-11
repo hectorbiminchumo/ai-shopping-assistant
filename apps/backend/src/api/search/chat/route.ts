@@ -18,7 +18,13 @@ const filtersSchema = z
     category: z.string().optional(),
     priceMin: z.number().nonnegative("priceMin must be a non-negative number").optional(),
     priceMax: z.number().nonnegative("priceMax must be a non-negative number").optional(),
-    size: z.string().optional(),
+    size: z
+      .string()
+      .trim()
+      .min(1, "size must not be empty")
+      .max(20, "size is too long")
+      .regex(/^[A-Za-z0-9.\-/ ]+$/, "size contains invalid characters")
+      .optional(),
   })
   .refine(
     (f) => f.priceMin === undefined || f.priceMax === undefined || f.priceMin <= f.priceMax,
