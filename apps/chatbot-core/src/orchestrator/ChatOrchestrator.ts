@@ -1,7 +1,7 @@
 import { HISTORY_TURNS } from "../pipeline/PromptAssembler"
 import type { IChatLogger, IEmbeddingService, ILLMService, IRetrievalService } from "../interfaces"
 import type { PromptAssembler, QueryParser, Reranker, ResponseFormatter } from "../pipeline"
-import type { ChatResponse, ChatSession } from "../types"
+import type { ChatResponse, ChatSession, ExplicitFilters } from "../types"
 
 // Retrieve more candidates than needed so the re-ranker has a meaningful set
 // to work with; RERANK_K is the final count passed to the LLM.
@@ -24,7 +24,11 @@ export class ChatOrchestrator {
     private readonly chatLogger: IChatLogger
   ) {}
 
-  async handle(rawQuery: string, session: ChatSession): Promise<ChatResponse> {
+  async handle(
+    rawQuery: string,
+    session: ChatSession,
+    filters?: ExplicitFilters
+  ): Promise<ChatResponse> {
     // Known categories let the parser emit a SQL pre-filter (e.g. "shoes"
     // in the query → only shoe rows are vector-searched)
     const knownCategories = await this.retrievalService.listCategories()
@@ -32,14 +36,16 @@ export class ChatOrchestrator {
     // them with the history into a standalone query before embedding
     const standaloneQuery = await this.llmService.condenseQuery(rawQuery, session.history)
     const parsedQuery = this.queryParser.parse(standaloneQuery, knownCategories)
-    const embedding = await this.embeddingService.embedText(parsedQuery.rawQuery)
-    const candidates = await this.retrievalService.search(embedding, parsedQuery, RETRIEVE_K)
-    const retrieved = this.reranker.rerank(parsedQuery, candidates, RERANK_K)
+    // Explicit filters from the client override the same fields inferred from text
+    const mergedQuery = filters ? { ...parsedQuery, ...filters } : parsedQuery
+    const embedding = await this.embeddingService.embedText(mergedQuery.rawQuery)
+    const candidates = await this.retrievalService.search(embedding, mergedQuery, RETRIEVE_K)
+    const retrieved = this.reranker.rerank(mergedQuery, candidates, RERANK_K)
 
     const prompt = this.promptAssembler.assemble({
       // The LLM answers the user's actual message; only retrieval uses the
       // condensed rewrite
-      query: { ...parsedQuery, rawQuery },
+      query: { ...mergedQuery, rawQuery },
       retrievedProducts: retrieved,
       history: session.history,
     })
@@ -55,6 +61,16 @@ export class ChatOrchestrator {
       { role: "assistant" as const, content: response.message },
     ].slice(-HISTORY_TURNS)
 
+    const appliedFilters: ExplicitFilters = {
+      ...(mergedQuery.category  !== undefined && { category: mergedQuery.category }),
+      ...(mergedQuery.priceMin  !== undefined && { priceMin: mergedQuery.priceMin }),
+      ...(mergedQuery.priceMax  !== undefined && { priceMax: mergedQuery.priceMax }),
+      ...(mergedQuery.size      !== undefined && { size: mergedQuery.size }),
+    }
+    if (Object.keys(appliedFilters).length > 0) {
+      response.appliedFilters = appliedFilters
+    }
+
     await this.chatLogger.log({
       userId: session.userId,
       sessionId: session.sessionId,
@@ -62,7 +78,7 @@ export class ChatOrchestrator {
       retrievedIds: retrieved.map((r) => r.product.medusaProductId),
       topScore: retrieved[0]?.similarityScore ?? 0,
       hasResults: response.hasResults,
-      categoryHint: parsedQuery.category,
+      categoryHint: mergedQuery.category,
     })
 
     return response

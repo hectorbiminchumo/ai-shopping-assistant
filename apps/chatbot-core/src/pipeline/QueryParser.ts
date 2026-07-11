@@ -1,7 +1,8 @@
 import { detectAudience } from "../utils/audience"
 import type { ParsedQuery } from "../types"
 
-const PRICE_PATTERN = /(?:under|below|less than|menos de)\s*\$?(\d+)/i
+const PRICE_MAX_PATTERN = /(?:under|below|less than|menos de)\s*\$?(\d+)/i
+const PRICE_MIN_PATTERN = /(?:above|over|more than|at least|desde|más de)\s*\$?(\d+)/i
 const SIZE_PATTERN = /\bsize\s*(\d+(?:\.\d+)?)\b/i
 
 // Categories are stored as slugs ("running-shoes") but users type plain
@@ -30,7 +31,8 @@ function matchesCategory(queryTokens: string[], category: string): boolean {
 // that still gets embedded for semantic matching.
 export class QueryParser {
   parse(rawQuery: string, knownCategories: string[] = []): ParsedQuery {
-    const priceMatch = rawQuery.match(PRICE_PATTERN)
+    const priceMaxMatch = rawQuery.match(PRICE_MAX_PATTERN)
+    const priceMinMatch = rawQuery.match(PRICE_MIN_PATTERN)
     const sizeMatch = rawQuery.match(SIZE_PATTERN)
     const queryTokens = normalize(rawQuery).split(" ")
     const category = knownCategories.find((c) => matchesCategory(queryTokens, c))
@@ -38,7 +40,8 @@ export class QueryParser {
     return {
       rawQuery,
       category,
-      priceMax: priceMatch ? Number(priceMatch[1]) : undefined,
+      priceMin: priceMinMatch ? Number(priceMinMatch[1]) : undefined,
+      priceMax: priceMaxMatch ? Number(priceMaxMatch[1]) : undefined,
       size: sizeMatch ? sizeMatch[1] : undefined,
       audience: detectAudience(rawQuery),
     }
