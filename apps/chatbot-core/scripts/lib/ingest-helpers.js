@@ -67,12 +67,17 @@ function buildEmbeddingText(product) {
 }
 
 function buildEmbeddingRow(product, embedding, now = () => new Date().toISOString()) {
+  const sizes = Array.isArray(product.sizes)
+    ? [...new Set(product.sizes.map((s) => String(s).trim()).filter(Boolean))]
+    : null
+
   return {
     medusa_product_id: product.medusa_product_id,
     title: product.title,
     description: product.description,
     category: product.category ?? null,
     tags: product.tags ?? [],
+    available_sizes: sizes && sizes.length > 0 ? sizes : null,
     price_min: product.price_min ?? null,
     price_max: product.price_max ?? null,
     thumbnail_url: product.thumbnail_url ?? null,
@@ -127,8 +132,9 @@ function parseCsv(raw) {
       title: row.title,
       description: row.description,
       category: row.category || undefined,
-      // CSV uses pipe-separated tags: "trail|road|lightweight"
+      // CSV uses pipe-separated values: "trail|road|lightweight", "38|40|42"
       tags: row.tags ? row.tags.split("|").map((t) => t.trim()).filter(Boolean) : [],
+      sizes: row.sizes ? row.sizes.split("|").map((s) => s.trim()).filter(Boolean) : undefined,
       price_min: row.price_min ? Number(row.price_min) : undefined,
       price_max: row.price_max ? Number(row.price_max) : undefined,
       thumbnail_url: row.thumbnail_url || undefined,

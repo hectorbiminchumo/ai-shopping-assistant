@@ -5,9 +5,19 @@ import type { Product } from "./product.types"
 // "Puma Men ...", "Doodle Boy's ... Kidswear")
 export type Audience = "men" | "women" | "children"
 
+// Filters sent explicitly by the client (UI filter panel). These override
+// the same fields inferred by QueryParser from the natural-language query.
+export interface ExplicitFilters {
+  category?: string
+  priceMin?: number
+  priceMax?: number
+  size?: string
+}
+
 export interface ParsedQuery {
   rawQuery: string
   category?: string
+  priceMin?: number
   priceMax?: number
   size?: string
   audience?: Audience

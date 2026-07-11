@@ -109,6 +109,7 @@ describe("buildEmbeddingRow", () => {
       description: "desc",
       category: null,
       tags: [],
+      available_sizes: null,
       price_min: null,
       price_max: null,
       thumbnail_url: null,
