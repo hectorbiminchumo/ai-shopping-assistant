@@ -18,7 +18,7 @@ type Message =
   | {
       role: "bot"
       text: string
-      products?: HttpTypes.StoreProduct[]
+      products?: ChatResult[]
       // Filters the backend applied to this result (explicit + inferred)
       appliedFilters?: ChatFilters
     }
@@ -55,6 +55,10 @@ const SUGGESTS = [
   { label: "Everyday lifestyle", query: "A jacket for everyday wear" },
 ]
 
+// A chat result: full catalog product plus its raw similarity score, so
+// the card can show the match badge.
+type ChatResult = { product: HttpTypes.StoreProduct; score: number }
+
 // The backend returns embedding-index products; join them against the
 // catalog the loader fetched to recover the full Medusa product (handle,
 // prices, badges). Results missing from the storefront catalog (e.g.
@@ -63,10 +67,10 @@ const SUGGESTS = [
 function toCatalogProducts(
   results: SemanticProduct[],
   catalog: HttpTypes.StoreProduct[]
-): HttpTypes.StoreProduct[] {
+): ChatResult[] {
   return results.flatMap((r) => {
     const known = catalog.find((p) => p.id === r.medusaProductId)
-    return known ? [known] : []
+    return known ? [{ product: known, score: r.similarityScore }] : []
   })
 }
 
@@ -98,11 +102,19 @@ function TypingDots() {
 }
 
 // Same card as the category/store grids (ProductCard in compact mode),
-// sized to fit three-up inside the chat thread.
-function ChatProductCard({ p }: { p: HttpTypes.StoreProduct }) {
+// sized to fit three-up inside the chat thread. `index` staggers the
+// entrance animation (see .vectra-card in the style block).
+function ChatProductCard({ result, index }: { result: ChatResult; index: number }) {
   return (
-    <div style={{ flex: "0 0 calc((100% - 28px) / 3)", minWidth: 140 }}>
-      <ProductCard product={p} compact />
+    <div
+      className="vectra-card"
+      style={{
+        flex: "0 0 calc((100% - 28px) / 3)",
+        minWidth: 140,
+        ["--stagger" as string]: index,
+      }}
+    >
+      <ProductCard product={result.product} compact matchScore={result.score} />
     </div>
   )
 }
@@ -324,7 +336,13 @@ export default function VectraChat({
           .vectra-panel{transition:transform .5s cubic-bezier(.22,.61,.36,1)}
           .vectra-float{transition:transform .25s cubic-bezier(.22,.61,.36,1),opacity .3s,background .25s}
           .vectra-float.hidden{transform:translateY(20px)}
+          /* Entrance animations: opacity/transform only, so they never
+             block pointer events or layout. Cards stagger via --stagger. */
+          .vectra-msg{animation:vectra-msg-in .35s cubic-bezier(.22,.61,.36,1) both}
+          .vectra-card{animation:vectra-card-in .4s cubic-bezier(.22,.61,.36,1) both;animation-delay:calc(var(--stagger, 0) * 80ms)}
         }
+        @keyframes vectra-msg-in{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+        @keyframes vectra-card-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
         .vectra-panel-scrim{position:fixed;inset:0;z-index:61;background:var(--overlay);opacity:0;pointer-events:none}
         .vectra-panel-scrim.open{opacity:1;pointer-events:auto}
         .vectra-panel{position:fixed;left:0;right:0;bottom:0;z-index:62;background:var(--bg);border-top:1px solid var(--line);box-shadow:0 -8px 40px rgba(0,0,0,.12);transform:translateY(100%);display:flex;flex-direction:column;height:100vh;height:100dvh}
@@ -492,7 +510,7 @@ export default function VectraChat({
             {messages.map((msg, i) => {
               if (msg.role === "typing") {
                 return (
-                  <div key={i} style={{ display: "flex", gap: 14 }}>
+                  <div key={i} className="vectra-msg" style={{ display: "flex", gap: 14 }}>
                     <div
                       style={{
                         flexShrink: 0,
@@ -522,6 +540,7 @@ export default function VectraChat({
                 return (
                   <div
                     key={i}
+                    className="vectra-msg"
                     style={{ display: "flex", gap: 14, flexDirection: "row-reverse" }}
                   >
                     <div
@@ -572,7 +591,7 @@ export default function VectraChat({
 
               // bot message
               return (
-                <div key={i} style={{ display: "flex", gap: 14 }}>
+                <div key={i} className="vectra-msg" style={{ display: "flex", gap: 14 }}>
                   <div
                     style={{
                       flexShrink: 0,
@@ -613,8 +632,8 @@ export default function VectraChat({
                           marginTop: 14,
                         }}
                       >
-                        {msg.products.map((p) => (
-                          <ChatProductCard key={p.id} p={p} />
+                        {msg.products.map((r, j) => (
+                          <ChatProductCard key={r.product.id} result={r} index={j} />
                         ))}
                       </div>
                     )}
