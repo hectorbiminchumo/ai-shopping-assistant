@@ -12,7 +12,16 @@ type Props = {
   searchParams: Promise<{
     sortBy?: SortOptions
     page?: string
+    minPrice?: string
+    maxPrice?: string
+    size?: string
   }>
+}
+
+// Query params arrive as strings; grid filters need validated numbers
+const toPrice = (value?: string) => {
+  const num = Number(value)
+  return value && !Number.isNaN(num) && num >= 0 ? num : undefined
 }
 
 export async function generateStaticParams() {
@@ -71,7 +80,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
 export default async function CategoryPage(props: Props) {
   const searchParams = await props.searchParams
   const params = await props.params
-  const { sortBy, page } = searchParams
+  const { sortBy, page, minPrice, maxPrice, size } = searchParams
 
   const productCategory = await getCategoryByHandle(params.category)
 
@@ -85,6 +94,11 @@ export default async function CategoryPage(props: Props) {
       sortBy={sortBy}
       page={page}
       countryCode={params.countryCode}
+      filters={{
+        priceMin: toPrice(minPrice),
+        priceMax: toPrice(maxPrice),
+        size: size || undefined,
+      }}
     />
   )
 }

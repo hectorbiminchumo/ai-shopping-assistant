@@ -1,15 +1,52 @@
 "use client"
 
-import { useRef, useState, useEffect, useCallback } from "react"
+import { useRef, useState, useEffect, useCallback, useMemo } from "react"
 import { usePathname } from "next/navigation"
 import { HttpTypes } from "@medusajs/types"
-import { chat, ChatHistoryMessage, SemanticProduct } from "@lib/api"
+import {
+  chat,
+  ChatFilters,
+  ChatFiltersError,
+  ChatHistoryMessage,
+  SemanticProduct,
+} from "@lib/api"
+import { collectSizeOptions } from "@lib/util/size-options"
 import ProductCard from "@modules/products/components/product-card"
+import FilterPanel from "./filter-panel"
 
 type Message =
-  | { role: "bot"; text: string; products?: HttpTypes.StoreProduct[] }
+  | {
+      role: "bot"
+      text: string
+      products?: HttpTypes.StoreProduct[]
+      // Filters the backend applied to this result (explicit + inferred)
+      appliedFilters?: ChatFilters
+    }
   | { role: "user"; text: string; images?: string[] }
   | { role: "typing" }
+
+// Human-readable chips for a filters object, used for the active-filter
+// tags under the composer and the "Filters:" caption on bot messages.
+function filterChips(filters: ChatFilters): { key: keyof ChatFilters; label: string }[] {
+  const chips: { key: keyof ChatFilters; label: string }[] = []
+  if (filters.category) chips.push({ key: "category", label: filters.category })
+  if (filters.priceMin !== undefined)
+    chips.push({ key: "priceMin", label: `min ${filters.priceMin}` })
+  if (filters.priceMax !== undefined)
+    chips.push({ key: "priceMax", label: `max ${filters.priceMax}` })
+  if (filters.size) chips.push({ key: "size", label: `size ${filters.size}` })
+  return chips
+}
+
+// The backend rejects priceMin > priceMax — swap instead of failing the
+// message. Returns undefined when no filter is set.
+function normalizeFilters(filters: ChatFilters): ChatFilters | undefined {
+  const f = { ...filters }
+  if (f.priceMin !== undefined && f.priceMax !== undefined && f.priceMin > f.priceMax) {
+    ;[f.priceMin, f.priceMax] = [f.priceMax, f.priceMin]
+  }
+  return filterChips(f).length ? f : undefined
+}
 
 const SUGGESTS = [
   { label: "Long-distance running", query: "Shoes for long-distance running" },
@@ -80,6 +117,9 @@ export default function VectraChat({
   ])
   const [input, setInput] = useState("")
   const [busy, setBusy] = useState(false)
+  // Explicit search filters — set visually, sent with the NEXT message
+  const [filters, setFilters] = useState<ChatFilters>({})
+  const [showFilters, setShowFilters] = useState(false)
   // Stable per-visit session id so the backend can group turns in chat_logs
   const sessionIdRef = useRef(
     typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -97,6 +137,19 @@ export default function VectraChat({
   const prevOpen = useRef(false)
   const pathname = usePathname()
   const prevPathname = useRef(pathname)
+
+  // Dropdown options for the filter panel, derived from the same catalog
+  // the results are joined against (category names match the embedding
+  // index — both come from the seed CSV, and the backend 400s on unknowns)
+  const categoryOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(products.flatMap((p) => p.categories?.map((c) => c.name) ?? []))
+      ).sort(),
+    [products]
+  )
+  const sizeOptions = useMemo(() => collectSizeOptions(products), [products])
+  const activeChips = filterChips(filters)
 
   const scrollToBottom = useCallback(() => {
     chatScrollRef.current?.scrollTo({ top: chatScrollRef.current.scrollHeight })
@@ -195,7 +248,12 @@ export default function VectraChat({
           text: "Image search isn't available just yet — try describing what you're looking for in words and I'll find the closest match.",
         }
       } else {
-        const result = await chat(q, sessionIdRef.current, historyRef.current)
+        const result = await chat(
+          q,
+          sessionIdRef.current,
+          historyRef.current,
+          normalizeFilters(filters)
+        )
         // Adopt the backend's updated history (last 10 turns) for the next
         // turn; fall back to appending locally if the field is missing
         historyRef.current =
@@ -212,16 +270,18 @@ export default function VectraChat({
             result.message ||
             "I couldn't find a close match in our catalog. Try describing it differently — the activity, conditions or product type all help.",
           products: result.hasResults && picks.length ? picks : undefined,
+          appliedFilters: result.appliedFilters,
         }
       }
       setMessages((prev) => [...prev.filter((m) => m.role !== "typing"), botMsg])
-    } catch {
+    } catch (err) {
+      const text =
+        err instanceof ChatFiltersError
+          ? "I couldn't search with those filters — try removing or changing them and send your message again."
+          : "Something went wrong on my end. Please try again."
       setMessages((prev) => [
         ...prev.filter((m) => m.role !== "typing"),
-        {
-          role: "bot",
-          text: "Something went wrong on my end. Please try again.",
-        },
+        { role: "bot", text },
       ])
     } finally {
       setBusy(false)
@@ -515,6 +575,18 @@ export default function VectraChat({
                   </div>
                   <div style={{ fontSize: 15, lineHeight: 1.6, paddingTop: 4, flex: 1 }}>
                     <div>{msg.text}</div>
+                    {msg.appliedFilters && filterChips(msg.appliedFilters).length > 0 && (
+                      <div
+                        className="mt-1.5 font-mono text-[10.5px] tracking-[.04em]"
+                        style={{ color: "var(--text-muted)" }}
+                        data-testid="chat-applied-filters"
+                      >
+                        {"Filters: "}
+                        {filterChips(msg.appliedFilters)
+                          .map((c) => c.label)
+                          .join(" · ")}
+                      </div>
+                    )}
                     {msg.products && msg.products.length > 0 && (
                       <div
                         style={{
@@ -590,6 +662,16 @@ export default function VectraChat({
           }}
         >
           <div style={{ maxWidth: 860, margin: "0 auto" }}>
+            {showFilters && (
+              <div className="mb-2.5">
+                <FilterPanel
+                  filters={filters}
+                  categories={categoryOptions}
+                  sizes={sizeOptions}
+                  onChange={setFilters}
+                />
+              </div>
+            )}
             <div className="composer-inner">
               {/* Image thumbnails */}
               {attachImages.length > 0 && (
@@ -692,6 +774,55 @@ export default function VectraChat({
                   }}
                 />
                 <button
+                  onClick={() => setShowFilters((v) => !v)}
+                  aria-label={showFilters ? "Hide filters" : "Show filters"}
+                  aria-expanded={showFilters}
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: 16,
+                    flexShrink: 0,
+                    display: "grid",
+                    placeItems: "center",
+                    position: "relative",
+                    color:
+                      showFilters || activeChips.length
+                        ? "var(--text)"
+                        : "var(--text-muted)",
+                    border: "none",
+                    background: showFilters ? "var(--surface-2)" : "none",
+                    cursor: "pointer",
+                    transition: "color .2s, background .2s",
+                  }}
+                >
+                  {/* Sliders icon */}
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                    style={{ width: 21, height: 21 }}
+                  >
+                    <path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h9M17 18h3" />
+                    <circle cx="15" cy="6" r="2" />
+                    <circle cx="9" cy="12" r="2" />
+                    <circle cx="15" cy="18" r="2" />
+                  </svg>
+                  {activeChips.length > 0 && (
+                    <span
+                      aria-hidden="true"
+                      className="absolute top-1 right-1 grid h-4 min-w-4 place-items-center rounded-full px-1 font-mono text-[9.5px] font-bold"
+                      style={{
+                        background: "var(--accent)",
+                        color: "#fff",
+                      }}
+                    >
+                      {activeChips.length}
+                    </span>
+                  )}
+                </button>
+                <button
                   onClick={() => fileRef.current?.click()}
                   aria-label="Attach image"
                   style={{
@@ -759,6 +890,40 @@ export default function VectraChat({
                 </button>
               </div>
             </div>
+            {/* Active filters — applied on the next message */}
+            {activeChips.length > 0 && (
+              <div
+                className="mt-2.5 flex flex-wrap items-center gap-2"
+                data-testid="chat-filter-tags"
+              >
+                {activeChips.map((chip) => (
+                  <button
+                    key={chip.key}
+                    onClick={() =>
+                      setFilters((prev) => ({ ...prev, [chip.key]: undefined }))
+                    }
+                    aria-label={`Remove filter: ${chip.label}`}
+                    className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[12px] font-medium cursor-pointer"
+                    style={{
+                      background: "var(--accent-bg)",
+                      borderColor: "var(--accent-line)",
+                      color: "var(--accent)",
+                    }}
+                  >
+                    {chip.label}
+                    <span aria-hidden="true">×</span>
+                  </button>
+                ))}
+                <button
+                  onClick={() => setFilters({})}
+                  className="rounded-full px-2 py-1 text-[12px] font-medium underline underline-offset-2 cursor-pointer"
+                  style={{ color: "var(--text-muted)", background: "none", border: "none" }}
+                  data-testid="chat-filter-clear"
+                >
+                  Clear all filters
+                </button>
+              </div>
+            )}
             <div
               style={{
                 fontFamily: "var(--mono)",

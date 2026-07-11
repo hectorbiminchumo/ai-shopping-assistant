@@ -113,8 +113,10 @@ export default async function PaginatedSearch({
         data-testid="products-list"
       >
         {products.map((p) => {
+          // suppressHydrationWarning: ScrollReveal adds .v-in to streamed
+          // HTML before this Suspense boundary hydrates
           return (
-            <li key={p.id} className="v-reveal">
+            <li key={p.id} className="v-reveal" suppressHydrationWarning>
               <ProductPreview product={p} region={region ?? undefined} />
             </li>
           )
