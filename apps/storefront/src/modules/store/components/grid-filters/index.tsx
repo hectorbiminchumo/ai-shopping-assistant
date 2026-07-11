@@ -2,6 +2,10 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
+import {
+  FilterInput,
+  FilterSelect,
+} from "@modules/common/components/filter-field"
 
 /**
  * Price/size filters for the category product grid. Values live in the URL
@@ -9,16 +13,6 @@ import { useCallback, useEffect, useState } from "react"
  * committing a change resets the page param. Price inputs commit on blur or
  * Enter to avoid a server round-trip per keystroke.
  */
-
-const fieldStyle: React.CSSProperties = {
-  height: 40,
-  borderRadius: 12,
-  border: "1px solid var(--line-strong)",
-  background: "var(--card)",
-  color: "var(--text)",
-  fontSize: 13.5,
-  fontWeight: 500,
-}
 
 export default function GridFilters({ sizes }: { sizes: string[] }) {
   const router = useRouter()
@@ -67,7 +61,7 @@ export default function GridFilters({ sizes }: { sizes: string[] }) {
       >
         Filter
       </span>
-      <input
+      <FilterInput
         type="number"
         min={0}
         inputMode="decimal"
@@ -77,11 +71,10 @@ export default function GridFilters({ sizes }: { sizes: string[] }) {
         onChange={(e) => setMin(e.target.value)}
         onBlur={() => min !== minParam && commit({ minPrice: min })}
         onKeyDown={(e) => e.key === "Enter" && commit({ minPrice: min })}
-        className="w-20 px-3 outline-none transition-colors duration-200 focus:[border-color:var(--text)]"
-        style={fieldStyle}
+        className="w-20"
         data-testid="grid-filter-price-min"
       />
-      <input
+      <FilterInput
         type="number"
         min={0}
         inputMode="decimal"
@@ -91,26 +84,20 @@ export default function GridFilters({ sizes }: { sizes: string[] }) {
         onChange={(e) => setMax(e.target.value)}
         onBlur={() => max !== maxParam && commit({ maxPrice: max })}
         onKeyDown={(e) => e.key === "Enter" && commit({ maxPrice: max })}
-        className="w-20 px-3 outline-none transition-colors duration-200 focus:[border-color:var(--text)]"
-        style={fieldStyle}
+        className="w-20"
         data-testid="grid-filter-price-max"
       />
       {sizes.length > 0 && (
-        <select
+        <FilterSelect
           value={sizeParam}
-          onChange={(e) => commit({ size: e.target.value })}
+          onChange={(v) => commit({ size: v })}
+          options={[
+            { value: "", label: "Any size" },
+            ...sizes.map((s) => ({ value: s, label: s })),
+          ]}
           aria-label="Filter by size"
-          className="appearance-none cursor-pointer pl-3 pr-8 outline-none transition-colors duration-200 focus:[border-color:var(--text)]"
-          style={fieldStyle}
           data-testid="grid-filter-size"
-        >
-          <option value="">Any size</option>
-          {sizes.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
+        />
       )}
       {hasActive && (
         <button

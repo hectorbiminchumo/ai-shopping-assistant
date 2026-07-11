@@ -4,12 +4,18 @@ import FilterPanel from "../filter-panel"
 // The panel is a controlled component: it never talks to the API itself,
 // it only reports changes to the parent via onChange. The full flow
 // (tags, clear-all, sending filters with the next message) is covered in
-// vectra-chat.test.tsx.
+// vectra-chat.test.tsx. Category/size are Headless UI listboxes: options
+// render only while the dropdown is open.
 describe("FilterPanel", () => {
   const categories = ["jackets", "running-shoes"]
   const sizes = ["40", "41", "M"]
 
-  it("renders all filter inputs with their options", () => {
+  const pickOption = (testId: string, name: string) => {
+    fireEvent.click(screen.getByTestId(testId))
+    fireEvent.click(screen.getByRole("option", { name }))
+  }
+
+  it("renders all filter inputs and lists options when a dropdown opens", () => {
     render(
       <FilterPanel
         filters={{}}
@@ -24,9 +30,12 @@ describe("FilterPanel", () => {
     expect(screen.getByTestId("chat-filter-category")).toBeInTheDocument()
     expect(screen.getByTestId("chat-filter-size")).toBeInTheDocument()
 
+    fireEvent.click(screen.getByTestId("chat-filter-category"))
     expect(screen.getByRole("option", { name: "All categories" })).toBeInTheDocument()
     expect(screen.getByRole("option", { name: "jackets" })).toBeInTheDocument()
     expect(screen.getByRole("option", { name: "running-shoes" })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByTestId("chat-filter-size"))
     expect(screen.getByRole("option", { name: "Any size" })).toBeInTheDocument()
     expect(screen.getByRole("option", { name: "40" })).toBeInTheDocument()
     expect(screen.getByRole("option", { name: "M" })).toBeInTheDocument()
@@ -44,8 +53,8 @@ describe("FilterPanel", () => {
 
     expect(screen.getByTestId("chat-filter-price-min")).toHaveValue(20)
     expect(screen.getByTestId("chat-filter-price-max")).toHaveValue(80)
-    expect(screen.getByTestId("chat-filter-category")).toHaveValue("jackets")
-    expect(screen.getByTestId("chat-filter-size")).toHaveValue("M")
+    expect(screen.getByTestId("chat-filter-category")).toHaveTextContent("jackets")
+    expect(screen.getByTestId("chat-filter-size")).toHaveTextContent("M")
   })
 
   it("reports each input change to onChange", () => {
@@ -69,14 +78,10 @@ describe("FilterPanel", () => {
     })
     expect(onChange).toHaveBeenLastCalledWith({ priceMax: 90 })
 
-    fireEvent.change(screen.getByTestId("chat-filter-category"), {
-      target: { value: "running-shoes" },
-    })
+    pickOption("chat-filter-category", "running-shoes")
     expect(onChange).toHaveBeenLastCalledWith({ category: "running-shoes" })
 
-    fireEvent.change(screen.getByTestId("chat-filter-size"), {
-      target: { value: "41" },
-    })
+    pickOption("chat-filter-size", "41")
     expect(onChange).toHaveBeenLastCalledWith({ size: "41" })
   })
 
@@ -109,18 +114,14 @@ describe("FilterPanel", () => {
       size: "M",
     })
 
-    fireEvent.change(screen.getByTestId("chat-filter-category"), {
-      target: { value: "" },
-    })
+    pickOption("chat-filter-category", "All categories")
     expect(onChange).toHaveBeenLastCalledWith({
       priceMax: 80,
       category: undefined,
       size: "M",
     })
 
-    fireEvent.change(screen.getByTestId("chat-filter-size"), {
-      target: { value: "" },
-    })
+    pickOption("chat-filter-size", "Any size")
     expect(onChange).toHaveBeenLastCalledWith({
       priceMax: 80,
       category: "jackets",

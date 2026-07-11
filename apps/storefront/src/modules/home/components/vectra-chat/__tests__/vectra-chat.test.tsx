@@ -254,6 +254,11 @@ describe("VectraChat filters", () => {
     fireEvent.change(getComposer(), { target: { value: text } })
     fireEvent.keyDown(getComposer(), { key: "Enter" })
   }
+  // Category/size are Headless UI listboxes: open the dropdown, click an option
+  const pickOption = (testId: string, name: string) => {
+    fireEvent.click(screen.getByTestId(testId))
+    fireEvent.click(screen.getByRole("option", { name }))
+  }
 
   beforeEach(() => {
     chatMock.mockReset()
@@ -265,7 +270,9 @@ describe("VectraChat filters", () => {
     openChat()
     openFilters()
 
+    fireEvent.click(screen.getByTestId("chat-filter-category"))
     expect(screen.getByRole("option", { name: "running-shoes" })).toBeInTheDocument()
+    fireEvent.click(screen.getByTestId("chat-filter-size"))
     expect(screen.getByRole("option", { name: "42" })).toBeInTheDocument()
   })
 
@@ -274,18 +281,15 @@ describe("VectraChat filters", () => {
     openChat()
     openFilters()
 
-    fireEvent.change(screen.getByTestId("chat-filter-category"), {
-      target: { value: "running-shoes" },
-    })
+    pickOption("chat-filter-category", "running-shoes")
+    fireEvent.click(screen.getByTestId("chat-filter-size"))
     expect(screen.getByRole("option", { name: "42" })).toBeInTheDocument()
     expect(screen.queryByRole("option", { name: "M" })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByTestId("chat-filter-size"))
 
-    fireEvent.change(screen.getByTestId("chat-filter-category"), {
-      target: { value: "" },
-    })
-    fireEvent.change(screen.getByTestId("chat-filter-size"), {
-      target: { value: "M" },
-    })
+    pickOption("chat-filter-category", "All categories")
+    pickOption("chat-filter-size", "M")
+    fireEvent.click(screen.getByTestId("chat-filter-category"))
     expect(screen.getByRole("option", { name: "jackets" })).toBeInTheDocument()
     expect(
       screen.queryByRole("option", { name: "running-shoes" })
@@ -297,15 +301,11 @@ describe("VectraChat filters", () => {
     openChat()
     openFilters()
 
-    fireEvent.change(screen.getByTestId("chat-filter-category"), {
-      target: { value: "running-shoes" },
-    })
+    pickOption("chat-filter-category", "running-shoes")
     fireEvent.change(screen.getByTestId("chat-filter-price-max"), {
       target: { value: "80" },
     })
-    fireEvent.change(screen.getByTestId("chat-filter-size"), {
-      target: { value: "42" },
-    })
+    pickOption("chat-filter-size", "42")
 
     // Active filters shown as tags under the composer
     expect(screen.getByTestId("chat-filter-tags")).toHaveTextContent("running-shoes")
@@ -331,9 +331,7 @@ describe("VectraChat filters", () => {
     fireEvent.change(screen.getByTestId("chat-filter-price-max"), {
       target: { value: "80" },
     })
-    fireEvent.change(screen.getByTestId("chat-filter-size"), {
-      target: { value: "42" },
-    })
+    pickOption("chat-filter-size", "42")
 
     fireEvent.click(screen.getByRole("button", { name: "Remove filter: max 80" }))
     expect(screen.getByTestId("chat-filter-tags")).not.toHaveTextContent("max 80")
