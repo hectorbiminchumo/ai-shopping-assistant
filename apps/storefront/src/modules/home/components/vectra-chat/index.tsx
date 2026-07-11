@@ -70,6 +70,13 @@ function toCatalogProducts(
   })
 }
 
+function productHasSize(p: HttpTypes.StoreProduct, size: string): boolean {
+  return !!p.options?.some(
+    (o) =>
+      o.title?.toLowerCase() === "size" && o.values?.some((v) => v.value === size)
+  )
+}
+
 function TypingDots() {
   return (
     <div className="flex gap-[5px] items-center pt-2">
@@ -140,15 +147,25 @@ export default function VectraChat({
 
   // Dropdown options for the filter panel, derived from the same catalog
   // the results are joined against (category names match the embedding
-  // index — both come from the seed CSV, and the backend 400s on unknowns)
-  const categoryOptions = useMemo(
-    () =>
-      Array.from(
-        new Set(products.flatMap((p) => p.categories?.map((c) => c.name) ?? []))
-      ).sort(),
-    [products]
-  )
-  const sizeOptions = useMemo(() => collectSizeOptions(products), [products])
+  // index — both come from the seed CSV, and the backend 400s on unknowns).
+  // Category and size narrow each other: only sizes available in the
+  // selected category, and only categories carrying the selected size.
+  const categoryOptions = useMemo(() => {
+    const pool = filters.size
+      ? products.filter((p) => productHasSize(p, filters.size!))
+      : products
+    return Array.from(
+      new Set(pool.flatMap((p) => p.categories?.map((c) => c.name) ?? []))
+    ).sort()
+  }, [products, filters.size])
+  const sizeOptions = useMemo(() => {
+    const pool = filters.category
+      ? products.filter((p) =>
+          p.categories?.some((c) => c.name === filters.category)
+        )
+      : products
+    return collectSizeOptions(pool)
+  }, [products, filters.category])
   const activeChips = filterChips(filters)
 
   const scrollToBottom = useCallback(() => {

@@ -227,6 +227,21 @@ describe("VectraChat filters", () => {
         },
       ],
     },
+    {
+      id: "prod_2",
+      title: "City Jacket",
+      handle: "city-jacket",
+      thumbnail: null,
+      variants: [],
+      categories: [{ id: "cat_2", name: "jackets" }],
+      options: [
+        {
+          id: "opt_2",
+          title: "Size",
+          values: [{ id: "v_3", value: "M" }],
+        },
+      ],
+    },
   ] as unknown as HttpTypes.StoreProduct[]
 
   const openChat = () =>
@@ -252,6 +267,29 @@ describe("VectraChat filters", () => {
 
     expect(screen.getByRole("option", { name: "running-shoes" })).toBeInTheDocument()
     expect(screen.getByRole("option", { name: "42" })).toBeInTheDocument()
+  })
+
+  it("narrows sizes to the selected category and categories to the selected size", () => {
+    render(<VectraChat products={catalog} />)
+    openChat()
+    openFilters()
+
+    fireEvent.change(screen.getByTestId("chat-filter-category"), {
+      target: { value: "running-shoes" },
+    })
+    expect(screen.getByRole("option", { name: "42" })).toBeInTheDocument()
+    expect(screen.queryByRole("option", { name: "M" })).not.toBeInTheDocument()
+
+    fireEvent.change(screen.getByTestId("chat-filter-category"), {
+      target: { value: "" },
+    })
+    fireEvent.change(screen.getByTestId("chat-filter-size"), {
+      target: { value: "M" },
+    })
+    expect(screen.getByRole("option", { name: "jackets" })).toBeInTheDocument()
+    expect(
+      screen.queryByRole("option", { name: "running-shoes" })
+    ).not.toBeInTheDocument()
   })
 
   it("sends the active filters with the next message and shows removable tags", async () => {
