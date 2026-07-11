@@ -18,7 +18,7 @@ type Message =
   | {
       role: "bot"
       text: string
-      products?: HttpTypes.StoreProduct[]
+      products?: ChatResult[]
       // Filters the backend applied to this result (explicit + inferred)
       appliedFilters?: ChatFilters
     }
@@ -55,6 +55,10 @@ const SUGGESTS = [
   { label: "Everyday lifestyle", query: "A jacket for everyday wear" },
 ]
 
+// A chat result: full catalog product plus its raw similarity score, so
+// the card can show the match badge.
+type ChatResult = { product: HttpTypes.StoreProduct; score: number }
+
 // The backend returns embedding-index products; join them against the
 // catalog the loader fetched to recover the full Medusa product (handle,
 // prices, badges). Results missing from the storefront catalog (e.g.
@@ -63,10 +67,10 @@ const SUGGESTS = [
 function toCatalogProducts(
   results: SemanticProduct[],
   catalog: HttpTypes.StoreProduct[]
-): HttpTypes.StoreProduct[] {
+): ChatResult[] {
   return results.flatMap((r) => {
     const known = catalog.find((p) => p.id === r.medusaProductId)
-    return known ? [known] : []
+    return known ? [{ product: known, score: r.similarityScore }] : []
   })
 }
 
@@ -93,7 +97,7 @@ function TypingDots() {
 // Same card as the category/store grids (ProductCard in compact mode),
 // sized to fit three-up inside the chat thread. `index` staggers the
 // entrance animation (see .vectra-card in the style block).
-function ChatProductCard({ p, index }: { p: HttpTypes.StoreProduct; index: number }) {
+function ChatProductCard({ result, index }: { result: ChatResult; index: number }) {
   return (
     <div
       className="vectra-card"
@@ -103,7 +107,7 @@ function ChatProductCard({ p, index }: { p: HttpTypes.StoreProduct; index: numbe
         ["--stagger" as string]: index,
       }}
     >
-      <ProductCard product={p} compact />
+      <ProductCard product={result.product} compact matchScore={result.score} />
     </div>
   )
 }
@@ -611,8 +615,8 @@ export default function VectraChat({
                           marginTop: 14,
                         }}
                       >
-                        {msg.products.map((p, j) => (
-                          <ChatProductCard key={p.id} p={p} index={j} />
+                        {msg.products.map((r, j) => (
+                          <ChatProductCard key={r.product.id} result={r} index={j} />
                         ))}
                       </div>
                     )}
