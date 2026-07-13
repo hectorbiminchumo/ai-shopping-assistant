@@ -8,9 +8,30 @@ describe("QueryParser", () => {
     expect(result.priceMax).toBe(80)
   })
 
+  it("extracts a price floor from the query", () => {
+    expect(parser.parse("running shoes above $50").priceMin).toBe(50)
+    expect(parser.parse("jackets at least $30").priceMin).toBe(30)
+  })
+
   it("extracts a size from the query", () => {
     const result = parser.parse("trail shoes size 42")
     expect(result.size).toBe("42")
+  })
+
+  it("leaves priceMax undefined for a negative price in free text", () => {
+    // The regex never captures a sign, so "-$80" simply fails to match.
+    const result = parser.parse("running shoes under -$80")
+    expect(result.priceMax).toBeUndefined()
+  })
+
+  it("leaves priceMax undefined for a non-numeric price in free text", () => {
+    const result = parser.parse("running shoes under a lot of money")
+    expect(result.priceMax).toBeUndefined()
+  })
+
+  it("leaves size undefined for a malformed size in free text", () => {
+    expect(parser.parse("trail shoes size XL").size).toBeUndefined()
+    expect(parser.parse("trail shoes size -1").size).toBeUndefined()
   })
 
   it("matches a known category mentioned in the query", () => {
@@ -43,6 +64,12 @@ describe("QueryParser", () => {
     const categories = ["running-shoes", "training-apparel"]
     // "training" alone must not trigger training-apparel for a shoe request
     expect(parser.parse("training shoes for women", categories).category).toBeUndefined()
+  })
+
+  it("leaves category undefined when the mentioned category is unknown to the catalog", () => {
+    const categories = ["running-shoes", "training-apparel"]
+    const result = parser.parse("looking for swimwear", categories)
+    expect(result.category).toBeUndefined()
   })
 
   it("detects the audience mentioned in the query", () => {
