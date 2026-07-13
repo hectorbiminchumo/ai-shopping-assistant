@@ -105,11 +105,11 @@ export default function ProductCard({
         {/* Badges — top left */}
         {(isNew(product) || isSale || matchScore !== undefined) && (
           <div
-            className="absolute top-3 left-3 flex gap-[5px] flex-wrap pointer-events-none"
+            className="absolute top-3 left-3 flex gap-[5px] flex-wrap pointer-events-none align-top"
             aria-label="Product badges"
           >
             {matchScore !== undefined && (
-              <span data-testid="match-score-badge">
+              <span data-testid="match-score-badge" className="flex">
                 <Badge variant="match" dot>
                   {matchScoreToPercent(matchScore)}% match
                 </Badge>
