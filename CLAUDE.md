@@ -331,7 +331,7 @@ Panel for the store owner powered entirely by `chat_logs` queries:
 - **Query parsing before embedding** — structured filters applied as SQL `WHERE` before vector search significantly improves precision
 - **Similarity threshold at 0.40** — below this the query is a lost sale, logged accordingly (Voyage AI voyage-3 compresses scores to ~0.35–0.55; 0.40 is calibrated from real data)
 - **Top-k = 5** — retrieve 5 products, pass all to LLM, let LLM reason over them
-- **Conversation history** — include last 3 turns in prompt assembly for context continuity
+- **Conversation history** — include last 10 turns in prompt assembly for context continuity
 - **No LangChain** — every step is explicit Node.js code — easier to debug, easier to explain in interviews and pitch
 
 ---

@@ -7,13 +7,14 @@ jest.mock("@dtc/chatbot-core", () =>
 )
 
 import { POST } from "../../src/api/search/chat/route"
-import { ChatOrchestrator, ChatbotError } from "@dtc/chatbot-core"
+import { ChatOrchestrator, ChatbotError, RetrievalService } from "@dtc/chatbot-core"
 
-// `ChatOrchestrator` is the jest.fn() constructor installed by the mock
-// factory above. Casting through `jest.Mock` (rather than `jest.mocked()`)
-// avoids fighting the real class's private-field instance type when
-// configuring `mockImplementation` below.
+// `ChatOrchestrator`/`RetrievalService` are the jest.fn() constructors
+// installed by the mock factory above. Casting through `jest.Mock` (rather
+// than `jest.mocked()`) avoids fighting the real classes' private-field
+// instance type when configuring `mockImplementation` below.
 const MockedChatOrchestrator = ChatOrchestrator as unknown as jest.Mock
+const MockedRetrievalService = RetrievalService as unknown as jest.Mock
 
 function buildReq(body: unknown): MedusaRequest {
   return { body } as Partial<MedusaRequest> as MedusaRequest
@@ -61,10 +62,11 @@ describe("POST /search/chat", () => {
 
     await POST(req, res)
 
-    expect(mockHandle).toHaveBeenCalledWith("running shoes", {
-      sessionId: "session-1",
-      history: [],
-    })
+    expect(mockHandle).toHaveBeenCalledWith(
+      "running shoes",
+      { sessionId: "session-1", history: [] },
+      undefined
+    )
     expect(res.status).toHaveBeenCalledWith(200)
     expect(res.json).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -128,14 +130,228 @@ describe("POST /search/chat", () => {
     expect(res.json).toHaveBeenCalledWith({ message: "LLM is temporarily unavailable" })
   })
 
-  // BLOCKED: "explicit filters" are not yet implemented on POST /search/chat.
-  // There is currently no request-body field for filters, and neither
-  // `ChatOrchestrator.handle` nor `QueryParser.parse` accepts a structured
-  // filters param in src/ (only free-text regex-based extraction of
-  // category/priceMax/size/audience from the raw query). Once the feature
-  // lands end-to-end, add cases here for:
-  //   - filters parsed from the request body and forwarded to/returned by
-  //     the orchestrator
-  //   - invalid filter values rejected with 400
-  it.todo("explicit filters (blocked — see comment above)")
+  describe("explicit filters", () => {
+    it("forwards valid filters to the orchestrator as the third argument", async () => {
+      const mockHandle = jest.fn().mockResolvedValue({
+        message: "Here are a few running shoes you might like.",
+        products: [],
+        hasResults: true,
+        history: [],
+        appliedFilters: { category: "running-shoes", priceMax: 100 },
+      })
+      MockedChatOrchestrator.mockImplementation(() => ({ handle: mockHandle }))
+      MockedRetrievalService.mockImplementation(() => ({
+        listCategories: jest.fn().mockResolvedValue(["running-shoes", "jackets"]),
+      }))
+
+      const req = buildReq({
+        query: "running shoes",
+        sessionId: "session-1",
+        filters: { category: "running-shoes", priceMax: 100 },
+      })
+      const res = buildRes()
+
+      await POST(req, res)
+
+      expect(mockHandle).toHaveBeenCalledWith(
+        "running shoes",
+        { sessionId: "session-1", history: [] },
+        { category: "running-shoes", priceMax: 100 }
+      )
+      expect(res.status).toHaveBeenCalledWith(200)
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          appliedFilters: { category: "running-shoes", priceMax: 100 },
+        })
+      )
+    })
+
+    it("returns 400 when filters.priceMin is negative", async () => {
+      const req = buildReq({
+        query: "running shoes",
+        sessionId: "session-1",
+        filters: { priceMin: -10 },
+      })
+      const res = buildRes()
+
+      await POST(req, res)
+
+      expect(MockedChatOrchestrator).not.toHaveBeenCalled()
+      expect(res.status).toHaveBeenCalledWith(400)
+    })
+
+    it("returns 400 when filters.priceMax is negative", async () => {
+      const req = buildReq({
+        query: "running shoes",
+        sessionId: "session-1",
+        filters: { priceMax: -50 },
+      })
+      const res = buildRes()
+
+      await POST(req, res)
+
+      expect(MockedChatOrchestrator).not.toHaveBeenCalled()
+      expect(res.status).toHaveBeenCalledWith(400)
+    })
+
+    it("returns 400 when a filter price is not a number", async () => {
+      const req = buildReq({
+        query: "running shoes",
+        sessionId: "session-1",
+        filters: { priceMax: "expensive" },
+      })
+      const res = buildRes()
+
+      await POST(req, res)
+
+      expect(MockedChatOrchestrator).not.toHaveBeenCalled()
+      expect(res.status).toHaveBeenCalledWith(400)
+    })
+
+    it("returns 400 when priceMin is greater than priceMax", async () => {
+      const req = buildReq({
+        query: "running shoes",
+        sessionId: "session-1",
+        filters: { priceMin: 100, priceMax: 50 },
+      })
+      const res = buildRes()
+
+      await POST(req, res)
+
+      expect(MockedChatOrchestrator).not.toHaveBeenCalled()
+      expect(res.status).toHaveBeenCalledWith(400)
+    })
+
+    it("returns 400 when filters.category is not a known catalog category", async () => {
+      MockedRetrievalService.mockImplementation(() => ({
+        listCategories: jest.fn().mockResolvedValue(["running-shoes", "jackets"]),
+      }))
+
+      const req = buildReq({
+        query: "running shoes",
+        sessionId: "session-1",
+        filters: { category: "swimwear" },
+      })
+      const res = buildRes()
+
+      await POST(req, res)
+
+      expect(MockedChatOrchestrator).not.toHaveBeenCalled()
+      expect(res.status).toHaveBeenCalledWith(400)
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          errors: expect.arrayContaining([expect.stringContaining("swimwear")]),
+        })
+      )
+    })
+
+    it.each([
+      ["empty", ""],
+      ["whitespace-only", "   "],
+      ["containing invalid characters", "<42>"],
+    ])("returns 400 when filters.size is %s", async (_label, size) => {
+      const req = buildReq({
+        query: "running shoes",
+        sessionId: "session-1",
+        filters: { size },
+      })
+      const res = buildRes()
+
+      await POST(req, res)
+
+      expect(MockedChatOrchestrator).not.toHaveBeenCalled()
+      expect(res.status).toHaveBeenCalledWith(400)
+    })
+  })
+
+  describe("history request window", () => {
+    it("accepts an explicit empty history array", async () => {
+      const mockHandle = jest.fn().mockResolvedValue({
+        message: "Hi",
+        products: [],
+        hasResults: true,
+        history: [],
+      })
+      MockedChatOrchestrator.mockImplementation(() => ({ handle: mockHandle }))
+
+      const req = buildReq({ query: "running shoes", sessionId: "session-1", history: [] })
+      const res = buildRes()
+
+      await POST(req, res)
+
+      expect(mockHandle).toHaveBeenCalledWith(
+        "running shoes",
+        { sessionId: "session-1", history: [] },
+        undefined
+      )
+      expect(res.status).toHaveBeenCalledWith(200)
+    })
+
+    it("forwards a non-empty history array unchanged", async () => {
+      const mockHandle = jest.fn().mockResolvedValue({
+        message: "Hi",
+        products: [],
+        hasResults: true,
+        history: [],
+      })
+      MockedChatOrchestrator.mockImplementation(() => ({ handle: mockHandle }))
+
+      const history = [
+        { role: "user", content: "hi" },
+        { role: "assistant", content: "hello" },
+        { role: "user", content: "more shoes please" },
+      ]
+      const req = buildReq({ query: "running shoes", sessionId: "session-1", history })
+      const res = buildRes()
+
+      await POST(req, res)
+
+      expect(mockHandle).toHaveBeenCalledWith(
+        "running shoes",
+        { sessionId: "session-1", history },
+        undefined
+      )
+      expect(res.status).toHaveBeenCalledWith(200)
+    })
+
+    it("accepts a history array at the 20-item limit", async () => {
+      const mockHandle = jest.fn().mockResolvedValue({
+        message: "Hi",
+        products: [],
+        hasResults: true,
+        history: [],
+      })
+      MockedChatOrchestrator.mockImplementation(() => ({ handle: mockHandle }))
+
+      const history = Array.from({ length: 20 }, (_, i) => ({
+        role: i % 2 === 0 ? "user" : "assistant",
+        content: `turn ${i + 1}`,
+      }))
+      const req = buildReq({ query: "running shoes", sessionId: "session-1", history })
+      const res = buildRes()
+
+      await POST(req, res)
+
+      expect(mockHandle).toHaveBeenCalledWith(
+        "running shoes",
+        { sessionId: "session-1", history },
+        undefined
+      )
+      expect(res.status).toHaveBeenCalledWith(200)
+    })
+
+    it("returns 400 when history exceeds the 20-item limit", async () => {
+      const history = Array.from({ length: 21 }, (_, i) => ({
+        role: i % 2 === 0 ? "user" : "assistant",
+        content: `turn ${i + 1}`,
+      }))
+      const req = buildReq({ query: "running shoes", sessionId: "session-1", history })
+      const res = buildRes()
+
+      await POST(req, res)
+
+      expect(MockedChatOrchestrator).not.toHaveBeenCalled()
+      expect(res.status).toHaveBeenCalledWith(400)
+    })
+  })
 })
