@@ -1,4 +1,4 @@
-import { PromptAssembler } from "../../../src/pipeline/PromptAssembler"
+import { HISTORY_TURNS, PromptAssembler } from "../../../src/pipeline/PromptAssembler"
 import type { Product, RetrievalResult } from "../../../src/types"
 
 const product: Product = {
@@ -27,10 +27,10 @@ describe("PromptAssembler", () => {
     expect(prompt).toContain("Trail Runner X")
   })
 
-  it("includes only the last 10 turns of conversation history", () => {
-    const history = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((n) => ({
+  it("includes only the last HISTORY_TURNS turns of conversation history", () => {
+    const history = Array.from({ length: HISTORY_TURNS + 1 }, (_, i) => ({
       role: "user" as const,
-      content: `turn ${n}`,
+      content: `turn ${i + 1}`,
     }))
 
     const prompt = assembler.assemble({
@@ -42,7 +42,87 @@ describe("PromptAssembler", () => {
     // "turn 1\n" avoids matching the "turn 1" prefix of "turn 10"/"turn 11"
     expect(prompt).not.toContain("turn 1\n")
     expect(prompt).toContain("turn 2")
-    expect(prompt).toContain("turn 11")
+    expect(prompt).toContain(`turn ${HISTORY_TURNS + 1}`)
+  })
+
+  it("keeps every turn when the history is exactly HISTORY_TURNS long", () => {
+    const history = Array.from({ length: HISTORY_TURNS }, (_, i) => ({
+      role: "user" as const,
+      content: `turn ${i + 1}`,
+    }))
+
+    const prompt = assembler.assemble({
+      query: { rawQuery: "anything else?" },
+      retrievedProducts: [],
+      history,
+    })
+
+    expect(prompt).toContain("turn 1\n")
+    expect(prompt).toContain(`turn ${HISTORY_TURNS}`)
+  })
+
+  it("keeps every turn when the history is shorter than HISTORY_TURNS", () => {
+    const history = Array.from({ length: HISTORY_TURNS - 1 }, (_, i) => ({
+      role: "user" as const,
+      content: `turn ${i + 1}`,
+    }))
+
+    const prompt = assembler.assemble({
+      query: { rawQuery: "anything else?" },
+      retrievedProducts: [],
+      history,
+    })
+
+    expect(prompt).toContain("turn 1\n")
+    expect(prompt).toContain(`turn ${HISTORY_TURNS - 1}`)
+  })
+
+  it("omits the conversation section entirely for an empty history", () => {
+    const prompt = assembler.assemble({
+      query: { rawQuery: "anything else?" },
+      retrievedProducts: [],
+      history: [],
+    })
+
+    expect(prompt).not.toContain("Recent conversation:")
+  })
+
+  it("keeps only the last HISTORY_TURNS turns for a very long history (>20)", () => {
+    const history = Array.from({ length: 25 }, (_, i) => ({
+      role: "user" as const,
+      content: `turn ${i + 1}`,
+    }))
+
+    const prompt = assembler.assemble({
+      query: { rawQuery: "anything else?" },
+      retrievedProducts: [],
+      history,
+    })
+
+    expect(prompt).not.toContain("turn 15\n")
+    expect(prompt).toContain("turn 16")
+    expect(prompt).toContain("turn 25")
+  })
+
+  it("trims alternating user/assistant messages by message count, not by pair", () => {
+    // 11 alternating messages starting on "user" — an odd count so slicing
+    // to the last 10 drops only the lone first message, leaving its
+    // "assistant" reply as the new first line with no paired "user"
+    // message before it. Proves a "turn" is one message, not a pair.
+    const history = Array.from({ length: 11 }, (_, i) => ({
+      role: i % 2 === 0 ? ("user" as const) : ("assistant" as const),
+      content: `msg ${i + 1}`,
+    }))
+
+    const prompt = assembler.assemble({
+      query: { rawQuery: "anything else?" },
+      retrievedProducts: [],
+      history,
+    })
+
+    expect(prompt).not.toContain("msg 1\n")
+    expect(prompt).toContain("assistant: msg 2")
+    expect(prompt).toContain("user: msg 11")
   })
 
   it("notes when no products were retrieved", () => {

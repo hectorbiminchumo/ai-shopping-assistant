@@ -13,6 +13,24 @@ import {
 } from "@dtc/chatbot-core"
 import type { IChatLogger } from "@dtc/chatbot-core"
 
+const filtersSchema = z
+  .object({
+    category: z.string().optional(),
+    priceMin: z.number().nonnegative("priceMin must be a non-negative number").optional(),
+    priceMax: z.number().nonnegative("priceMax must be a non-negative number").optional(),
+    size: z
+      .string()
+      .trim()
+      .min(1, "size must not be empty")
+      .max(20, "size is too long")
+      .regex(/^[A-Za-z0-9.\-/ ]+$/, "size contains invalid characters")
+      .optional(),
+  })
+  .refine(
+    (f) => f.priceMin === undefined || f.priceMax === undefined || f.priceMin <= f.priceMax,
+    { message: "priceMin must be less than or equal to priceMax" }
+  )
+
 const chatBodySchema = z.object({
   query: z.string().trim().min(1, "query must not be empty"),
   sessionId: z.string().trim().min(1, "sessionId must not be empty"),
@@ -25,6 +43,7 @@ const chatBodySchema = z.object({
     )
     .max(20)
     .optional(),
+  filters: filtersSchema.optional(),
 })
 
 // chat_logs analytics are skipped until the Supabase client is configured
@@ -44,10 +63,24 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     return
   }
 
+  const retrievalService = new RetrievalService()
+
+  const filterCategory = parsed.data.filters?.category
+  if (filterCategory) {
+    const knownCategories = await retrievalService.listCategories()
+    if (knownCategories.length > 0 && !knownCategories.includes(filterCategory)) {
+      res.status(400).json({
+        message: "Invalid request body",
+        errors: [`Unknown category: "${filterCategory}"`],
+      })
+      return
+    }
+  }
+
   const orchestrator = new ChatOrchestrator(
     new QueryParser(),
     new EmbeddingService(),
-    new RetrievalService(),
+    retrievalService,
     new Reranker(),
     new PromptAssembler(),
     new LLMService(),
@@ -56,10 +89,11 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
   )
 
   try {
-    const response = await orchestrator.handle(parsed.data.query, {
-      sessionId: parsed.data.sessionId,
-      history: parsed.data.history ?? [],
-    })
+    const response = await orchestrator.handle(
+      parsed.data.query,
+      { sessionId: parsed.data.sessionId, history: parsed.data.history ?? [] },
+      parsed.data.filters
+    )
     res.status(200).json(response)
   } catch (err) {
     const message = err instanceof ChatbotError ? err.message : "Chat failed"
