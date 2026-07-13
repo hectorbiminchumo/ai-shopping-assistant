@@ -6,6 +6,11 @@ import type { ChatResponse, ProductCard, RetrievalResult } from "../types"
 // leading/trailing whitespace so minor LLM formatting quirks don't break parsing.
 const RECOMMENDED_LINE = /\n?\s*\**RECOMMENDED:?\**\s*(none|[\d,\s]+?)[\.\*]*\s*$/i
 
+// Occasionally the LLM emits only the trailer with no prose before it,
+// leaving an empty bubble in the storefront. Never show the user nothing.
+const FALLBACK_MESSAGE =
+  "Sorry, could you rephrase that? I didn't quite catch what you're looking for."
+
 // Formats the LLM's raw text reply + retrieved products into the
 // structured ChatResponse the storefront renders (message + product cards).
 // Only the products the LLM actually recommended become cards, so the cards
@@ -35,7 +40,7 @@ export class ResponseFormatter {
         : Math.max(0, ...retrieved.map((r) => r.similarityScore))
 
     return {
-      message,
+      message: message || FALLBACK_MESSAGE,
       products: recommended.map((r) => this.toProductCard(r)),
       hasResults: meetsSimilarityThreshold(topScore),
       similarityThresholdMet: meetsSimilarityThreshold(realTopScore),

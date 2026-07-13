@@ -49,6 +49,25 @@ describe("EmbeddingService", () => {
     await expect(service.embedText("shoes")).rejects.toThrow("already wrapped")
   })
 
+  it("embedText() retries after a transient failure and succeeds", async () => {
+    const vector = [0.1, 0.2, 0.3]
+    mockEmbed
+      .mockRejectedValueOnce(new Error("rate limited"))
+      .mockResolvedValueOnce({ data: [{ embedding: vector }] })
+
+    const result = await service.embedText("running shoes")
+
+    expect(result).toEqual(vector)
+    expect(mockEmbed).toHaveBeenCalledTimes(2)
+  })
+
+  it("embedText() gives up and throws after exhausting retries", async () => {
+    mockEmbed.mockRejectedValue(new Error("still failing"))
+
+    await expect(service.embedText("running shoes")).rejects.toThrow(EmbeddingError)
+    expect(mockEmbed).toHaveBeenCalledTimes(3)
+  })
+
   // ── embedBatch ─────────────────────────────────────────────────────────────
 
   it("embedBatch() returns embeddings for all input texts", async () => {

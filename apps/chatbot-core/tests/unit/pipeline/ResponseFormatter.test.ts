@@ -86,6 +86,13 @@ describe("ResponseFormatter", () => {
       expect(response.products.map((p) => p.id)).toEqual(["prod_1"])
     })
 
+    it("falls back to a generic message when the LLM reply is only the trailer", () => {
+      const response = formatter.format("RECOMMENDED: none", retrieved)
+      expect(response.message).toBe(
+        "Sorry, could you rephrase that? I didn't quite catch what you're looking for."
+      )
+    })
+
     it("similarityThresholdMet is true when the recommended product's real score meets the threshold", () => {
       const response = formatter.format(
         "The Gym Flex Trainer is your best option.\nRECOMMENDED: 2",
