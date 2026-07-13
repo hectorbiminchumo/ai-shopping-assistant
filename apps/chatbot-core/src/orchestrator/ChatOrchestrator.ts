@@ -72,15 +72,21 @@ export class ChatOrchestrator {
       response.appliedFilters = appliedFilters
     }
 
-    await this.chatLogger.log({
-      userId: session.userId,
-      sessionId: session.sessionId,
-      userQuery: rawQuery,
-      retrievedIds: retrieved.map((r) => r.product.medusaProductId),
-      topScore: retrieved[0]?.similarityScore ?? 0,
-      hasResults: response.similarityThresholdMet,
-      categoryHint: parsedQuery.category,
-    })
+    // Analytics logging is best-effort: a Supabase hiccup here must never
+    // discard an already-generated, valid chat response.
+    try {
+      await this.chatLogger.log({
+        userId: session.userId,
+        sessionId: session.sessionId,
+        userQuery: rawQuery,
+        retrievedIds: retrieved.map((r) => r.product.medusaProductId),
+        topScore: retrieved[0]?.similarityScore ?? 0,
+        hasResults: response.similarityThresholdMet,
+        categoryHint: parsedQuery.category,
+      })
+    } catch (err) {
+      console.error("[ChatOrchestrator] chat_logs write failed:", err)
+    }
 
     return response
   }

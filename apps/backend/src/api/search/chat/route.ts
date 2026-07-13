@@ -2,6 +2,7 @@ import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { z } from "zod"
 import {
   ChatbotError,
+  ChatLogger,
   ChatOrchestrator,
   EmbeddingService,
   LLMService,
@@ -11,7 +12,6 @@ import {
   ResponseFormatter,
   RetrievalService,
 } from "@dtc/chatbot-core"
-import type { IChatLogger } from "@dtc/chatbot-core"
 
 const filtersSchema = z
   .object({
@@ -46,12 +46,6 @@ const chatBodySchema = z.object({
   filters: filtersSchema.optional(),
 })
 
-// chat_logs analytics are skipped until the Supabase client is configured
-// (ChatLogger currently throws). Swap this for ChatLogger once it's wired.
-class NoopChatLogger implements IChatLogger {
-  async log(): Promise<void> {}
-}
-
 export async function POST(req: MedusaRequest, res: MedusaResponse) {
   const parsed = chatBodySchema.safeParse(req.body)
 
@@ -85,7 +79,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     new PromptAssembler(),
     new LLMService(),
     new ResponseFormatter(),
-    new NoopChatLogger()
+    new ChatLogger()
   )
 
   try {
@@ -96,6 +90,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     )
     res.status(200).json(response)
   } catch (err) {
+    console.error("[POST /search/chat]", err)
     const message = err instanceof ChatbotError ? err.message : "Chat failed"
     res.status(502).json({ message })
   }
