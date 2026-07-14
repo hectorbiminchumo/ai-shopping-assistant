@@ -1,4 +1,5 @@
 import { getProductPrice } from "@lib/util/get-product-price"
+import { matchScoreToPercent } from "@lib/util/match-score"
 import { HttpTypes } from "@medusajs/types"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import Image from "next/image"
@@ -11,11 +12,12 @@ function isNew(product: HttpTypes.StoreProduct) {
   return days <= 30
 }
 
-const BADGE_COLORS: Record<"new" | "sale" | "low" | "oos", string> = {
+const BADGE_COLORS: Record<"new" | "sale" | "low" | "oos" | "match", string> = {
   new: "bg-[var(--accent-bg)] text-[var(--accent)] border-[var(--accent-line)]",
   sale: "bg-[var(--clr-danger-bg)] text-[var(--clr-danger)] border-[var(--clr-danger-line)]",
   low: "bg-[var(--clr-warning-bg)] text-[var(--clr-warning)] border-[var(--clr-warning-line)]",
   oos: "bg-[var(--surface-2)] text-[var(--text-muted)] border-[var(--line-strong)]",
+  match: "bg-[var(--clr-info-bg)] text-[var(--clr-info)] border-[var(--clr-info-line)]",
 }
 
 function Badge({
@@ -23,7 +25,7 @@ function Badge({
   dot,
   children,
 }: {
-  variant: "new" | "sale" | "low" | "oos"
+  variant: "new" | "sale" | "low" | "oos" | "match"
   dot?: boolean
   children: React.ReactNode
 }) {
@@ -47,6 +49,7 @@ export default function ProductCard({
   product,
   compact = false,
   priority = false,
+  matchScore,
 }: {
   product: HttpTypes.StoreProduct
   region?: HttpTypes.StoreRegion
@@ -54,6 +57,9 @@ export default function ProductCard({
   // Preload the image (disables lazy-loading) — set on above-the-fold
   // cards, which are the LCP element on grid pages
   priority?: boolean
+  // Raw cosine similarity (0–1) from the search backend. Only the chat
+  // results pass it, so grids never show the match badge.
+  matchScore?: number
 }) {
   const { cheapestPrice } = getProductPrice({ product })
   const isSale = cheapestPrice?.price_type === "sale"
@@ -97,11 +103,18 @@ export default function ProductCard({
         />
 
         {/* Badges — top left */}
-        {(isNew(product) || isSale) && (
+        {(isNew(product) || isSale || matchScore !== undefined) && (
           <div
-            className="absolute top-3 left-3 flex gap-[5px] flex-wrap pointer-events-none"
+            className="absolute top-3 left-3 flex gap-[5px] flex-wrap pointer-events-none align-top"
             aria-label="Product badges"
           >
+            {matchScore !== undefined && (
+              <span data-testid="match-score-badge" className="flex">
+                <Badge variant="match" dot>
+                  {matchScoreToPercent(matchScore)}% match
+                </Badge>
+              </span>
+            )}
             {isNew(product) && !isSale && (
               <Badge variant="new" dot>New</Badge>
             )}

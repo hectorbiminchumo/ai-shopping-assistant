@@ -22,12 +22,23 @@ export type ChatHistoryMessage = {
   content: string
 }
 
+// Explicit filters accepted by POST /search/chat. Category must be one of
+// the catalog categories (the backend rejects unknown values with a 400).
+export type ChatFilters = {
+  category?: string
+  priceMin?: number
+  priceMax?: number
+  size?: string
+}
+
 export type ChatResponse = {
   message: string
   products: SemanticProduct[]
   hasResults: boolean
   // Updated history (previous turns + this exchange) to send on the next turn
   history?: ChatHistoryMessage[]
+  // Filters the backend actually applied (explicit + inferred from the query)
+  appliedFilters?: ChatFilters
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:9000"
@@ -54,69 +65,34 @@ export async function search(
 export async function chat(
   query: string,
   sessionId: string,
-  history: ChatHistoryMessage[]
+  history: ChatHistoryMessage[],
+  filters?: ChatFilters
 ): Promise<ChatResponse> {
+  const hasFilters = filters && Object.values(filters).some((v) => v !== undefined)
   const res = await fetch(`${API_URL}/search/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ query, sessionId, history }),
+    body: JSON.stringify({
+      query,
+      sessionId,
+      history,
+      ...(hasFilters ? { filters } : {}),
+    }),
   })
 
   if (!res.ok) {
+    // 400 = the backend rejected the filters (e.g. a catalog category that
+    // isn't in the embedding index) — surface it so the chat can explain
+    // instead of showing the generic error.
+    if (res.status === 400) {
+      const body = await res.json().catch(() => null)
+      const detail = Array.isArray(body?.errors) ? body.errors.join(", ") : null
+      throw new ChatFiltersError(detail ?? "Invalid filters")
+    }
     throw new Error(`Chat failed with status ${res.status}`)
   }
 
   return res.json()
 }
 
-type ChatStreamEvent =
-  | { type: "delta"; text: string }
-  | { type: "done"; response: ChatResponse }
-  | { type: "error"; message: string }
-
-// Same conversational endpoint as chat(), but consumes the streamed reply:
-// onDelta fires as prose arrives (live-typing effect); the returned promise
-// resolves with the final formatted response once the stream's "done" event
-// arrives (product cards can only be known once the full reply is parsed).
-export async function chatStream(
-  query: string,
-  sessionId: string,
-  history: ChatHistoryMessage[],
-  onDelta: (text: string) => void
-): Promise<ChatResponse> {
-  const res = await fetch(`${API_URL}/search/chat`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ query, sessionId, history, stream: true }),
-  })
-
-  if (!res.ok || !res.body) {
-    throw new Error(`Chat failed with status ${res.status}`)
-  }
-
-  const reader = res.body.getReader()
-  const decoder = new TextDecoder()
-  let buffer = ""
-  let finalResponse: ChatResponse | null = null
-
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) break
-
-    buffer += decoder.decode(value, { stream: true })
-    const lines = buffer.split("\n")
-    buffer = lines.pop() ?? ""
-
-    for (const line of lines) {
-      if (!line.trim()) continue
-      const event: ChatStreamEvent = JSON.parse(line)
-
-      if (event.type === "delta") onDelta(event.text)
-      else if (event.type === "done") finalResponse = event.response
-      else throw new Error(event.message)
-    }
-  }
-
-  if (!finalResponse) throw new Error("Chat stream ended without a final response")
-  return finalResponse
-}
+export class ChatFiltersError extends Error {}

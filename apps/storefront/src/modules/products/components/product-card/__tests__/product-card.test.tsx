@@ -110,4 +110,37 @@ describe("ProductCard", () => {
 
     expect(screen.getByText("New")).toBeInTheDocument()
   })
+
+  it("shows the match badge when a score is provided, rescaled for display", () => {
+    mockedGetProductPrice.mockReturnValue({
+      cheapestPrice: {
+        price_type: "default",
+        calculated_price: "$120",
+        original_price: "$120",
+        percentage_diff: "0",
+      },
+    } as ReturnType<typeof getProductPrice>)
+
+    // Raw voyage-3 cosine 0.47 sits at 60% of the 0.35–0.55 band → 79%
+    render(<ProductCard product={makeProduct()} compact matchScore={0.47} />)
+
+    expect(screen.getByTestId("match-score-badge")).toHaveTextContent(
+      "79% match"
+    )
+  })
+
+  it("hides the match badge when no score is provided", () => {
+    mockedGetProductPrice.mockReturnValue({
+      cheapestPrice: {
+        price_type: "default",
+        calculated_price: "$120",
+        original_price: "$120",
+        percentage_diff: "0",
+      },
+    } as ReturnType<typeof getProductPrice>)
+
+    render(<ProductCard product={makeProduct()} compact />)
+
+    expect(screen.queryByTestId("match-score-badge")).not.toBeInTheDocument()
+  })
 })
