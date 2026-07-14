@@ -1,5 +1,6 @@
 import { listProductsWithSort } from "@lib/data/products"
 import { getRegion } from "@lib/data/regions"
+import { GridFilters, hasActiveGridFilters } from "@lib/util/grid-filters"
 import ProductPreview from "@modules/products/components/product-preview"
 import { Pagination } from "@modules/store/components/pagination"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
@@ -15,12 +16,15 @@ type PaginatedProductsParams = {
   fields?: string
 }
 
-// Only what ProductCard renders. The default listProducts fields pull
-// variant images, metadata and inventory for the whole catalog — a
-// response too large for the Next data cache (2MB/entry), so every
-// store/category visit paid the full Medusa query (~30s) again.
+// Only what ProductCard renders (plus options for the size grid filter).
+// The default listProducts fields pull variant images, metadata and
+// inventory for the whole catalog — a response too large for the Next
+// data cache (2MB/entry), so every store/category visit paid the full
+// Medusa query (~30s) again.
+// Bare "categories" doesn't expand the relation in Medusa v2; ProductCard
+// reads categories[0].name, so request the name explicitly.
 const GRID_FIELDS =
-  "id,title,handle,thumbnail,created_at,categories,collection,*variants.calculated_price"
+  "id,title,handle,thumbnail,created_at,categories.name,collection,*variants.calculated_price,*options,*options.values"
 
 export default async function PaginatedProducts({
   sortBy,
@@ -29,6 +33,7 @@ export default async function PaginatedProducts({
   categoryId,
   productsIds,
   countryCode,
+  filters,
 }: {
   sortBy?: SortOptions
   page: number
@@ -36,6 +41,7 @@ export default async function PaginatedProducts({
   categoryId?: string
   productsIds?: string[]
   countryCode: string
+  filters?: GridFilters
 }) {
   const queryParams: PaginatedProductsParams = {
     limit: 12,
@@ -71,9 +77,20 @@ export default async function PaginatedProducts({
     queryParams,
     sortBy,
     countryCode,
+    filters,
   })
 
   const totalPages = Math.ceil(count / PRODUCT_LIMIT)
+
+  if (!products.length && hasActiveGridFilters(filters)) {
+    return (
+      <div className="py-12 text-center">
+        <p className="text-lg" style={{ color: "var(--text-muted)" }}>
+          No products match the selected filters.
+        </p>
+      </div>
+    )
+  }
 
   return (
     <>
@@ -82,8 +99,10 @@ export default async function PaginatedProducts({
         data-testid="products-list"
       >
         {products.map((p, i) => {
+          // suppressHydrationWarning: ScrollReveal adds .v-in to streamed
+          // HTML before this Suspense boundary hydrates
           return (
-            <li key={p.id} className="v-reveal">
+            <li key={p.id} className="v-reveal" suppressHydrationWarning>
               {/* First row is the LCP on grid pages: preload those images */}
               <ProductPreview product={p} region={region} priority={i < 4} />
             </li>

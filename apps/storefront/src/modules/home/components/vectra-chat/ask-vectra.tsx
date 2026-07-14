@@ -31,10 +31,14 @@ async function listChatCatalog(regionId: string): Promise<HttpTypes.StoreProduct
       query: {
         // Full catalog (~80-100 products): the chat joins backend search
         // results against this list to build linked product cards.
+        // Options are included so the filter panel can list the catalog's
+        // categories and sizes.
         limit: 100,
         region_id: regionId,
+        // NOTE: bare "categories" doesn't expand the relation in Medusa v2 —
+        // it must be "categories.name" (or *categories) to get names back.
         fields:
-          "id,title,handle,thumbnail,created_at,categories,collection,*variants.calculated_price",
+          "id,title,handle,thumbnail,created_at,categories.name,collection,*variants.calculated_price,*options,*options.values",
       },
       next,
     }

@@ -1,6 +1,11 @@
 "use server"
 
 import { sdk } from "@lib/config"
+import {
+  GridFilters,
+  hasActiveGridFilters,
+  matchesGridFilters,
+} from "@lib/util/grid-filters"
 import { sortProducts } from "@lib/util/sort-products"
 import { HttpTypes } from "@medusajs/types"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
@@ -97,11 +102,13 @@ export const listProductsWithSort = async ({
   queryParams,
   sortBy = "created_at",
   countryCode,
+  filters,
 }: {
   page?: number
   queryParams?: HttpTypes.FindParams & HttpTypes.StoreProductParams
   sortBy?: SortOptions
   countryCode: string
+  filters?: GridFilters
 }): Promise<{
   response: { products: HttpTypes.StoreProduct[]; count: number }
   nextPage: number | null
@@ -125,18 +132,26 @@ export const listProductsWithSort = async ({
     countryCode,
   })
 
-  const sortedProducts = sortProducts(products, sortBy)
+  // Grid filters (price/size) are applied in-memory, same as sorting, so
+  // pagination and count stay consistent with what the user actually sees.
+  const filteredProducts = hasActiveGridFilters(filters)
+    ? products.filter((p) => matchesGridFilters(p, filters))
+    : products
+
+  const total = hasActiveGridFilters(filters) ? filteredProducts.length : count
+
+  const sortedProducts = sortProducts(filteredProducts, sortBy)
 
   const offset = (_page - 1) * limit
 
-  const nextPage = count > offset + limit ? _page + 1 : null
+  const nextPage = total > offset + limit ? _page + 1 : null
 
   const paginatedProducts = sortedProducts.slice(offset, offset + limit)
 
   return {
     response: {
       products: paginatedProducts,
-      count,
+      count: total,
     },
     nextPage,
     queryParams,
