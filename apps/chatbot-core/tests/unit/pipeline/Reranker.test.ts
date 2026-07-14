@@ -97,4 +97,23 @@ describe("Reranker.rerank", () => {
   it("returns an empty array when given an empty input", () => {
     expect(reranker.rerank(noFilter, [])).toEqual([])
   })
+
+  it("keeps a high-similarity product near the price ceiling in the topK over several cheaper, less relevant ones", () => {
+    // Regression: with priceMax set, every candidate already fits the budget
+    // (the SQL layer filtered them) — priceMatch must only be a tie-breaker,
+    // never strong enough to push a clearly-better semantic match out of the
+    // topK just because it costs close to the stated max.
+    const nearCeiling = makeResult({ id: "near-ceiling", similarityScore: 0.545, priceMin: 108 })
+    const cheaperDistractors = [
+      makeResult({ id: "d1", similarityScore: 0.50, priceMin: 80 }),
+      makeResult({ id: "d2", similarityScore: 0.49, priceMin: 85 }),
+      makeResult({ id: "d3", similarityScore: 0.48, priceMin: 80 }),
+      makeResult({ id: "d4", similarityScore: 0.47, priceMin: 100 }),
+    ]
+
+    const query: ParsedQuery = { rawQuery: "shoes under 115", embeddingText: "shoes", priceMax: 115 }
+    const ranked = reranker.rerank(query, [nearCeiling, ...cheaperDistractors], 5)
+
+    expect(ranked.map((r) => r.product.id)).toContain("near-ceiling")
+  })
 })
