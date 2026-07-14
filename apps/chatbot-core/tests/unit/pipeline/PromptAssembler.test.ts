@@ -18,7 +18,7 @@ describe("PromptAssembler", () => {
 
   it("includes the user query and retrieved product context", () => {
     const prompt = assembler.assemble({
-      query: { rawQuery: "trail shoes under $100" },
+      query: { rawQuery: "trail shoes under $100", embeddingText: "trail shoes under $100" },
       retrievedProducts: [retrievalResult],
       history: [],
     })
@@ -34,7 +34,7 @@ describe("PromptAssembler", () => {
     }))
 
     const prompt = assembler.assemble({
-      query: { rawQuery: "anything else?" },
+      query: { rawQuery: "anything else?", embeddingText: "anything else?" },
       retrievedProducts: [],
       history,
     })
@@ -52,7 +52,7 @@ describe("PromptAssembler", () => {
     }))
 
     const prompt = assembler.assemble({
-      query: { rawQuery: "anything else?" },
+      query: { rawQuery: "anything else?", embeddingText: "anything else?" },
       retrievedProducts: [],
       history,
     })
@@ -68,7 +68,7 @@ describe("PromptAssembler", () => {
     }))
 
     const prompt = assembler.assemble({
-      query: { rawQuery: "anything else?" },
+      query: { rawQuery: "anything else?", embeddingText: "anything else?" },
       retrievedProducts: [],
       history,
     })
@@ -79,7 +79,7 @@ describe("PromptAssembler", () => {
 
   it("omits the conversation section entirely for an empty history", () => {
     const prompt = assembler.assemble({
-      query: { rawQuery: "anything else?" },
+      query: { rawQuery: "anything else?", embeddingText: "anything else?" },
       retrievedProducts: [],
       history: [],
     })
@@ -94,7 +94,7 @@ describe("PromptAssembler", () => {
     }))
 
     const prompt = assembler.assemble({
-      query: { rawQuery: "anything else?" },
+      query: { rawQuery: "anything else?", embeddingText: "anything else?" },
       retrievedProducts: [],
       history,
     })
@@ -115,7 +115,7 @@ describe("PromptAssembler", () => {
     }))
 
     const prompt = assembler.assemble({
-      query: { rawQuery: "anything else?" },
+      query: { rawQuery: "anything else?", embeddingText: "anything else?" },
       retrievedProducts: [],
       history,
     })
@@ -127,7 +127,7 @@ describe("PromptAssembler", () => {
 
   it("notes when no products were retrieved", () => {
     const prompt = assembler.assemble({
-      query: { rawQuery: "something rare" },
+      query: { rawQuery: "something rare", embeddingText: "something rare" },
       retrievedProducts: [],
       history: [],
     })

@@ -41,7 +41,9 @@ describe("ChatOrchestrator (integration, mocked providers)", () => {
 
     const response = await orchestrator.handle("trail shoes size 42", session)
 
-    expect(embeddingService.embedText).toHaveBeenCalledWith("trail shoes size 42")
+    // "size 42" is stripped before embedding — it's applied as a SQL filter
+    // instead, so it shouldn't also skew the semantic ranking
+    expect(embeddingService.embedText).toHaveBeenCalledWith("trail shoes")
     expect(retrievalService.search).toHaveBeenCalled()
     expect(llmService.complete).toHaveBeenCalled()
     expect(chatLogger.log).toHaveBeenCalledWith(

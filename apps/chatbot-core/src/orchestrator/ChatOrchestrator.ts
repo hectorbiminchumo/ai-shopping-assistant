@@ -115,7 +115,7 @@ export class ChatOrchestrator {
     const parsedQuery = this.queryParser.parse(standaloneQuery, knownCategories)
     // Explicit filters from the client override the same fields inferred from text
     const mergedQuery = filters ? { ...parsedQuery, ...filters } : parsedQuery
-    const embedding = await this.embeddingService.embedText(mergedQuery.rawQuery)
+    const embedding = await this.embeddingService.embedText(mergedQuery.embeddingText)
     const candidates = await this.retrievalService.search(embedding, mergedQuery, RETRIEVE_K)
     const retrieved = this.reranker.rerank(mergedQuery, candidates, RERANK_K)
 

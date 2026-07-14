@@ -1,8 +1,11 @@
 import { detectAudience } from "../utils/audience"
 import type { ParsedQuery } from "../types"
 
-const PRICE_MAX_PATTERN = /(?:under|below|less than|menos de)\s*\$?(\d+)/i
-const PRICE_MIN_PATTERN = /(?:above|over|more than|at least|desde|más de)\s*\$?(\d+)/i
+// Trailing currency word (e.g. "under 115 usd") is matched but not captured,
+// so the whole phrase — not just "under 115" — gets stripped for embedding.
+const PRICE_MAX_PATTERN = /(?:under|below|less than|menos de)\s*\$?(\d+)\s*(?:usd|dollars?)?/i
+const PRICE_MIN_PATTERN =
+  /(?:above|over|more than|at least|desde|más de)\s*\$?(\d+)\s*(?:usd|dollars?)?/i
 const SIZE_PATTERN = /\bsize\s*(\d+(?:\.\d+)?)\b/i
 
 // Categories are stored as slugs ("running-shoes") but users type plain
@@ -37,8 +40,17 @@ export class QueryParser {
     const queryTokens = normalize(rawQuery).split(" ")
     const category = knownCategories.find((c) => matchesCategory(queryTokens, c))
 
+    // These filter phrases become SQL WHERE clauses (below) — strip them from
+    // the text that gets embedded so they don't also skew semantic ranking.
+    const embeddingText =
+      [priceMaxMatch, priceMinMatch, sizeMatch]
+        .reduce((text, m) => (m ? text.replace(m[0], " ") : text), rawQuery)
+        .replace(/\s+/g, " ")
+        .trim() || rawQuery
+
     return {
       rawQuery,
+      embeddingText,
       category,
       priceMin: priceMinMatch ? Number(priceMinMatch[1]) : undefined,
       priceMax: priceMaxMatch ? Number(priceMaxMatch[1]) : undefined,

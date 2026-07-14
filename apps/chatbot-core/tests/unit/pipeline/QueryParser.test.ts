@@ -85,4 +85,38 @@ describe("QueryParser", () => {
     expect(result.category).toBeUndefined()
     expect(result.audience).toBeUndefined()
   })
+
+  describe("embeddingText", () => {
+    it("strips a price ceiling phrase so it doesn't skew the semantic embedding", () => {
+      const result = parser.parse("training shoes for men under 115 usd")
+      expect(result.priceMax).toBe(115)
+      expect(result.embeddingText).toBe("training shoes for men")
+    })
+
+    it("strips a price floor phrase", () => {
+      const result = parser.parse("jackets above $50")
+      expect(result.embeddingText).toBe("jackets")
+    })
+
+    it("strips a size phrase", () => {
+      const result = parser.parse("trail shoes size 42")
+      expect(result.embeddingText).toBe("trail shoes")
+    })
+
+    it("strips multiple matched phrases at once", () => {
+      const result = parser.parse("trail shoes size 42 under $150")
+      expect(result.embeddingText).toBe("trail shoes")
+    })
+
+    it("keeps rawQuery unchanged — only embeddingText is stripped", () => {
+      const result = parser.parse("trail shoes size 42")
+      expect(result.rawQuery).toBe("trail shoes size 42")
+      expect(result.embeddingText).toBe("trail shoes")
+    })
+
+    it("leaves embeddingText equal to rawQuery when nothing matches", () => {
+      const result = parser.parse("something comfortable for the gym")
+      expect(result.embeddingText).toBe("something comfortable for the gym")
+    })
+  })
 })
