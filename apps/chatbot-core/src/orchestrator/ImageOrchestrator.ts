@@ -30,7 +30,7 @@ export class ImageOrchestrator {
 
     const [imageResults, textResults] = await Promise.all([
       this.searchByImage(imageBuffer),
-      textQuery ? this.searchByText(parsedQuery.rawQuery, parsedQuery) : Promise.resolve([]),
+      textQuery ? this.searchByText(parsedQuery.embeddingText, parsedQuery) : Promise.resolve([]),
     ])
 
     const retrieved = this.mergeResults(imageResults, textResults).slice(0, TOP_K)
@@ -63,10 +63,10 @@ export class ImageOrchestrator {
   }
 
   private async searchByText(
-    rawQuery: string,
+    embeddingText: string,
     parsedQuery: ReturnType<QueryParser["parse"]>
   ): Promise<RetrievalResult[]> {
-    const embedding = await this.embeddingService.embedText(rawQuery)
+    const embedding = await this.embeddingService.embedText(embeddingText)
     return this.retrievalService.search(embedding, parsedQuery, TOP_K)
   }
 

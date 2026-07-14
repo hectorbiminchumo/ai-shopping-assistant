@@ -3,7 +3,12 @@ import type { ParsedQuery, RetrievalResult } from "../types"
 // Re-ranking weights — must sum to 1.0.
 // Similarity dominates because it captures semantic fit.
 // Price and category are tie-breakers within closely-scored candidates.
-const W = { similarity: 0.60, priceMatch: 0.25, categoryMatch: 0.15 }
+// priceMatch is intentionally small: the SQL layer already excludes anything
+// over query.priceMax, so every candidate here already fits the budget — this
+// weight only nudges ties toward the cheaper option, it must never be large
+// enough to evict a higher-similarity, still-in-budget product from the topK
+// just for being closer to the price ceiling.
+const W = { similarity: 0.80, priceMatch: 0.05, categoryMatch: 0.15 }
 
 export class Reranker {
   /**

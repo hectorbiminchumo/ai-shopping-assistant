@@ -2,6 +2,7 @@ import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { z } from "zod"
 import {
   ChatbotError,
+  ChatLogger,
   ChatOrchestrator,
   EmbeddingService,
   LLMService,
@@ -11,7 +12,6 @@ import {
   ResponseFormatter,
   RetrievalService,
 } from "@dtc/chatbot-core"
-import type { IChatLogger } from "@dtc/chatbot-core"
 
 const filtersSchema = z
   .object({
@@ -44,13 +44,8 @@ const chatBodySchema = z.object({
     .max(20)
     .optional(),
   filters: filtersSchema.optional(),
+  stream: z.boolean().optional(),
 })
-
-// chat_logs analytics are skipped until the Supabase client is configured
-// (ChatLogger currently throws). Swap this for ChatLogger once it's wired.
-class NoopChatLogger implements IChatLogger {
-  async log(): Promise<void> {}
-}
 
 export async function POST(req: MedusaRequest, res: MedusaResponse) {
   const parsed = chatBodySchema.safeParse(req.body)
@@ -85,18 +80,45 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     new PromptAssembler(),
     new LLMService(),
     new ResponseFormatter(),
-    new NoopChatLogger()
+    new ChatLogger()
   )
 
+  const session = { sessionId: parsed.data.sessionId, history: parsed.data.history ?? [] }
+
+  if (!parsed.data.stream) {
+    try {
+      const response = await orchestrator.handle(parsed.data.query, session, parsed.data.filters)
+      res.status(200).json(response)
+    } catch (err) {
+      console.error("[POST /search/chat]", err)
+      const message = err instanceof ChatbotError ? err.message : "Chat failed"
+      res.status(502).json({ message })
+    }
+    return
+  }
+
+  // Streaming path: newline-delimited JSON over a chunked response. Each line
+  // is one ChatStreamEvent ({"type":"delta"} | {"type":"done"}) from the
+  // orchestrator, plus a transport-only {"type":"error"} if the pipeline
+  // fails after streaming has already started (headers are already sent by
+  // then, so a normal error status response is no longer possible).
+  res.status(200)
+  res.setHeader("Content-Type", "application/x-ndjson")
+  res.flushHeaders()
+
   try {
-    const response = await orchestrator.handle(
+    for await (const event of orchestrator.handleStream(
       parsed.data.query,
-      { sessionId: parsed.data.sessionId, history: parsed.data.history ?? [] },
+      session,
       parsed.data.filters
-    )
-    res.status(200).json(response)
+    )) {
+      res.write(JSON.stringify(event) + "\n")
+    }
   } catch (err) {
+    console.error("[POST /search/chat] stream", err)
     const message = err instanceof ChatbotError ? err.message : "Chat failed"
-    res.status(502).json({ message })
+    res.write(JSON.stringify({ type: "error", message }) + "\n")
+  } finally {
+    res.end()
   }
 }

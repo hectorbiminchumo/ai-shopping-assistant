@@ -18,6 +18,7 @@ export class PromptAssembler {
       "Catalog matches (ordered by relevance):",
       productContext || "(no matching products found)",
       "",
+      context.query.audience ? `Audience already specified: ${context.query.audience}` : "",
       recentHistory ? `Recent conversation:\n${recentHistory}` : "",
       `User: ${context.query.rawQuery}`,
     ]

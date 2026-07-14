@@ -30,7 +30,7 @@ export class SearchOrchestrator {
     // in the query → only shoe rows are vector-searched)
     const knownCategories = await this.retrievalService.listCategories()
     const parsedQuery = this.queryParser.parse(rawQuery, knownCategories)
-    const embedding = await this.embeddingService.embedText(parsedQuery.rawQuery)
+    const embedding = await this.embeddingService.embedText(parsedQuery.embeddingText)
     const candidates = await this.retrievalService.search(embedding, parsedQuery, RETRIEVE_K)
     const reranked = this.reranker.rerank(parsedQuery, candidates, RERANK_K)
 

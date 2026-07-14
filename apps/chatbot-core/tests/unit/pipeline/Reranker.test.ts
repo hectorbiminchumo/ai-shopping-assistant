@@ -22,7 +22,7 @@ const makeResult = (
   },
 })
 
-const noFilter: ParsedQuery = { rawQuery: "running shoes" }
+const noFilter: ParsedQuery = { rawQuery: "running shoes", embeddingText: "running shoes" }
 
 describe("Reranker.rerank", () => {
   const reranker = new Reranker()
@@ -55,7 +55,7 @@ describe("Reranker.rerank", () => {
     const expensive = makeResult({ id: "expensive", similarityScore: 0.45, priceMin: 90 })
     const cheap = makeResult({ id: "cheap", similarityScore: 0.45, priceMin: 30 })
 
-    const query: ParsedQuery = { rawQuery: "shoes", priceMax: 100 }
+    const query: ParsedQuery = { rawQuery: "shoes", embeddingText: "shoes", priceMax: 100 }
     const ranked = reranker.rerank(query, [expensive, cheap])
 
     expect(ranked[0].product.id).toBe("cheap")
@@ -65,7 +65,11 @@ describe("Reranker.rerank", () => {
     const wrong = makeResult({ id: "wrong", similarityScore: 0.45, category: "jackets" })
     const correct = makeResult({ id: "correct", similarityScore: 0.45, category: "running shoes" })
 
-    const query: ParsedQuery = { rawQuery: "shoes", category: "running shoes" }
+    const query: ParsedQuery = {
+      rawQuery: "shoes",
+      embeddingText: "shoes",
+      category: "running shoes",
+    }
     const ranked = reranker.rerank(query, [wrong, correct])
 
     expect(ranked[0].product.id).toBe("correct")
@@ -84,7 +88,7 @@ describe("Reranker.rerank", () => {
     const noPriceHighSim = makeResult({ id: "no-price", similarityScore: 0.50, priceMin: undefined })
     const withPriceLowSim = makeResult({ id: "with-price", similarityScore: 0.40, priceMin: 30 })
 
-    const query: ParsedQuery = { rawQuery: "shoes", priceMax: 100 }
+    const query: ParsedQuery = { rawQuery: "shoes", embeddingText: "shoes", priceMax: 100 }
     const ranked = reranker.rerank(query, [noPriceHighSim, withPriceLowSim])
 
     expect(ranked[0].product.id).toBe("no-price")
@@ -92,5 +96,24 @@ describe("Reranker.rerank", () => {
 
   it("returns an empty array when given an empty input", () => {
     expect(reranker.rerank(noFilter, [])).toEqual([])
+  })
+
+  it("keeps a high-similarity product near the price ceiling in the topK over several cheaper, less relevant ones", () => {
+    // Regression: with priceMax set, every candidate already fits the budget
+    // (the SQL layer filtered them) — priceMatch must only be a tie-breaker,
+    // never strong enough to push a clearly-better semantic match out of the
+    // topK just because it costs close to the stated max.
+    const nearCeiling = makeResult({ id: "near-ceiling", similarityScore: 0.545, priceMin: 108 })
+    const cheaperDistractors = [
+      makeResult({ id: "d1", similarityScore: 0.50, priceMin: 80 }),
+      makeResult({ id: "d2", similarityScore: 0.49, priceMin: 85 }),
+      makeResult({ id: "d3", similarityScore: 0.48, priceMin: 80 }),
+      makeResult({ id: "d4", similarityScore: 0.47, priceMin: 100 }),
+    ]
+
+    const query: ParsedQuery = { rawQuery: "shoes under 115", embeddingText: "shoes", priceMax: 115 }
+    const ranked = reranker.rerank(query, [nearCeiling, ...cheaperDistractors], 5)
+
+    expect(ranked.map((r) => r.product.id)).toContain("near-ceiling")
   })
 })

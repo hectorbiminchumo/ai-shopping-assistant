@@ -16,6 +16,13 @@ export interface ExplicitFilters {
 
 export interface ParsedQuery {
   rawQuery: string
+  // Same text as rawQuery with matched filter phrases (price, size) removed —
+  // use this for embedding. Those phrases are applied as SQL WHERE clauses
+  // via priceMin/priceMax/size below; leaving them in the embedded text also
+  // shifts the semantic ranking unpredictably (e.g. "under $115" pulling in
+  // different products than the same search without that phrase), even
+  // though the price cutoff should only ever be a hard filter.
+  embeddingText: string
   category?: string
   priceMin?: number
   priceMax?: number
