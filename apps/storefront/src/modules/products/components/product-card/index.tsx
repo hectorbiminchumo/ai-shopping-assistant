@@ -76,6 +76,13 @@ export default function ProductCard({
 
   const hasBadges = isNew(product) || isSale || matchScore !== undefined
 
+  // Shoe product photos in this catalog tend to have blank canvas baked in
+  // at the bottom — crop it out with a top-anchored zoom. Other categories
+  // (apparel, accessories) are already framed correctly, so leave them as-is.
+  const isShoe = (product.categories ?? []).some((c) =>
+    `${c.name ?? ""} ${c.handle ?? ""}`.toLowerCase().includes("shoe")
+  )
+
   // Single variant → enable quick-add; multiple → send to PDP
   const variants = product.variants ?? []
   const firstVariantId =
@@ -100,7 +107,14 @@ export default function ProductCard({
             src={product.thumbnail ?? placeholder}
             alt={product.title}
             fill
-            className="object-cover object-center pc-img"
+            // Shoe photos in this catalog often have blank canvas baked in
+            // at the bottom of the frame — scale-[] zooms in to crop it,
+            // origin-[] chooses where that zoom is anchored vertically
+            // (more negative = crops less off the top, more off the bottom).
+            // Tune both together by eye if a shoe still looks off.
+            className={`object-cover pc-img ${
+              isShoe ? "scale-[1] origin-[center_0%]" : "object-center"
+            }`}
             sizes={
               compact
                 ? "(max-width: 560px) 50vw, 33vw"
