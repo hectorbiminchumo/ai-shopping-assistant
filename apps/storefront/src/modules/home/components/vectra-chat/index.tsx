@@ -4,7 +4,7 @@ import { useRef, useState, useEffect, useCallback, useMemo } from "react"
 import { usePathname } from "next/navigation"
 import { HttpTypes } from "@medusajs/types"
 import {
-  chat,
+  chatStream,
   ChatFilters,
   ChatFiltersError,
   ChatHistoryMessage,
@@ -252,6 +252,17 @@ export default function VectraChat({
       })
   }
 
+  // Replaces the last message in-place — used both to swap the "typing"
+  // indicator for the streaming bot bubble, and to update that bubble's
+  // text as deltas arrive.
+  const replaceLastMessage = (msg: Message) => {
+    setMessages((prev) => {
+      const next = [...prev]
+      next[next.length - 1] = msg
+      return next
+    })
+  }
+
   const send = async (overrideText?: string) => {
     if (busy) return
     const q = (overrideText ?? input).trim()
@@ -277,11 +288,19 @@ export default function VectraChat({
           text: "Image search isn't available just yet — try describing what you're looking for in words and I'll find the closest match.",
         }
       } else {
-        const result = await chat(
+        // Keep the typing indicator up through retrieval/prompt assembly;
+        // the first delta swaps it for a live bot bubble that fills in as
+        // the reply streams. Product cards only appear once done.
+        let streamedText = ""
+        const result = await chatStream(
           q,
           sessionIdRef.current,
           historyRef.current,
-          normalizeFilters(filters)
+          normalizeFilters(filters),
+          (delta) => {
+            streamedText += delta
+            replaceLastMessage({ role: "bot", text: streamedText })
+          }
         )
         // Adopt the backend's updated history (last 10 turns) for the next
         // turn; fall back to appending locally if the field is missing
@@ -302,16 +321,13 @@ export default function VectraChat({
           appliedFilters: result.appliedFilters,
         }
       }
-      setMessages((prev) => [...prev.filter((m) => m.role !== "typing"), botMsg])
+      replaceLastMessage(botMsg)
     } catch (err) {
       const text =
         err instanceof ChatFiltersError
           ? "I couldn't search with those filters — try removing or changing them and send your message again."
           : "Something went wrong on my end. Please try again."
-      setMessages((prev) => [
-        ...prev.filter((m) => m.role !== "typing"),
-        { role: "bot", text },
-      ])
+      replaceLastMessage({ role: "bot", text })
     } finally {
       setBusy(false)
     }
