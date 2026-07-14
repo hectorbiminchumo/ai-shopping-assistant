@@ -3,7 +3,7 @@ import { QueryParser } from "../../src/pipeline/QueryParser"
 import { Reranker } from "../../src/pipeline/Reranker"
 import { ResponseFormatter } from "../../src/pipeline/ResponseFormatter"
 import { ChatOrchestrator } from "../../src/orchestrator/ChatOrchestrator"
-import type { ChatSession, Product, RetrievalResult } from "../../src/types"
+import type { ChatSession, ChatStreamEvent, Product, RetrievalResult } from "../../src/types"
 import { createMockLLMService } from "../mocks/openai.mock"
 import { createMockChatLogger, createMockRetrievalService } from "../mocks/supabase.mock"
 import { createMockEmbeddingService } from "../mocks/voyageai.mock"
@@ -354,6 +354,82 @@ describe("ChatOrchestrator (integration, mocked providers)", () => {
       await orchestrator.handle("for women", { sessionId: "session_1", history: longHistory })
 
       expect(llmService.condenseQuery).toHaveBeenCalledWith("for women", longHistory)
+    })
+  })
+
+  describe("handleStream", () => {
+    it("streams delta events whose concatenation is a prefix of the final message, and never leaks the RECOMMENDED trailer", async () => {
+      const prose =
+        "Trail Runner X is a great match for lightweight trail running, with excellent grip and cushioning."
+      const fullReply = `${prose}\nRECOMMENDED: 1`
+      // Split into small chunks, as a real token-by-token stream would arrive
+      const chunks = fullReply.match(/.{1,6}/g) ?? [fullReply]
+      const llmService = createMockLLMService()
+      ;(llmService.stream as jest.Mock).mockImplementation(async function* () {
+        for (const c of chunks) yield c
+      })
+
+      const orchestrator = new ChatOrchestrator(
+        new QueryParser(),
+        createMockEmbeddingService(),
+        createMockRetrievalService([retrievalResult]),
+        new Reranker(),
+        new PromptAssembler(),
+        llmService,
+        new ResponseFormatter(),
+        createMockChatLogger()
+      )
+
+      const events: ChatStreamEvent[] = []
+      for await (const event of orchestrator.handleStream("trail shoes size 42", session)) {
+        events.push(event)
+      }
+
+      const deltas = events.filter(
+        (e): e is Extract<ChatStreamEvent, { type: "delta" }> => e.type === "delta"
+      )
+      const done = events.find(
+        (e): e is Extract<ChatStreamEvent, { type: "done" }> => e.type === "done"
+      )
+      const streamedText = deltas.map((d) => d.text).join("")
+
+      // Multiple deltas actually fired (not just one big chunk at the end)
+      expect(deltas.length).toBeGreaterThan(1)
+      // The trailer never appears in anything streamed to the client
+      expect(streamedText).not.toContain("RECOMMENDED")
+      // What was streamed is always a strict prefix of the final, formatted message
+      expect(done?.response.message.startsWith(streamedText)).toBe(true)
+      expect(done?.response.message).toBe(prose)
+      expect(done?.response.products[0].title).toBe("Trail Runner X")
+    })
+
+    it("yields a final done event with the same history/logging behavior as handle()", async () => {
+      const chatLogger = createMockChatLogger()
+      const llmService = createMockLLMService("Sure, here you go!\nRECOMMENDED: 1")
+
+      const orchestrator = new ChatOrchestrator(
+        new QueryParser(),
+        createMockEmbeddingService(),
+        createMockRetrievalService([retrievalResult]),
+        new Reranker(),
+        new PromptAssembler(),
+        llmService,
+        new ResponseFormatter(),
+        chatLogger
+      )
+
+      let done: Extract<ChatStreamEvent, { type: "done" }> | undefined
+      for await (const event of orchestrator.handleStream("trail shoes size 42", session)) {
+        if (event.type === "done") done = event
+      }
+
+      expect(done?.response.history).toEqual([
+        { role: "user", content: "trail shoes size 42" },
+        { role: "assistant", content: "Sure, here you go!" },
+      ])
+      expect(chatLogger.log).toHaveBeenCalledWith(
+        expect.objectContaining({ sessionId: "session_1", hasResults: true })
+      )
     })
   })
 })

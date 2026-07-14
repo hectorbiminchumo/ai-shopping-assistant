@@ -3,7 +3,7 @@
 import { useRef, useState, useEffect, useCallback } from "react"
 import { usePathname } from "next/navigation"
 import { HttpTypes } from "@medusajs/types"
-import { chat, ChatHistoryMessage, SemanticProduct } from "@lib/api"
+import { chatStream, ChatHistoryMessage, SemanticProduct } from "@lib/api"
 import ProductCard from "@modules/products/components/product-card"
 
 type Message =
@@ -186,16 +186,30 @@ export default function VectraChat({
     if (taRef.current) taRef.current.style.height = "auto"
     setBusy(true)
 
+    // The "typing" placeholder pushed above is always the last message at
+    // this point — replace it in place as the reply streams in, instead of
+    // filtering it out and appending a new one on every update.
+    const updateLastMessage = (msg: Message) => {
+      setMessages((prev) => {
+        const next = [...prev]
+        next[next.length - 1] = msg
+        return next
+      })
+    }
+
     try {
-      let botMsg: Message
       if (!q) {
         // Image-only message — image search isn't wired to the backend yet
-        botMsg = {
+        updateLastMessage({
           role: "bot",
           text: "Image search isn't available just yet — try describing what you're looking for in words and I'll find the closest match.",
-        }
+        })
       } else {
-        const result = await chat(q, sessionIdRef.current, historyRef.current)
+        let streamedText = ""
+        const result = await chatStream(q, sessionIdRef.current, historyRef.current, (delta) => {
+          streamedText += delta
+          updateLastMessage({ role: "bot", text: streamedText })
+        })
         // Adopt the backend's updated history (last 10 turns) for the next
         // turn; fall back to appending locally if the field is missing
         historyRef.current =
@@ -206,23 +220,22 @@ export default function VectraChat({
             { role: "assistant" as const, content: result.message },
           ].slice(-10)
         const picks = toCatalogProducts(result.products, products)
-        botMsg = {
+        // Replace the streamed-so-far text with the final formatted message —
+        // the RECOMMENDED trailer can only be parsed once the full reply is
+        // known, so this is the first point the product cards are available.
+        updateLastMessage({
           role: "bot",
           text:
             result.message ||
             "I couldn't find a close match in our catalog. Try describing it differently — the activity, conditions or product type all help.",
           products: result.hasResults && picks.length ? picks : undefined,
-        }
+        })
       }
-      setMessages((prev) => [...prev.filter((m) => m.role !== "typing"), botMsg])
     } catch {
-      setMessages((prev) => [
-        ...prev.filter((m) => m.role !== "typing"),
-        {
-          role: "bot",
-          text: "Something went wrong on my end. Please try again.",
-        },
-      ])
+      updateLastMessage({
+        role: "bot",
+        text: "Something went wrong on my end. Please try again.",
+      })
     } finally {
       setBusy(false)
     }

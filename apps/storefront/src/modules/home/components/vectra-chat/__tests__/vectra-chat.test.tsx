@@ -1,6 +1,6 @@
-import { render, screen, fireEvent } from "@testing-library/react"
+import { render, screen, fireEvent, act } from "@testing-library/react"
 import { HttpTypes } from "@medusajs/types"
-import { chat } from "@lib/api"
+import { chatStream } from "@lib/api"
 import VectraChat from "../index"
 
 jest.mock("next/navigation", () => ({
@@ -10,10 +10,10 @@ jest.mock("next/navigation", () => ({
 }))
 
 jest.mock("@lib/api", () => ({
-  chat: jest.fn(),
+  chatStream: jest.fn(),
 }))
 
-// The chat renders results with the shared ProductCard (same card as the
+// VectraChat renders results with the shared ProductCard (same card as the
 // category pages). Its cart/price internals are covered by its own tests.
 jest.mock("@modules/products/components/product-card", () => ({
   __esModule: true,
@@ -22,9 +22,9 @@ jest.mock("@modules/products/components/product-card", () => ({
   ),
 }))
 
-const chatMock = chat as jest.Mock
+const chatStreamMock = chatStream as jest.Mock
 
-// jsdom does not implement element scrolling; the chat autoscrolls on mount.
+// jsdom does not implement element scrolling; the chat panel autoscrolls on mount.
 beforeAll(() => {
   HTMLElement.prototype.scrollTo = jest.fn()
 })
@@ -88,11 +88,11 @@ describe("VectraChat conversation", () => {
   }
 
   beforeEach(() => {
-    chatMock.mockReset()
+    chatStreamMock.mockReset()
   })
 
   it("shows the assistant message and products joined against the catalog", async () => {
-    chatMock.mockResolvedValue({
+    chatStreamMock.mockResolvedValue({
       message: "The Trail Runner X is a great fit for trail running.",
       products: [
         {
@@ -115,15 +115,16 @@ describe("VectraChat conversation", () => {
       await screen.findByText("The Trail Runner X is a great fit for trail running.")
     ).toBeInTheDocument()
     expect(screen.getByTestId("product-card")).toHaveTextContent("Trail Runner X")
-    expect(chatMock).toHaveBeenCalledWith(
+    expect(chatStreamMock).toHaveBeenCalledWith(
       "trail running shoes",
       expect.any(String),
-      expect.any(Array)
+      expect.any(Array),
+      expect.any(Function)
     )
   })
 
   it("shows the assistant message without product cards when hasResults is false", async () => {
-    chatMock.mockResolvedValue({
+    chatStreamMock.mockResolvedValue({
       message: "Nothing matches that exactly — try a related category like jackets.",
       products: [
         {
@@ -149,7 +150,7 @@ describe("VectraChat conversation", () => {
   })
 
   it("answers greetings conversationally with the assistant message", async () => {
-    chatMock.mockResolvedValue({
+    chatStreamMock.mockResolvedValue({
       message: "Hi! I'm Vectra. Tell me what you're looking for.",
       products: [],
       hasResults: false,
@@ -166,7 +167,7 @@ describe("VectraChat conversation", () => {
   })
 
   it("falls back to the canned empty state when the message is empty", async () => {
-    chatMock.mockResolvedValue({ message: "", products: [], hasResults: false })
+    chatStreamMock.mockResolvedValue({ message: "", products: [], hasResults: false })
 
     render(<VectraChat products={catalog} />)
     openChat()
@@ -179,7 +180,7 @@ describe("VectraChat conversation", () => {
 
   it("shows the typing indicator while the request is in flight", async () => {
     let resolveChat!: (value: unknown) => void
-    chatMock.mockImplementation(
+    chatStreamMock.mockImplementation(
       () => new Promise((resolve) => (resolveChat = resolve))
     )
 
@@ -195,8 +196,44 @@ describe("VectraChat conversation", () => {
     expect(screen.queryByText("Vectra is typing")).not.toBeInTheDocument()
   })
 
+  it("updates the bot message incrementally as deltas arrive, then replaces it with the final formatted message", async () => {
+    let onDeltaCallback!: (text: string) => void
+    let resolveStream!: (value: unknown) => void
+    chatStreamMock.mockImplementation(
+      (_q: string, _s: string, _h: unknown[], onDelta: (text: string) => void) =>
+        new Promise((resolve) => {
+          onDeltaCallback = onDelta
+          resolveStream = resolve
+        })
+    )
+
+    render(<VectraChat products={catalog} />)
+    openChat()
+    sendQuery("trail running shoes")
+
+    expect(screen.getByText("Vectra is typing")).toBeInTheDocument()
+
+    act(() => onDeltaCallback("Trail Run"))
+    expect(await screen.findByText("Trail Run")).toBeInTheDocument()
+
+    act(() => onDeltaCallback("ner X is great."))
+    expect(await screen.findByText("Trail Runner X is great.")).toBeInTheDocument()
+
+    act(() =>
+      resolveStream({
+        message: "Trail Runner X is a great fit for trail running.",
+        products: [],
+        hasResults: false,
+      })
+    )
+
+    expect(
+      await screen.findByText("Trail Runner X is a great fit for trail running.")
+    ).toBeInTheDocument()
+  })
+
   it("shows an error message when the request fails", async () => {
-    chatMock.mockRejectedValue(new Error("boom"))
+    chatStreamMock.mockRejectedValue(new Error("boom"))
 
     render(<VectraChat products={catalog} />)
     openChat()

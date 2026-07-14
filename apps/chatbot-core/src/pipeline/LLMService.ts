@@ -66,6 +66,7 @@ export class LLMService implements ILLMService {
               "Carry over constraints from earlier turns that still apply (product type, men/women/children, budget, size). " +
               "Never invent a specific number (price, size, quantity) that was not explicitly stated in the conversation. " +
               "If the user asks for something relative like 'cheaper' or 'smaller' without giving a number, keep it relative in the rewrite (e.g. 'cheaper men's t-shirts') — do not turn it into a specific threshold like 'under $20'. " +
+              "Conversely, if the user DOES give an explicit number (e.g. 'under $140', 'size 10'), preserve that exact number in the rewrite — never soften it into a vague word like 'cheaper' or 'smaller', since that number is used as a hard filter downstream. " +
               "If the latest message is not a product request (greeting, thanks, general question), return it unchanged. " +
               "Return ONLY the query text — no quotes, no explanation.",
           },

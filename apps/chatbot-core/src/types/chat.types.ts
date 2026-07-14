@@ -33,3 +33,10 @@ export interface ChatResponse {
   // The frontend uses this to render active-filter tags.
   appliedFilters?: ExplicitFilters
 }
+
+// Emitted by ChatOrchestrator.handleStream(): "delta" chunks arrive as the
+// LLM generates its reply (for a live-typing effect), and the final "done"
+// event carries the fully formatted ChatResponse — which supersedes whatever
+// partial text the client displayed, since the RECOMMENDED trailer can only
+// be parsed once the full reply is known.
+export type ChatStreamEvent = { type: "delta"; text: string } | { type: "done"; response: ChatResponse }
