@@ -31,7 +31,7 @@ function Badge({
 }) {
   return (
     <span
-      className={`inline-flex items-center gap-[5px] h-[22px] px-2 rounded-full border [font-family:var(--mono)] text-[10px] font-semibold tracking-[.08em] uppercase whitespace-nowrap ${BADGE_COLORS[variant]}`}
+      className={`inline-flex items-center gap-[6px] h-[23px] px-[10px] rounded-full border [font-family:var(--mono)] text-[10px] font-semibold tracking-[.08em] uppercase whitespace-nowrap ${BADGE_COLORS[variant]}`}
     >
       {dot && (
         <span
@@ -74,6 +74,8 @@ export default function ProductCard({
 
   const placeholder = `https://placehold.co/600x600/f6f6f4/6a6a67?text=${encodeURIComponent(product.title)}`
 
+  const hasBadges = isNew(product) || isSale || matchScore !== undefined
+
   // Single variant → enable quick-add; multiple → send to PDP
   const variants = product.variants ?? []
   const firstVariantId =
@@ -86,26 +88,34 @@ export default function ProductCard({
       data-testid="product-wrapper"
     >
       {/* Image tile */}
-      <div className="relative rounded-[14px] overflow-hidden aspect-square bg-[var(--surface)]">
-        <Image
-          src={product.thumbnail ?? placeholder}
-          alt={product.title}
-          fill
-          className="object-cover object-center pc-img"
-          sizes={
-            compact
-              ? "(max-width: 560px) 50vw, 33vw"
-              : "(max-width: 640px) 100vw, (max-width: 1024px) 33vw, 25vw"
-          }
-          priority={priority}
-          fetchPriority={priority ? "high" : undefined}
-          draggable={false}
-        />
+      <div className="relative rounded-[14px] overflow-hidden aspect-square">
+        {/* When badges are present they get their own header strip above the
+            photo (image inset from the top) so pills never sit on top of the
+            product itself. bg-[var(--surface)] here is only a fallback behind
+            transparent product photos, not a visible band in the strip. */}
+        <div
+          className={`absolute inset-x-0 bottom-0 bg-[var(--surface)] ${hasBadges ? "top-9" : "top-0"}`}
+        >
+          <Image
+            src={product.thumbnail ?? placeholder}
+            alt={product.title}
+            fill
+            className="object-cover object-center pc-img"
+            sizes={
+              compact
+                ? "(max-width: 560px) 50vw, 33vw"
+                : "(max-width: 640px) 100vw, (max-width: 1024px) 33vw, 25vw"
+            }
+            priority={priority}
+            fetchPriority={priority ? "high" : undefined}
+            draggable={false}
+          />
+        </div>
 
-        {/* Badges — top left */}
-        {(isNew(product) || isSale || matchScore !== undefined) && (
+        {/* Badges — header strip, top left */}
+        {hasBadges && (
           <div
-            className="absolute top-3 left-3 flex gap-[5px] flex-wrap pointer-events-none align-top"
+            className="absolute top-0 left-0 right-0 h-9 px-3 flex items-center gap-2 flex-wrap pointer-events-none"
             aria-label="Product badges"
           >
             {matchScore !== undefined && (
