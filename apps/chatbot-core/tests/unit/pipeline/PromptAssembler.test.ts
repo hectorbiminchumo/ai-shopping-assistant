@@ -1,5 +1,5 @@
 import { HISTORY_TURNS, PromptAssembler } from "../../../src/pipeline/PromptAssembler"
-import type { Product, RetrievalResult } from "../../../src/types"
+import type { ChatMessage, Product, RetrievalResult } from "../../../src/types"
 
 const product: Product = {
   id: "prod_1",
@@ -12,6 +12,46 @@ const product: Product = {
 }
 
 const retrievalResult: RetrievalResult = { product, similarityScore: 0.82 }
+
+// Rough token estimate: OpenAI's BPE tokenizers average ~4 characters per
+// token for English prose, so chars / 4 is a conservative upper bound that
+// needs no tiktoken/wasm dependency. See the token-budget test for how it's used.
+function estimateTokens(text: string): number {
+  return Math.ceil(text.length / 4)
+}
+
+// gpt-4o-mini has a 128k-token context window. The assembled prompt is only the
+// per-turn context (matches + history + query); the ~1.5k-token system prompt
+// and the model's completion share the rest of the window. We cap the per-turn
+// context well below that so a regression (e.g. history no longer trimmed, or
+// the full catalog dumped in) fails loudly instead of silently inflating cost.
+const PROMPT_TOKEN_BUDGET = 6000
+
+// A rich, 150+ word description like the enriched catalog copy the RAG pipeline
+// actually embeds — the worst-case size for a single retrieved product.
+const LONG_DESCRIPTION = Array.from(
+  { length: 160 },
+  (_, i) => `word${i + 1}`,
+).join(" ")
+
+function makeHeavyProduct(index: number): Product {
+  return {
+    id: `prod_${index}`,
+    medusaProductId: `medusa_${index}`,
+    title: `Trail Runner ${index} Ultra Boost Performance Edition`,
+    description: LONG_DESCRIPTION,
+    category: "running shoes",
+    tags: ["trail", "running", "lightweight", "waterproof", "cushioned", "breathable"],
+    variants: Array.from({ length: 5 }, (_, v) => ({
+      id: `var_${index}_${v}`,
+      title: `Size ${40 + v} / Black`,
+      sku: `TRX-${index}-${40 + v}-BLK`,
+      price: 90 + v,
+      inventoryQuantity: 5,
+      options: { size: `${40 + v}`, color: "Black" },
+    })),
+  }
+}
 
 describe("PromptAssembler", () => {
   const assembler = new PromptAssembler()
@@ -123,6 +163,27 @@ describe("PromptAssembler", () => {
     expect(prompt).not.toContain("msg 1\n")
     expect(prompt).toContain("assistant: msg 2")
     expect(prompt).toContain("user: msg 11")
+  })
+
+  it("keeps the worst-case prompt within the per-turn token budget", () => {
+    // Worst case the pipeline can produce: top-k = 5 products, each with a
+    // 150+ word enriched description, plus a full 6-turn conversation.
+    const retrievedProducts: RetrievalResult[] = Array.from({ length: 5 }, (_, i) => ({
+      product: makeHeavyProduct(i + 1),
+      similarityScore: 0.9 - i * 0.05,
+    }))
+    const history: ChatMessage[] = Array.from({ length: 6 }, (_, i) => ({
+      role: i % 2 === 0 ? ("user" as const) : ("assistant" as const),
+      content: `${LONG_DESCRIPTION} (turn ${i + 1})`,
+    }))
+
+    const prompt = assembler.assemble({
+      query: { rawQuery: "lightweight waterproof trail shoes under $150", embeddingText: "lightweight waterproof trail shoes" },
+      retrievedProducts,
+      history,
+    })
+
+    expect(estimateTokens(prompt)).toBeLessThan(PROMPT_TOKEN_BUDGET)
   })
 
   it("notes when no products were retrieved", () => {
