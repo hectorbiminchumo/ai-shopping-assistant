@@ -4,8 +4,8 @@ import type { Product } from "../types"
 import { ChunkBuilder } from "./ChunkBuilder"
 
 // Generates text embeddings (Voyage AI) and upserts the product row into
-// Supabase product_embeddings. image_embedding (CLIP) is left null until
-// the image search feature is wired up.
+// Supabase product_embeddings. image_embedding (voyage-multimodal-3) is left
+// null until the image search feature is wired up.
 export class EmbeddingIndexer {
   constructor(
     private readonly embeddingService: IEmbeddingService,
