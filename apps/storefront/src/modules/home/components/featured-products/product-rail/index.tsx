@@ -89,7 +89,7 @@ export default async function ProductRail({
           <li
             key={`${p.handle}-${i}`}
             className="shrink-0"
-            style={{ flex: "0 0 calc((100% - 66px) / 4)", scrollSnapAlign: "start", minWidth: 200 }}
+            style={{ flex: "0 0 calc((100% - 44px) / 3)", scrollSnapAlign: "start", minWidth: 200 }}
           >
             <FallbackCard {...p} />
           </li>
@@ -104,7 +104,7 @@ export default async function ProductRail({
         <li
           key={`${product.id}-${i}`}
           className="shrink-0"
-          style={{ flex: "0 0 calc((100% - 66px) / 4)", scrollSnapAlign: "start", minWidth: 200 }}
+          style={{ flex: "0 0 calc((100% - 44px) / 3)", scrollSnapAlign: "start", minWidth: 200 }}
         >
           <ProductCard product={product} region={region} />
         </li>

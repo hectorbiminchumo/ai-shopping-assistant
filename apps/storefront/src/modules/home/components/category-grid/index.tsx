@@ -15,6 +15,12 @@ const TILE_COLORS = [
   { bg: "1a1a0a", fg: "f4f3f0" },
 ]
 
+const CATEGORY_IMAGES: Record<string, string> = {
+  "running-shoes": "/categories/running-shoes.jpg",
+  "training-apparel": "/categories/training-apparel.jpg",
+  "jackets": "/categories/jackets.jpg",
+}
+
 const STATIC_FALLBACK = [
   { name: "Running",   handle: "running"   },
   { name: "Training",  handle: "training"  },
@@ -83,6 +89,7 @@ export default async function CategoryGrid() {
           handle: c.handle,
           count: c.products?.length ?? 0,
           src:
+            CATEGORY_IMAGES[c.handle] ??
             c.products?.[0]?.thumbnail ??
             `https://placehold.co/400x400/${bg}/${fg}?text=${encodeURIComponent(prettyName(c.name))}`,
         }
@@ -97,13 +104,18 @@ export default async function CategoryGrid() {
         }
       })
 
+  // Divide by however many categories actually render (capped at 5) so a
+  // short list still fills the row instead of leaving it half-empty.
+  const perRow = Math.min(items.length, 5) || 1
+  const basis = `calc((100% - ${22 * (perRow - 1)}px) / ${perRow})`
+
   return (
     <RailSection title="Categories" background="var(--surface)">
       {items.map((item, i) => (
         <li
           key={`${item.handle}-${i}`}
           className="shrink-0"
-          style={{ flex: "0 0 calc((100% - 88px) / 5)", scrollSnapAlign: "start", minWidth: 140 }}
+          style={{ flex: `0 0 ${basis}`, scrollSnapAlign: "start", minWidth: 140 }}
         >
           <CategoryCard {...item} />
         </li>

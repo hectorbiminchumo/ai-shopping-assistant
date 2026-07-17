@@ -97,6 +97,22 @@ export async function chat(
 
 export class ChatFiltersError extends Error {}
 
+// No /store/chat/image-search route exists on the backend yet — this will
+// 404 until it's wired up. Kept here so the chat UI has a real call to make
+// (and a real error to show) instead of a fake stub.
+export async function searchImage(file: File): Promise<SemanticSearchResponse> {
+  const body = new FormData()
+  body.append("image", file)
+
+  const res = await fetch(`${API_URL}/store/chat/image-search`, { method: "POST", body })
+
+  if (!res.ok) {
+    throw new Error(`Image search failed with status ${res.status}`)
+  }
+
+  return res.json()
+}
+
 type ChatStreamEvent =
   | { type: "delta"; text: string }
   | { type: "done"; response: ChatResponse }
