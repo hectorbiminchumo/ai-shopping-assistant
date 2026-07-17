@@ -1,5 +1,11 @@
-import type { ImageEmbeddingService, ImageRetrievalService } from "../image"
-import type { IChatLogger, IEmbeddingService, ILLMService, IRetrievalService } from "../interfaces"
+import type { ImageRetrievalService } from "../image"
+import type {
+  IChatLogger,
+  IEmbeddingService,
+  IImageEmbeddingService,
+  ILLMService,
+  IRetrievalService,
+} from "../interfaces"
 import type { PromptAssembler, QueryParser, ResponseFormatter } from "../pipeline"
 import type { ChatResponse, ChatSession, RetrievalResult } from "../types"
 
@@ -11,7 +17,7 @@ const TOP_K = 5
 export class ImageOrchestrator {
   constructor(
     private readonly queryParser: QueryParser,
-    private readonly imageEmbeddingService: ImageEmbeddingService,
+    private readonly imageEmbeddingService: IImageEmbeddingService,
     private readonly imageRetrievalService: ImageRetrievalService,
     private readonly embeddingService: IEmbeddingService,
     private readonly retrievalService: IRetrievalService,

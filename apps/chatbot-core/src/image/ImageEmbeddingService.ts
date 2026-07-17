@@ -1,10 +1,12 @@
 import { EmbeddingError } from "../errors"
+import type { IImageEmbeddingService } from "../interfaces"
 
-// Generates CLIP image embeddings (512 dims). CLIP runs as a separate
-// service or via Replicate API to avoid heavy ML dependencies in Node.js.
-export class ImageEmbeddingService {
-  async embedImage(_imageBuffer: Buffer): Promise<number[]> {
-    // TODO: call the CLIP service/Replicate API once it's chosen and configured
-    throw new EmbeddingError("CLIP image embedding client not configured yet")
+// Generates image embeddings (512 dims) via Voyage AI voyage-multimodal-3,
+// configured to output_dimension 512 so vectors fit product_embeddings
+// .image_embedding vector(512). Same account and SDK as the text embeddings.
+export class ImageEmbeddingService implements IImageEmbeddingService {
+  async embedImage(_image: Buffer): Promise<number[]> {
+    // TODO (W4 Ticket 2): call voyage-multimodal-3 with output_dimension 512
+    throw new EmbeddingError("voyage-multimodal-3 image embedding client not configured yet")
   }
 }

@@ -1,4 +1,5 @@
 export * from "./IEmbeddingService"
+export * from "./IImageEmbeddingService"
 export * from "./IRetrievalService"
 export * from "./ILLMService"
 export * from "./IChatLogger"

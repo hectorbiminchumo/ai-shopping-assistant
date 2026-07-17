@@ -5,7 +5,7 @@ You are assisting in the development of an AI-powered shopping assistant built o
 
 - **RAG pipeline** — retrieval-augmented generation over a product catalog
 - **Semantic search** — natural language queries converted to vector embeddings and matched against product embeddings via cosine similarity
-- **Image-based search** — multimodal search using CLIP embeddings to find visually similar products
+- **Image-based search** — multimodal search using voyage-multimodal-3 embeddings to find visually similar products
 - **Business analytics dashboard** — insights for the store owner: most searched products, lost sales (queries with no results), and business intelligence from chat interactions
 
 When suggesting code, architecture decisions, or debugging approaches, always consider how they affect these four core pillars. The AI assistant is the product — not a feature bolted on top.
@@ -63,7 +63,7 @@ apps/                               → workspace packages (Turborepo + npm work
 │   │   │   └── index.ts
 │   │   │
 │   │   ├── image/                  → Feature 2: image-based search
-│   │   │   ├── ImageEmbeddingService.ts  → CLIP embeddings
+│   │   │   ├── ImageEmbeddingService.ts  → voyage-multimodal-3 embeddings
 │   │   │   ├── ImageRetrievalService.ts  → cosine search on image_embedding
 │   │   │   └── index.ts
 │   │   │
@@ -170,7 +170,7 @@ Each app deploys independently on Vercel — one project per folder, same repo.
 ### AI & Embeddings
 - **Voyage AI** (`voyage-3`, 1024 dimensions) — text embeddings for semantic search — free tier
 - **OpenAI API** (`gpt-4o-mini`) — LLM for chat responses and query parsing
-- **CLIP** — image embeddings (512 dimensions) for image-based search
+- **Voyage AI** (`voyage-multimodal-3`, 512 dimensions) — image embeddings for image-based search; text and images share one vector space (single backbone)
 
 ### Infrastructure
 - **GitHub Projects** — task management (issues, kanban, PRs)
@@ -199,7 +199,7 @@ API Gateway (Medusa custom routes — validates Supabase JWT)
         ↓
 RAG Pipeline:
   1. Query parser    → extract intent + structured filters (category, price, size)
-  2. Embedding svc   → Voyage AI text-embed (semantic) or CLIP (image-based)
+  2. Embedding svc   → Voyage AI text-embed (semantic) or voyage-multimodal-3 (image-based)
   3. Retrieval       → pgvector cosine similarity search (text + image hybrid)
   4. Prompt assembly → top-k products + user query + conversation history
   5. LLM call        → OpenAI gpt-4o-mini generates response
@@ -220,7 +220,7 @@ Ingestion service (cron job, runs hourly)
 Build embedding text: title + description + tags + category
         ↓
 Voyage AI  → text embedding (1024d)
-CLIP       → image embedding (512d)
+voyage-multimodal-3 → image embedding (512d)
         ↓
 Upsert into product_embeddings (Supabase)
 ```
@@ -242,7 +242,7 @@ CREATE TABLE product_embeddings (
   price_max         NUMERIC,
   thumbnail_url     TEXT,
   embedding         vector(1024),  -- Voyage AI text embedding
-  image_embedding   vector(512),   -- CLIP image embedding
+  image_embedding   vector(512),   -- voyage-multimodal-3 image embedding
   created_at        TIMESTAMPTZ DEFAULT now(),
   updated_at        TIMESTAMPTZ DEFAULT now()
 );
@@ -303,12 +303,12 @@ Natural language query → query parser extracts intent + filters → Voyage AI 
 - Log every interaction to `chat_logs` for analytics
 
 ### Feature 2 — Image-Based Search (Wow factor)
-User uploads photo → CLIP generates image embedding (512d) → cosine search against `image_embedding` column → hybrid retrieval: image results + text results merged → top-k passed to OpenAI for response.
+User uploads photo → voyage-multimodal-3 generates image embedding (512d) → cosine search against `image_embedding` column → hybrid retrieval: image results + text results merged → top-k passed to OpenAI for response.
 
 **Key implementation notes:**
 - Text search and image search run in PARALLEL — merge results before LLM call (hybrid retrieval pattern)
 - Image upload handled via multipart form in the storefront
-- CLIP runs as a separate service or via Replicate API to avoid heavy ML dependencies in Node.js
+- voyage-multimodal-3 is called via the Voyage AI API (same SDK and account as text embeddings) — no heavy ML dependencies in Node.js, and text + images land in one shared vector space
 
 ### Feature 3 — Business Analytics Dashboard (Business impact)
 Panel for the store owner powered entirely by `chat_logs` queries:
@@ -387,7 +387,7 @@ Focus unit tests on `chatbot-core/pipeline/` — these are the most critical and
 | 3 | Ingestion pipeline, Voyage AI text embeddings, pgvector indexed |
 | 4–5 | Feature 1 — Semantic search RAG pipeline end to end + Jest unit tests |
 | 6 | Feature 3 — Business analytics dashboard (chat_logs + SQL aggregations) |
-| 7–8 | Feature 2 — Image search (CLIP hybrid retrieval) + full integration + demo prep |
+| 7–8 | Feature 2 — Image search (voyage-multimodal-3 hybrid retrieval) + full integration + demo prep |
 
 ---
 
@@ -409,7 +409,7 @@ Focus unit tests on `chatbot-core/pipeline/` — these are the most critical and
 4. **No LangChain** — RAG implemented from scratch in Node.js for full control and transparency
 5. **Voyage AI for text embeddings** — free tier, high quality, purpose-built for retrieval
 6. **OpenAI gpt-4o-mini as LLM** — cost-effective, strong reasoning, reliable function calling for query parsing
-7. **CLIP for image embeddings** — enables multimodal search without training a custom model
+7. **voyage-multimodal-3 for image embeddings** — multimodal search in a shared text+image vector space, same account/SDK as text embeddings; no custom model to train, no extra ML infra
 8. **Query parsing before embedding** — structured filters (price, category, size) applied as SQL WHERE before vector search
 9. **Hybrid retrieval for image search** — text and image searches run in parallel, merged before LLM call
 10. **Similarity threshold at 0.40** — below this = lost sale, logged in chat_logs, surfaced in dashboard (calibrated for Voyage AI voyage-3 score compression)

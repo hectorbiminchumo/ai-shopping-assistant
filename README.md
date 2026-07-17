@@ -12,7 +12,7 @@ recommendations through natural language and image-based search.
 - **Storefront:** [Next.js 15](https://nextjs.org/) (App Router) + Tailwind CSS + TypeScript
 - **Design:** Static design system / prototypes built with [Vite](https://vitejs.dev/)
 - **Database:** [Supabase](https://supabase.com/) (PostgreSQL + pgvector)
-- **AI Engine:** OpenAI `gpt-4o-mini` (LLM) · Voyage AI `voyage-3` (text embeddings) · CLIP (image embeddings)
+- **AI Engine:** OpenAI `gpt-4o-mini` (LLM) · Voyage AI `voyage-3` (text embeddings) · Voyage AI `voyage-multimodal-3` (image embeddings, 512d)
 
 ## Project Structure
 
@@ -31,7 +31,7 @@ store/
 │       │   ├── config/       # Env vars + client setup (OpenAI, Voyage AI, Supabase)
 │       │   ├── pipeline/     # RAG steps (QueryParser → Embedding → Retrieval →
 │       │   │                 #   PromptAssembler → LLM → ResponseFormatter)
-│       │   ├── image/        # Image-based search (CLIP embeddings)
+│       │   ├── image/        # Image-based search (voyage-multimodal-3 embeddings)
 │       │   ├── orchestrator/ # ChatOrchestrator, ImageOrchestrator (DI, no business logic)
 │       │   ├── analytics/    # ChatLogger + AnalyticsService (dashboard data)
 │       │   ├── ingestion/    # Offline indexing pipeline (Medusa → pgvector)
