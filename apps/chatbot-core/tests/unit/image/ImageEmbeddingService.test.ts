@@ -42,13 +42,21 @@ function mockFetchSequence(
 
 describe("ImageEmbeddingService", () => {
   const service = new ImageEmbeddingService()
-  const originalKey = aiConfig.voyageApiKey
+  const original = {
+    key: aiConfig.voyageApiKey,
+    model: aiConfig.voyageMultimodalModel,
+    baseUrl: aiConfig.voyageApiBaseUrl,
+  }
 
   beforeEach(() => {
     aiConfig.voyageApiKey = "test-key"
+    aiConfig.voyageMultimodalModel = "voyage-multimodal-3.5"
+    aiConfig.voyageApiBaseUrl = "https://api.voyageai.com/v1"
   })
   afterEach(() => {
-    aiConfig.voyageApiKey = originalKey
+    aiConfig.voyageApiKey = original.key
+    aiConfig.voyageMultimodalModel = original.model
+    aiConfig.voyageApiBaseUrl = original.baseUrl
     jest.restoreAllMocks()
   })
 

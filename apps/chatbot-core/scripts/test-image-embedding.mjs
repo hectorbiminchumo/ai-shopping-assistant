@@ -14,15 +14,20 @@
  */
 import { readFile } from "node:fs/promises"
 
-const MODEL = process.env.VOYAGE_MULTIMODAL_MODEL || "voyage-multimodal-3.5"
-const BASE_URL = process.env.VOYAGE_API_BASE_URL || "https://api.voyageai.com/v1"
+const MODEL = process.env.VOYAGE_MULTIMODAL_MODEL
+const BASE_URL = process.env.VOYAGE_API_BASE_URL
 const DIM = 512
 
-const apiKey = process.env.VOYAGE_API_KEY
-if (!apiKey) {
-  console.error("❌  VOYAGE_API_KEY not set")
+const missing = [
+  !process.env.VOYAGE_API_KEY && "VOYAGE_API_KEY",
+  !MODEL && "VOYAGE_MULTIMODAL_MODEL",
+  !BASE_URL && "VOYAGE_API_BASE_URL",
+].filter(Boolean)
+if (missing.length) {
+  console.error(`❌  Missing env vars: ${missing.join(", ")}`)
   process.exit(1)
 }
+const apiKey = process.env.VOYAGE_API_KEY
 
 const args = process.argv.slice(2)
 const dryRun = !args.includes("--no-dry-run") // dry-run is the only mode for now
