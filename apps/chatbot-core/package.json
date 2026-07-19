@@ -8,7 +8,7 @@
   "scripts": {
     "build": "tsc",
     "chat": "npm run build && node --env-file=.env scripts/chat.mjs",
-    "test": "jest",
+    "test": "jest --coverage",
     "lint": "tsc --noEmit"
   },
   "dependencies": {
