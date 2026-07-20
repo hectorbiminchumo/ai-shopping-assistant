@@ -54,7 +54,7 @@ export class EmbeddingIndexer {
     if (error) throw new Error(`Supabase upsert failed for "${product.title}": ${error.message}`)
   }
 
-  // Downloads the product image and stores its 512d CLIP-style embedding in the
+  // Downloads the product image and stores its 512d voyage-multimodal-3.5 embedding in the
   // existing product_embeddings row. Runs independently of text indexing so
   // images can be (re)indexed without regenerating text embeddings.
   async indexProductImage(product: Product): Promise<void> {
