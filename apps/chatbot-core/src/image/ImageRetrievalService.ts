@@ -42,6 +42,32 @@ export class ImageRetrievalService {
     }
   }
 
+  // Reads a product's already-indexed image embedding, so a catalog product can
+  // itself be the query ("more like this" on the product detail page) without
+  // re-embedding its photo through Voyage. Returns null when the product is
+  // unknown or was never image-indexed — both are the caller's 404, not errors.
+  async getImageEmbedding(medusaProductId: string): Promise<number[] | null> {
+    try {
+      const supabase = getSupabaseClient()
+
+      const { data, error } = await supabase
+        .from("product_embeddings")
+        .select("image_embedding")
+        .eq("medusa_product_id", medusaProductId)
+        .maybeSingle()
+
+      if (error) throw new RetrievalError(error.message)
+      if (!data?.image_embedding) return null
+
+      // Supabase returns vector columns as a JSON-encoded string, not an array.
+      const raw = data.image_embedding
+      return typeof raw === "string" ? JSON.parse(raw) : raw
+    } catch (err) {
+      if (err instanceof RetrievalError) throw err
+      throw new RetrievalError("Failed to read product image embedding", err)
+    }
+  }
+
   private toProduct(row: ImageMatchRow): Product {
     return {
       id: row.id,
