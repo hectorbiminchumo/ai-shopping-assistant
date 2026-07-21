@@ -172,7 +172,7 @@ describe("ImageOrchestrator (unit, all dependencies mocked)", () => {
   })
 
   describe("chat logging (drives the analytics 'lost sale' signal)", () => {
-    it("logs hasResults: true when the top merged score meets the 0.60 image threshold", async () => {
+    it("logs hasResults: true when the top merged score meets the 0.42 image threshold", async () => {
       const chatLogger = createMockChatLogger()
 
       const orchestrator = new ImageOrchestrator(
@@ -180,7 +180,7 @@ describe("ImageOrchestrator (unit, all dependencies mocked)", () => {
           parsedQuery({ rawQuery: "sneakers", embeddingText: "sneakers", category: "shoes" })
         ),
         createMockImageEmbeddingService(),
-        mockImageRetrievalService([{ product: product("p1"), similarityScore: 0.6 }]),
+        mockImageRetrievalService([{ product: product("p1"), similarityScore: 0.42 }]),
         createMockEmbeddingService(),
         createMockRetrievalService([]),
         mockPromptAssembler(),
@@ -196,19 +196,19 @@ describe("ImageOrchestrator (unit, all dependencies mocked)", () => {
         sessionId: "session_1",
         userQuery: "sneakers",
         retrievedIds: ["medusa_p1"],
-        topScore: 0.6,
+        topScore: 0.42,
         hasResults: true,
         categoryHint: "shoes",
       })
     })
 
-    it("logs hasResults: false when the top merged score is just below the 0.60 image threshold", async () => {
+    it("logs hasResults: false when the top merged score is just below the 0.42 image threshold", async () => {
       const chatLogger = createMockChatLogger()
 
       const orchestrator = new ImageOrchestrator(
         mockQueryParser(parsedQuery()),
         createMockImageEmbeddingService(),
-        mockImageRetrievalService([{ product: product("p1"), similarityScore: 0.59 }]),
+        mockImageRetrievalService([{ product: product("p1"), similarityScore: 0.419 }]),
         createMockEmbeddingService(),
         createMockRetrievalService([]),
         mockPromptAssembler(),
@@ -220,7 +220,7 @@ describe("ImageOrchestrator (unit, all dependencies mocked)", () => {
       await orchestrator.handle(Buffer.from([1]), undefined, session)
 
       expect(chatLogger.log).toHaveBeenCalledWith(
-        expect.objectContaining({ topScore: 0.59, hasResults: false, userQuery: "(image search)" })
+        expect.objectContaining({ topScore: 0.419, hasResults: false, userQuery: "(image search)" })
       )
     })
 

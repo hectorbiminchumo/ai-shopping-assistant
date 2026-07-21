@@ -7,13 +7,18 @@ import {
 
 describe("scoreFilter", () => {
   describe("image threshold (voyage-multimodal-3.5)", () => {
-    it("is calibrated at 0.60", () => {
-      expect(IMAGE_SIMILARITY_THRESHOLD).toBe(0.6)
+    it("is calibrated at 0.42", () => {
+      expect(IMAGE_SIMILARITY_THRESHOLD).toBe(0.42)
     })
 
     it.each([
-      [0.6, true],
-      [0.599, false],
+      [0.42, true],
+      [0.419, false],
+      // Bracket the measured populations: the lowest real match (0.4401) must
+      // pass and the highest real no-match (0.4140) must not — see the
+      // calibration note in scoreFilter.ts.
+      [0.4401, true],
+      [0.414, false],
       [0.99, true],
       [0, false],
     ])("meetsImageSimilarityThreshold(%p) -> %p", (score, expected) => {

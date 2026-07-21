@@ -128,10 +128,10 @@ describe("ImageRetrievalService", () => {
     await expect(service.search([0.1], 5)).rejects.toThrow("Image vector search failed")
   })
 
-  // The 0.60 similarity cutoff (IMAGE_SIMILARITY_THRESHOLD) is applied by
+  // The 0.42 similarity cutoff (IMAGE_SIMILARITY_THRESHOLD) is applied by
   // ImageOrchestrator via meetsImageSimilarityThreshold, not here — this
   // service returns whatever rows the RPC gives it, unfiltered.
-  it("does not filter rows by the 0.60 image similarity threshold", async () => {
+  it("does not filter rows by the 0.42 image similarity threshold", async () => {
     mockRpc.mockResolvedValue({ data: [row({ id: "p1", similarity: 0.12 })], error: null })
 
     const results = await service.search([0.1], 5)

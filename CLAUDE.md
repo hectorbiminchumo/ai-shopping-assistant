@@ -105,7 +105,7 @@ apps/                               → workspace packages (Turborepo + npm work
 │   │   │
 │   │   └── utils/
 │   │       ├── formatProducts.ts   → formats products for prompt
-│   │       ├── scoreFilter.ts      → applies similarity threshold (0.40)
+│   │       ├── scoreFilter.ts      → similarity thresholds (0.40 text · 0.42 image)
 │   │       └── index.ts
 │   │
 │   ├── tests/
@@ -247,9 +247,16 @@ CREATE TABLE product_embeddings (
   updated_at        TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE INDEX ON product_embeddings USING ivfflat (embedding vector_cosine_ops);
-CREATE INDEX ON product_embeddings USING ivfflat (image_embedding vector_cosine_ops);
+-- No vector index at MVP scale — see "Vector indexing" below.
 ```
+
+#### Vector indexing — deliberately none
+
+Both columns are searched with an **exact sequential scan**. Do not add an `ivfflat` index at this catalog size.
+
+The schema originally prescribed `CREATE INDEX ... USING ivfflat (... vector_cosine_ops)`, which Supabase created with the default `lists=100` — roughly one cluster per product over a 100-row table. `ivfflat` is an *approximate* index that scans only `ivfflat.probes` clusters (default **1**), so `match_products_by_image` returned whatever happened to sit in one ~1-row cluster: 1 row for a requested `match_count` of 5 or 20, occasionally 0, and a "nearest" product that frequently was not the true nearest neighbour. Image search looked functional while silently returning wrong results, and it depressed measured similarity scores by roughly half. Both indexes were dropped on 2026-07-21.
+
+At 100 products an exact scan costs well under a millisecond and is always correct — there is nothing to accelerate. Revisit past ~10k products, and then either size the index properly (`lists ≈ rows/1000`) or use HNSW, which has no `probes` footgun. Whatever is added must be validated by checking that a search actually returns `match_count` rows.
 
 ### Supabase — chat_logs (Business Analytics)
 ```sql
