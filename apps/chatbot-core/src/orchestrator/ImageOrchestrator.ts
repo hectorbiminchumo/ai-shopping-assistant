@@ -8,6 +8,7 @@ import type {
 } from "../interfaces"
 import type { PromptAssembler, QueryParser, ResponseFormatter } from "../pipeline"
 import type { ChatResponse, ChatSession, RetrievalResult } from "../types"
+import { meetsImageSimilarityThreshold } from "../utils"
 
 const TOP_K = 5
 
@@ -50,13 +51,20 @@ export class ImageOrchestrator {
     const llmMessage = await this.llmService.complete(prompt)
     const response = this.responseFormatter.format(llmMessage, retrieved)
 
+    // Lost-sale signal for the analytics dashboard is retrieval confidence, not
+    // whether the LLM chose to reply: a query whose best visual match is below
+    // the image threshold is a catalog gap, even if the LLM offered the closest
+    // option anyway. (See ResponseFormatter for the text-side equivalent.)
+    const topScore = retrieved[0]?.similarityScore ?? 0
+    const similarityThresholdMet = retrieved.length > 0 && meetsImageSimilarityThreshold(topScore)
+
     await this.chatLogger.log({
       userId: session.userId,
       sessionId: session.sessionId,
       userQuery: textQuery ?? "(image search)",
       retrievedIds: retrieved.map((r) => r.product.medusaProductId),
-      topScore: retrieved[0]?.similarityScore ?? 0,
-      hasResults: response.hasResults,
+      topScore,
+      hasResults: similarityThresholdMet,
       categoryHint: parsedQuery.category,
     })
 

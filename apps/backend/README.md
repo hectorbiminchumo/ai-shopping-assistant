@@ -36,6 +36,43 @@
 
 This starter is compatible with versions >= 2 of `@medusajs/medusa`. 
 
+## Custom API Routes
+
+### POST /store/chat/image-search
+
+Image-based product search (optionally combined with a text query) via
+`@dtc/chatbot-core`'s `ImageOrchestrator`. See `apps/chatbot-core/README.md`
+→ "Image Search Architecture" for the full design.
+
+**Auth:** No customer authentication required (Medusa's built-in customer
+auth on `/store/*` is configured with `allowUnauthenticated: true`). Like
+every route under `/store`, it still requires Medusa's standard
+`x-publishable-api-key` header — a request missing it is rejected before this
+route's own code ever runs, with Medusa's own `{ code, type, message }` error
+shape rather than this endpoint's `{ message }` convention. Unlike
+`/search/chat` and `/search/semantic` (which deliberately live outside
+`/store` and skip this requirement), callers of this endpoint must attach the
+key.
+
+**Request:** `multipart/form-data`
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `image` | file | yes | `image/jpeg`, `image/png`, or `image/webp`; max 5MB |
+| `sessionId` | text | yes | Non-empty string |
+| `query` | text | no | Optional text refinement, enables hybrid image+text retrieval |
+
+**Response:** `200` — a `ChatResponse` (see `@dtc/chatbot-core`'s
+`types/chat.types.ts`): `{ message, products, hasResults,
+similarityThresholdMet, appliedFilters? }` (`history` is omitted for this
+route — image search is single-turn only).
+
+| Status | Cause |
+|---|---|
+| 400 | No `image` file attached, `sessionId` missing/empty, `query` provided but empty, unsupported image type |
+| 413 | Image exceeds 5MB |
+| 500 | `ImageOrchestrator` pipeline failure (embedding/retrieval/LLM) — deliberately 500, not the 502 used by `/search/chat`/`/search/semantic` |
+
 ## Getting Started
 
 Visit the [Quickstart Guide](https://docs.medusajs.com/learn/installation) to set up a server.

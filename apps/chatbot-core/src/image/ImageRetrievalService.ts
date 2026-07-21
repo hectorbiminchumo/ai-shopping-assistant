@@ -1,11 +1,59 @@
+import { getSupabaseClient } from "../config"
 import { RetrievalError } from "../errors"
-import type { RetrievalResult } from "../types"
+import type { Product, RetrievalResult } from "../types"
+
+// Row shape returned by the match_products_by_image RPC — mirrors the text
+// match_products result, minus the text-only filter columns.
+interface ImageMatchRow {
+  id: string
+  medusa_product_id: string
+  title: string
+  description: string
+  category: string | null
+  tags: string[] | null
+  price_min: number | null
+  price_max: number | null
+  thumbnail_url: string | null
+  similarity: number
+}
 
 // Cosine similarity search against the image_embedding column in
-// product_embeddings (Supabase/pgvector).
+// product_embeddings (Supabase/pgvector), mirroring the text RetrievalService.
 export class ImageRetrievalService {
-  async search(_imageEmbedding: number[], _topK: number): Promise<RetrievalResult[]> {
-    // TODO: query Supabase pgvector (image_embedding column) once the client is configured
-    throw new RetrievalError("Supabase client not configured yet")
+  async search(imageEmbedding: number[], topK: number): Promise<RetrievalResult[]> {
+    try {
+      const supabase = getSupabaseClient()
+
+      const { data, error } = await supabase.rpc("match_products_by_image", {
+        query_embedding: imageEmbedding,
+        match_count: topK,
+      })
+
+      if (error) throw new RetrievalError(error.message)
+
+      const rows = (data ?? []) as ImageMatchRow[]
+      return rows.map((row) => ({
+        product: this.toProduct(row),
+        similarityScore: row.similarity,
+      }))
+    } catch (err) {
+      if (err instanceof RetrievalError) throw err
+      throw new RetrievalError("Image vector search failed", err)
+    }
+  }
+
+  private toProduct(row: ImageMatchRow): Product {
+    return {
+      id: row.id,
+      medusaProductId: row.medusa_product_id,
+      title: row.title,
+      description: row.description,
+      category: row.category ?? undefined,
+      tags: row.tags ?? [],
+      thumbnailUrl: row.thumbnail_url ?? undefined,
+      priceMin: row.price_min ?? undefined,
+      priceMax: row.price_max ?? undefined,
+      variants: [],
+    }
   }
 }
