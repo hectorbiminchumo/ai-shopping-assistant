@@ -25,7 +25,15 @@ type Message =
       appliedFilters?: ChatFilters
     }
   | { role: "user"; text: string }
-  | { role: "user-image"; id: string; src: string; status: "pending" | "done" | "error"; error?: string }
+  | {
+      role: "user-image"
+      id: string
+      src: string
+      status: "pending" | "done" | "error"
+      error?: string
+      // Composer text sent alongside the image (hybrid search), shown under it
+      caption?: string
+    }
   | { role: "typing" }
 
 function makeId(): string {
@@ -256,31 +264,57 @@ export default function VectraChat({
     )
   }
 
-  const runImageSearch = async (id: string, file: File) => {
+  // `query` is whatever was in the composer when the image was added: it makes
+  // the backend run hybrid retrieval (0.6·image + 0.4·text) instead of a purely
+  // visual search, so "in black" or "for trail running" refines the photo.
+  const runImageSearch = async (id: string, file: File, query?: string) => {
     try {
-      const result = await searchImage(file, sessionIdRef.current)
+      const result = await searchImage(file, sessionIdRef.current, query)
       updateImageMessage(id, { status: "done" })
       const picks = toCatalogProducts(result.products, products)
-      if (result.hasResults && picks.length) {
-        setMessages((prev) => [
-          ...prev,
-          { role: "bot", text: "Here's what I found that looks similar:", products: picks },
-        ])
-      }
-    } catch {
+      // Render the assistant's own reply — it explains why each match fits the
+      // photo (see IMAGE_SEARCH_SYSTEM_PROMPT in chatbot-core). The fallback
+      // only covers an empty reply, not a search that found nothing: in that
+      // case the model still explains the miss.
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "bot",
+          text:
+            result.message ||
+            "I couldn't find a close visual match in our catalog. Try another photo, or describe what you're after in words.",
+          products: result.hasResults && picks.length ? picks : undefined,
+        },
+      ])
+    } catch (err) {
+      // Never phrase this as "not available yet" — the feature is wired, so a
+      // failure here is a real error (backend down, missing publishable key,
+      // Voyage rate limit) and saying otherwise hides it during debugging.
+      console.error("[image-search]", err)
       updateImageMessage(id, {
         status: "error",
-        error: "Image search isn't available yet — try describing it in words instead.",
+        error: "Something went wrong searching with this image. Please try again.",
       })
     }
   }
 
   // Each file becomes its own bubble immediately (object URL — nothing is
-  // uploaded anywhere for this), independent of the text composer. Invalid
-  // files (wrong type, over 5MB) still get a bubble, just with an inline
-  // error instead of a search request.
+  // uploaded anywhere for this). Invalid files (wrong type, over 5MB) still get
+  // a bubble, just with an inline error instead of a search request.
+  //
+  // Text in the composer is consumed as the query for this batch and shown as a
+  // caption on the bubble, so it is never silently dropped: before this, an
+  // image sent alongside text searched on the image alone.
   const addFiles = (files: FileList | File[]) => {
-    Array.from(files).forEach((file) => {
+    const list = Array.from(files)
+    const query = input.trim() || undefined
+    const usesQuery = query && list.some((file) => !validateImageFile(file))
+    if (usesQuery) {
+      setInput("")
+      if (taRef.current) taRef.current.style.height = "auto"
+    }
+
+    list.forEach((file) => {
       const id = makeId()
       const src = URL.createObjectURL(file)
       const error = validateImageFile(file)
@@ -288,9 +322,9 @@ export default function VectraChat({
         ...prev,
         error
           ? { role: "user-image", id, src, status: "error", error }
-          : { role: "user-image", id, src, status: "pending" },
+          : { role: "user-image", id, src, status: "pending", caption: query },
       ])
-      if (!error) runImageSearch(id, file)
+      if (!error) runImageSearch(id, file, query)
     })
   }
 
@@ -624,6 +658,11 @@ export default function VectraChat({
                             border: "1px solid var(--line)",
                           }}
                         />
+                        {msg.caption && (
+                          <div style={{ fontSize: 15, lineHeight: 1.6, textAlign: "right" }}>
+                            {msg.caption}
+                          </div>
+                        )}
                         {msg.status === "pending" && (
                           <div
                             className="vectra-skeleton"

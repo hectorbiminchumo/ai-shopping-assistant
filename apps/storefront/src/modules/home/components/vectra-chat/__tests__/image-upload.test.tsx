@@ -52,6 +52,9 @@ const catalog = [
 const openChat = () =>
   fireEvent.click(screen.getByRole("button", { name: "Ask Vectra" }))
 
+const getComposer = () =>
+  screen.getByPlaceholderText("Describe what you're looking for…")
+
 function makeFile(name: string, type: string, sizeBytes = 1024): File {
   return new File([new Uint8Array(sizeBytes)], name, { type })
 }
@@ -130,7 +133,11 @@ describe("VectraChat image upload", () => {
     expect(global.URL.createObjectURL).toHaveBeenCalled()
   })
 
+  // A failure must read as a failure. It used to say "isn't available yet",
+  // which made a real 400 (e.g. a missing publishable key) look like an
+  // unimplemented feature.
   it("shows an inline error below the image bubble when the API call fails", async () => {
+    jest.spyOn(console, "error").mockImplementation(() => {})
     searchImageMock.mockRejectedValue(new Error("Image search failed with status 404"))
     render(<VectraChat products={catalog} />)
     openChat()
@@ -138,8 +145,9 @@ describe("VectraChat image upload", () => {
     dropFile(makeFile("shoe.png", "image/png"))
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      /image search isn't available/i
+      /something went wrong searching with this image/i
     )
+    expect(screen.queryByText(/isn't available yet/i)).not.toBeInTheDocument()
   })
 
   it("renders product cards with the similarity scores from the image search response", async () => {
@@ -167,16 +175,20 @@ describe("VectraChat image upload", () => {
     )
   })
 
-  it("shows nothing extra once a valid search resolves with no results", async () => {
-    searchImageMock.mockResolvedValue({ products: [], hasResults: false })
+  it("shows the assistant's explanation but no cards when the search finds nothing", async () => {
+    searchImageMock.mockResolvedValue({
+      message: "Nothing in the catalog looks like that jacket.",
+      products: [],
+      hasResults: false,
+    })
     render(<VectraChat products={catalog} />)
     openChat()
 
     dropFile(makeFile("shoe.png", "image/png"))
 
-    await waitFor(() =>
-      expect(screen.queryByLabelText("Searching…")).not.toBeInTheDocument()
-    )
+    expect(
+      await screen.findByText("Nothing in the catalog looks like that jacket.")
+    ).toBeInTheDocument()
     expect(screen.queryByTestId("product-card")).not.toBeInTheDocument()
     expect(screen.queryByRole("alert")).not.toBeInTheDocument()
   })
@@ -191,6 +203,71 @@ describe("VectraChat image upload", () => {
       await screen.findByText(/only jpg, png or webp images are supported/i)
     ).toBeInTheDocument()
     expect(searchImageMock).not.toHaveBeenCalled()
+  })
+
+  // Without the query the backend can only do a purely visual search — the
+  // 0.6·image + 0.4·text blend never runs.
+  it("sends composer text as the query so the search is hybrid", async () => {
+    searchImageMock.mockResolvedValue({ message: "", products: [], hasResults: false })
+    render(<VectraChat products={catalog} />)
+    openChat()
+    fireEvent.change(getComposer(), { target: { value: "  in black  " } })
+
+    dropFile(makeFile("shoe.png", "image/png"))
+
+    await waitFor(() => expect(searchImageMock).toHaveBeenCalledTimes(1))
+    expect(searchImageMock.mock.calls[0][2]).toBe("in black")
+    // Consumed, not left behind to be sent again as a separate text message
+    expect(getComposer()).toHaveValue("")
+    expect(await screen.findByText("in black")).toBeInTheDocument()
+  })
+
+  it("searches on the image alone when the composer is empty", async () => {
+    searchImageMock.mockResolvedValue({ message: "", products: [], hasResults: false })
+    render(<VectraChat products={catalog} />)
+    openChat()
+
+    dropFile(makeFile("shoe.png", "image/png"))
+
+    await waitFor(() => expect(searchImageMock).toHaveBeenCalledTimes(1))
+    expect(searchImageMock.mock.calls[0][2]).toBeUndefined()
+  })
+
+  it("keeps the composer text when every dropped file is rejected", async () => {
+    render(<VectraChat products={catalog} />)
+    openChat()
+    fireEvent.change(getComposer(), { target: { value: "in black" } })
+
+    dropFile(makeFile("notes.txt", "text/plain"))
+
+    expect(await screen.findByText(/only image files are supported/i)).toBeInTheDocument()
+    expect(searchImageMock).not.toHaveBeenCalled()
+    expect(getComposer()).toHaveValue("in black")
+  })
+
+  it("renders the assistant's reply rather than a fixed caption", async () => {
+    searchImageMock.mockResolvedValue({
+      message: "This trail shoe matches the aggressive lugs in your photo.",
+      products: [
+        {
+          id: "emb_1",
+          medusaProductId: "prod_1",
+          title: "Trail Runner X",
+          priceMin: 95,
+          priceMax: 95,
+          similarityScore: 0.82,
+        },
+      ],
+      hasResults: true,
+    })
+    render(<VectraChat products={catalog} />)
+    openChat()
+
+    dropFile(makeFile("shoe.png", "image/png"))
+
+    expect(
+      await screen.findByText("This trail shoe matches the aggressive lugs in your photo.")
+    ).toBeInTheDocument()
   })
 
   it("sends the session id alongside the file to the image-search API", async () => {

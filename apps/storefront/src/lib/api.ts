@@ -1,6 +1,7 @@
 // Client for the AI backend (Medusa custom routes backed by chatbot-core).
-// Kept separate from lib/config.ts: these routes sit outside /store, so they
-// don't need the Medusa SDK or the publishable key.
+// Kept separate from lib/config.ts: these routes are called with plain fetch
+// rather than the Medusa SDK. Most of them (/search/*) sit outside /store and
+// need no publishable key; image search is the exception — see searchImage.
 
 export type SemanticProduct = {
   id: string
@@ -42,6 +43,7 @@ export type ChatResponse = {
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:9000"
+const PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
 
 export async function search(
   query: string,
@@ -97,15 +99,29 @@ export async function chat(
 
 export class ChatFiltersError extends Error {}
 
+// Image search is the one endpoint here that DOES sit under /store, so unlike
+// the /search/* routes above it needs the publishable key — without it Medusa
+// rejects the request with a 400 before the route ever runs.
+//
+// `query` is optional and drives hybrid retrieval: with text the backend blends
+// 0.6·image + 0.4·text, without it the search stays purely visual. It must be
+// omitted rather than sent empty — the route's schema rejects a blank string.
 export async function searchImage(
   file: File,
-  sessionId: string
-): Promise<SemanticSearchResponse> {
+  sessionId: string,
+  query?: string
+): Promise<ChatResponse> {
   const body = new FormData()
   body.append("image", file)
   body.append("sessionId", sessionId)
+  const trimmedQuery = query?.trim()
+  if (trimmedQuery) body.append("query", trimmedQuery)
 
-  const res = await fetch(`${API_URL}/store/chat/image-search`, { method: "POST", body })
+  const res = await fetch(`${API_URL}/store/chat/image-search`, {
+    method: "POST",
+    headers: PUBLISHABLE_KEY ? { "x-publishable-api-key": PUBLISHABLE_KEY } : undefined,
+    body,
+  })
 
   if (!res.ok) {
     throw new Error(`Image search failed with status ${res.status}`)
