@@ -39,6 +39,7 @@ export function mockChatbotCore() {
     ChatOrchestrator: jest.fn(),
     SearchOrchestrator: jest.fn(),
     ImageOrchestrator: jest.fn(),
+    VisualSearchOrchestrator: jest.fn(),
     ImageEmbeddingService: jest.fn(),
     ImageRetrievalService: jest.fn(),
   }

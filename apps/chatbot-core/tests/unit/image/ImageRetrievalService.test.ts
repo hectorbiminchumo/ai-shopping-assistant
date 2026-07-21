@@ -3,6 +3,12 @@ import { ImageRetrievalService } from "../../../src/image/ImageRetrievalService"
 
 const mockRpc = jest.fn()
 const mockGetSupabaseClient = jest.fn()
+// getImageEmbedding uses the query builder rather than an RPC; each call in the
+// chain returns the builder so only maybeSingle() needs to resolve.
+const mockMaybeSingle = jest.fn()
+const mockEq = jest.fn()
+const mockSelect = jest.fn()
+const mockFrom = jest.fn()
 
 jest.mock("../../../src/config", () => ({
   getSupabaseClient: () => mockGetSupabaseClient(),
@@ -30,7 +36,11 @@ describe("ImageRetrievalService", () => {
   beforeEach(() => {
     mockRpc.mockReset()
     mockGetSupabaseClient.mockReset()
-    mockGetSupabaseClient.mockReturnValue({ rpc: mockRpc })
+    mockMaybeSingle.mockReset()
+    mockEq.mockReset().mockReturnValue({ maybeSingle: mockMaybeSingle })
+    mockSelect.mockReset().mockReturnValue({ eq: mockEq })
+    mockFrom.mockReset().mockReturnValue({ select: mockSelect })
+    mockGetSupabaseClient.mockReturnValue({ rpc: mockRpc, from: mockFrom })
   })
 
   it("calls match_products_by_image with the embedding and topK", async () => {
@@ -138,5 +148,56 @@ describe("ImageRetrievalService", () => {
 
     expect(results).toHaveLength(1)
     expect(results[0].similarityScore).toBe(0.12)
+  })
+
+  describe("getImageEmbedding", () => {
+    it("reads the indexed embedding for a product", async () => {
+      mockMaybeSingle.mockResolvedValue({ data: { image_embedding: [0.1, 0.2] }, error: null })
+
+      const embedding = await service.getImageEmbedding("medusa_p1")
+
+      expect(mockFrom).toHaveBeenCalledWith("product_embeddings")
+      expect(mockSelect).toHaveBeenCalledWith("image_embedding")
+      expect(mockEq).toHaveBeenCalledWith("medusa_product_id", "medusa_p1")
+      expect(embedding).toEqual([0.1, 0.2])
+    })
+
+    // Supabase returns pgvector columns JSON-encoded, not as a JS array
+    it("parses the embedding when it arrives as a JSON string", async () => {
+      mockMaybeSingle.mockResolvedValue({ data: { image_embedding: "[0.1,0.2]" }, error: null })
+
+      expect(await service.getImageEmbedding("medusa_p1")).toEqual([0.1, 0.2])
+    })
+
+    it("returns null for an unknown product", async () => {
+      mockMaybeSingle.mockResolvedValue({ data: null, error: null })
+
+      expect(await service.getImageEmbedding("medusa_missing")).toBeNull()
+    })
+
+    // Distinct from "unknown product" only to the caller's eye — both mean the
+    // product cannot be used as a visual query, which is a 404, not an error.
+    it("returns null for a product that was never image-indexed", async () => {
+      mockMaybeSingle.mockResolvedValue({ data: { image_embedding: null }, error: null })
+
+      expect(await service.getImageEmbedding("medusa_p1")).toBeNull()
+    })
+
+    it("wraps a Supabase error in a RetrievalError", async () => {
+      mockMaybeSingle.mockResolvedValue({ data: null, error: { message: "column missing" } })
+
+      await expect(service.getImageEmbedding("medusa_p1")).rejects.toThrow(RetrievalError)
+      await expect(service.getImageEmbedding("medusa_p1")).rejects.toThrow("column missing")
+    })
+
+    it("wraps an unconfigured client in a RetrievalError", async () => {
+      mockGetSupabaseClient.mockImplementation(() => {
+        throw new Error("Supabase is not configured")
+      })
+
+      await expect(service.getImageEmbedding("medusa_p1")).rejects.toThrow(
+        "Failed to read product image embedding"
+      )
+    })
   })
 })
