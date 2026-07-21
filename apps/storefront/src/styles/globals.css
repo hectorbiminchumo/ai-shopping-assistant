@@ -127,6 +127,12 @@ select option {
    Set --bg-webp and --bg-fallback (both as url(...)) on the element.
    First declaration is the hard fallback for engines without image-set();
    second serves WebP where supported, original otherwise. */
+.bg-image-set {
+  background-image: var(--bg-fallback);
+  background-image: -webkit-image-set(var(--bg-webp) 1x, var(--bg-fallback) 1x);
+  background-image: image-set(var(--bg-webp) 1x, var(--bg-fallback) 1x);
+}
+
 /* Global focus-visible ring — keyboard users must see where they are */
 a:focus-visible,
 button:focus-visible,

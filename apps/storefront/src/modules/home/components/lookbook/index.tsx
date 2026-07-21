@@ -6,8 +6,15 @@ import Image from "next/image"
 
 const TARGET = 10
 
+// Matches product-rail/index.tsx's TARGET, so this rail can skip past
+// whatever Featured already shows instead of repeating it.
+const FEATURED_TARGET = 8
+
 // Default Medusa starter products — hidden from the storefront.
 const JUNK_HANDLES = new Set(["t-shirt", "sweatshirt", "sweatpants", "shorts"])
+
+// Apparel only — footwear has its own category tile.
+const EXCLUDED_CATEGORIES = new Set(["running-shoes"])
 
 const STATIC_ITEMS = [
   { label: "Trail Lightrange™", sub: "short-sleeve tee",  handle: "meridian-tee",  color: "1a1a17" },
@@ -55,13 +62,17 @@ export default async function Lookbook({ regionId }: { regionId: string }) {
   let base: LookItem[] = []
 
   try {
+    // Same fetch + junk filter as Featured, then slice past its picks.
     const { response } = await listProducts({
       regionId,
-      queryParams: { limit: 20, fields: "id,title,handle,thumbnail,collection,categories" },
+      queryParams: { limit: 60, fields: "id,title,handle,thumbnail,collection,categories" },
     })
-    const products = (response.products ?? []).filter(
+    const nonJunk = (response.products ?? []).filter(
       (p) => !JUNK_HANDLES.has(p.handle ?? "")
     )
+    const products = nonJunk
+      .slice(FEATURED_TARGET)
+      .filter((p) => !p.categories?.some((c) => EXCLUDED_CATEGORIES.has(c.handle)))
     if (products.length) base = fromProducts(products)
   } catch { /* fallback */ }
 
@@ -75,7 +86,7 @@ export default async function Lookbook({ regionId }: { regionId: string }) {
         <li
           key={`${item.handle}-${i}`}
           className="shrink-0"
-          style={{ flex: "0 0 calc((100% - 72px) / 5)", scrollSnapAlign: "start", minWidth: 140 }}
+          style={{ flex: "0 0 calc((100% - 66px) / 4)", scrollSnapAlign: "start", minWidth: 140 }}
         >
           <LocalizedClientLink
             href={`/products/${item.handle}`}
@@ -88,7 +99,7 @@ export default async function Lookbook({ regionId }: { regionId: string }) {
                 alt={item.label}
                 fill
                 className="object-cover transition-transform duration-500 group-hover:scale-105"
-                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
               />
             </div>
             <div

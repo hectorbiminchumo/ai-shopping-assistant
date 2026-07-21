@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation"
 import { HttpTypes } from "@medusajs/types"
 import {
   chatStream,
+  searchImage,
   ChatFilters,
   ChatFiltersError,
   ChatHistoryMessage,
@@ -13,6 +14,7 @@ import {
 import { collectSizeOptions } from "@lib/util/size-options"
 import ProductCard from "@modules/products/components/product-card"
 import FilterPanel from "./filter-panel"
+import ImageUpload, { validateImageFile, IMAGE_FORMAT_HINT } from "./image-upload"
 
 type Message =
   | {
@@ -22,8 +24,15 @@ type Message =
       // Filters the backend applied to this result (explicit + inferred)
       appliedFilters?: ChatFilters
     }
-  | { role: "user"; text: string; images?: string[] }
+  | { role: "user"; text: string }
+  | { role: "user-image"; id: string; src: string; status: "pending" | "done" | "error"; error?: string }
   | { role: "typing" }
+
+function makeId(): string {
+  return typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : Math.random().toString(36).slice(2)
+}
 
 // Human-readable chips for a filters object, used for the active-filter
 // tags under the composer and the "Filters:" caption on bot messages.
@@ -148,10 +157,9 @@ export default function VectraChat({
   // Conversation history as maintained by the backend: each response returns
   // the updated history (last 10 turns), which we send back on the next turn
   const historyRef = useRef<ChatHistoryMessage[]>([])
-  const [attachImages, setAttachImages] = useState<string[]>([])
   const chatScrollRef = useRef<HTMLDivElement>(null)
   const taRef = useRef<HTMLTextAreaElement>(null)
-  const fileRef = useRef<HTMLInputElement>(null)
+  const panelRef = useRef<HTMLElement>(null)
   const floatRef = useRef<HTMLButtonElement>(null)
   const prevOpen = useRef(false)
   const pathname = usePathname()
@@ -239,17 +247,51 @@ export default function VectraChat({
     ta.style.height = Math.min(ta.scrollHeight, 120) + "px"
   }
 
-  const addFiles = (files: FileList | File[]) => {
-    Array.from(files)
-      .filter((f) => f.type.startsWith("image/"))
-      .forEach((f) => {
-        const r = new FileReader()
-        r.onload = (ev) => {
-          if (ev.target?.result)
-            setAttachImages((prev) => [...prev, ev.target!.result as string])
-        }
-        r.readAsDataURL(f)
+  const updateImageMessage = (
+    id: string,
+    patch: Partial<Extract<Message, { role: "user-image" }>>
+  ) => {
+    setMessages((prev) =>
+      prev.map((m) => (m.role === "user-image" && m.id === id ? { ...m, ...patch } : m))
+    )
+  }
+
+  const runImageSearch = async (id: string, file: File) => {
+    try {
+      const result = await searchImage(file, sessionIdRef.current)
+      updateImageMessage(id, { status: "done" })
+      const picks = toCatalogProducts(result.products, products)
+      if (result.hasResults && picks.length) {
+        setMessages((prev) => [
+          ...prev,
+          { role: "bot", text: "Here's what I found that looks similar:", products: picks },
+        ])
+      }
+    } catch {
+      updateImageMessage(id, {
+        status: "error",
+        error: "Image search isn't available yet — try describing it in words instead.",
       })
+    }
+  }
+
+  // Each file becomes its own bubble immediately (object URL — nothing is
+  // uploaded anywhere for this), independent of the text composer. Invalid
+  // files (wrong type, over 5MB) still get a bubble, just with an inline
+  // error instead of a search request.
+  const addFiles = (files: FileList | File[]) => {
+    Array.from(files).forEach((file) => {
+      const id = makeId()
+      const src = URL.createObjectURL(file)
+      const error = validateImageFile(file)
+      setMessages((prev) => [
+        ...prev,
+        error
+          ? { role: "user-image", id, src, status: "error", error }
+          : { role: "user-image", id, src, status: "pending" },
+      ])
+      if (!error) runImageSearch(id, file)
+    })
   }
 
   // Replaces the last message in-place — used both to swap the "typing"
@@ -266,62 +308,46 @@ export default function VectraChat({
   const send = async (overrideText?: string) => {
     if (busy) return
     const q = (overrideText ?? input).trim()
-    if (!q && !attachImages.length) return
+    if (!q) return
 
-    const userMsg: Message = {
-      role: "user",
-      text: q,
-      images: attachImages.length ? [...attachImages] : undefined,
-    }
-    setMessages((prev) => [...prev, userMsg, { role: "typing" }])
+    setMessages((prev) => [...prev, { role: "user", text: q }, { role: "typing" }])
     setInput("")
-    setAttachImages([])
     if (taRef.current) taRef.current.style.height = "auto"
     setBusy(true)
 
     try {
-      let botMsg: Message
-      if (!q) {
-        // Image-only message — image search isn't wired to the backend yet
-        botMsg = {
-          role: "bot",
-          text: "Image search isn't available just yet — try describing what you're looking for in words and I'll find the closest match.",
+      // Keep the typing indicator up through retrieval/prompt assembly; the
+      // first delta swaps it for a live bot bubble that fills in as the
+      // reply streams. Product cards only appear once done.
+      let streamedText = ""
+      const result = await chatStream(
+        q,
+        sessionIdRef.current,
+        historyRef.current,
+        normalizeFilters(filters),
+        (delta) => {
+          streamedText += delta
+          replaceLastMessage({ role: "bot", text: streamedText })
         }
-      } else {
-        // Keep the typing indicator up through retrieval/prompt assembly;
-        // the first delta swaps it for a live bot bubble that fills in as
-        // the reply streams. Product cards only appear once done.
-        let streamedText = ""
-        const result = await chatStream(
-          q,
-          sessionIdRef.current,
-          historyRef.current,
-          normalizeFilters(filters),
-          (delta) => {
-            streamedText += delta
-            replaceLastMessage({ role: "bot", text: streamedText })
-          }
-        )
-        // Adopt the backend's updated history (last 10 turns) for the next
-        // turn; fall back to appending locally if the field is missing
-        historyRef.current =
-          result.history ??
-          [
-            ...historyRef.current,
-            { role: "user" as const, content: q },
-            { role: "assistant" as const, content: result.message },
-          ].slice(-10)
-        const picks = toCatalogProducts(result.products, products)
-        botMsg = {
-          role: "bot",
-          text:
-            result.message ||
-            "I couldn't find a close match in our catalog. Try describing it differently — the activity, conditions or product type all help.",
-          products: result.hasResults && picks.length ? picks : undefined,
-          appliedFilters: result.appliedFilters,
-        }
-      }
-      replaceLastMessage(botMsg)
+      )
+      // Adopt the backend's updated history (last 10 turns) for the next
+      // turn; fall back to appending locally if the field is missing
+      historyRef.current =
+        result.history ??
+        [
+          ...historyRef.current,
+          { role: "user" as const, content: q },
+          { role: "assistant" as const, content: result.message },
+        ].slice(-10)
+      const picks = toCatalogProducts(result.products, products)
+      replaceLastMessage({
+        role: "bot",
+        text:
+          result.message ||
+          "I couldn't find a close match in our catalog. Try describing it differently — the activity, conditions or product type all help.",
+        products: result.hasResults && picks.length ? picks : undefined,
+        appliedFilters: result.appliedFilters,
+      })
     } catch (err) {
       const text =
         err instanceof ChatFiltersError
@@ -371,6 +397,10 @@ export default function VectraChat({
         .vectra-float.hidden{opacity:0;pointer-events:none}
         .composer-inner{border:1px solid var(--line-strong);border-radius:20px;background:var(--surface);padding:12px 12px 12px 18px;display:flex;flex-direction:column;gap:10px;transition:border-color .2s}
         .composer-inner:focus-within{border-color:var(--text)}
+        .vectra-dropzone{position:absolute;inset:0;z-index:1;display:grid;place-items:center;background:var(--overlay);pointer-events:none}
+        .vectra-dropzone-inner{display:flex;flex-direction:column;align-items:center;gap:10px;padding:32px 40px;border-radius:20px;border:2px dashed var(--accent);background:var(--surface);color:var(--text);font-size:14px;font-weight:600}
+        .vectra-skeleton{background:linear-gradient(90deg,var(--surface-2) 25%,var(--line) 37%,var(--surface-2) 63%);background-size:400% 100%;animation:vectra-skeleton 1.4s ease infinite}
+        @keyframes vectra-skeleton{0%{background-position:100% 50%}100%{background-position:0 50%}}
       `}</style>
 
       {/* ============ SCRIM (full-screen mode only) ============ */}
@@ -387,6 +417,7 @@ export default function VectraChat({
         aria-modal={!mini}
         aria-label="Vectra search assistant"
         aria-hidden={!open}
+        ref={panelRef}
       >
         {/* Header */}
         <div
@@ -552,7 +583,7 @@ export default function VectraChat({
                 )
               }
 
-              if (msg.role === "user") {
+              if (msg.role === "user" || msg.role === "user-image") {
                 return (
                   <div
                     key={i}
@@ -576,31 +607,40 @@ export default function VectraChat({
                     >
                       YOU
                     </div>
-                    <div
-                      style={{
-                        fontSize: 15,
-                        lineHeight: 1.6,
-                        paddingTop: 4,
-                        textAlign: "right",
-                      }}
-                    >
-                      {msg.images?.map((src, j) => (
+                    {msg.role === "user" ? (
+                      <div style={{ fontSize: 15, lineHeight: 1.6, paddingTop: 4, textAlign: "right" }}>
+                        {msg.text}
+                      </div>
+                    ) : (
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
                         <img
-                          key={j}
-                          src={src}
-                          alt=""
+                          src={msg.src}
+                          alt="Uploaded search image"
                           style={{
-                            width: 80,
-                            height: 80,
+                            width: 160,
+                            height: 160,
                             objectFit: "cover",
                             borderRadius: 12,
                             border: "1px solid var(--line)",
-                            marginBottom: 8,
                           }}
                         />
-                      ))}
-                      {msg.text && <div>{msg.text}</div>}
-                    </div>
+                        {msg.status === "pending" && (
+                          <div
+                            className="vectra-skeleton"
+                            style={{ width: 160, height: 14, borderRadius: 6 }}
+                            aria-label="Searching…"
+                          />
+                        )}
+                        {msg.status === "error" && (
+                          <div
+                            role="alert"
+                            style={{ fontSize: 12.5, color: "var(--clr-danger)", maxWidth: 160, textAlign: "right" }}
+                          >
+                            {msg.error}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )
               }
@@ -660,7 +700,7 @@ export default function VectraChat({
           </div>
 
           {/* Suggestion chips (only before first user message) */}
-          {messages.filter((m) => m.role === "user").length === 0 && (
+          {messages.filter((m) => m.role === "user" || m.role === "user-image").length === 0 && (
             <div
               style={{
                 display: "flex",
@@ -725,64 +765,6 @@ export default function VectraChat({
               </div>
             )}
             <div className="composer-inner">
-              {/* Image thumbnails */}
-              {attachImages.length > 0 && (
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  {attachImages.map((src, i) => (
-                    <div
-                      key={i}
-                      style={{
-                        position: "relative",
-                        width: 54,
-                        height: 54,
-                        borderRadius: 10,
-                        overflow: "hidden",
-                        border: "1px solid var(--line)",
-                      }}
-                    >
-                      <img
-                        src={src}
-                        alt=""
-                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                      />
-                      <button
-                        onClick={() =>
-                          setAttachImages((prev) => prev.filter((_, j) => j !== i))
-                        }
-                        aria-label="Remove image"
-                        style={{
-                          position: "absolute",
-                          top: -10,
-                          right: -10,
-                          width: 44,
-                          height: 44,
-                          display: "grid",
-                          placeItems: "center",
-                          border: "none",
-                          background: "none",
-                          cursor: "pointer",
-                        }}
-                      >
-                        <span
-                          style={{
-                            width: 18,
-                            height: 18,
-                            borderRadius: "50%",
-                            background: "rgba(0,0,0,.6)",
-                            color: "#fff",
-                            fontSize: 11,
-                            display: "grid",
-                            placeItems: "center",
-                          }}
-                        >
-                          ×
-                        </span>
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <textarea
                   ref={taRef}
@@ -812,17 +794,6 @@ export default function VectraChat({
                     padding: "0",
                     fontFamily: "inherit",
                     outline: "none",
-                  }}
-                />
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  hidden
-                  onChange={(e) => {
-                    if (e.target.files) addFiles(e.target.files)
-                    e.target.value = ""
                   }}
                 />
                 <button
@@ -874,43 +845,7 @@ export default function VectraChat({
                     </span>
                   )}
                 </button>
-                <button
-                  onClick={() => fileRef.current?.click()}
-                  aria-label="Attach image"
-                  style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: 16,
-                    flexShrink: 0,
-                    display: "grid",
-                    placeItems: "center",
-                    color: "var(--text-muted)",
-                    border: "none",
-                    background: "none",
-                    cursor: "pointer",
-                    transition: "color .2s, background .2s",
-                  }}
-                  onMouseEnter={(e) => {
-                    ;(e.currentTarget as HTMLElement).style.color = "var(--text)"
-                    ;(e.currentTarget as HTMLElement).style.background =
-                      "var(--surface-2)"
-                  }}
-                  onMouseLeave={(e) => {
-                    ;(e.currentTarget as HTMLElement).style.color =
-                      "var(--text-muted)"
-                    ;(e.currentTarget as HTMLElement).style.background = "none"
-                  }}
-                >
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.6"
-                    style={{ width: 21, height: 21 }}
-                  >
-                    <path d="M21 11.5l-8.5 8.5a5 5 0 01-7-7l9-9a3.3 3.3 0 014.7 4.7l-9 9a1.6 1.6 0 01-2.3-2.3l8.2-8.2" />
-                  </svg>
-                </button>
+                <ImageUpload dropZoneRef={panelRef} onFiles={addFiles} />
                 <button
                   onClick={() => send()}
                   disabled={busy}
@@ -986,7 +921,7 @@ export default function VectraChat({
                 marginTop: 8,
               }}
             >
-              Paste or attach images · Enter to send · Esc to close
+              {IMAGE_FORMAT_HINT} — paste, drag & drop, or attach to search by image · Enter to send · Esc to close
             </div>
           </div>
         </div>
