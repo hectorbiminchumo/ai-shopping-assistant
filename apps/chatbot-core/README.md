@@ -182,14 +182,27 @@ Verified live against Supabase (July 17, 2026): the `image_embedding` column alr
 | `embedding` | `vector(1024)` | `voyage-3` (text) | 100 / 100 |
 | `image_embedding` | `vector(512)` | `voyage-multimodal-3.5 @512d` (image) | filled by W4 Ticket 3 |
 
-No migration is needed. The catalog has **100 products**, all currently with a `NULL` `image_embedding`; the image ingestion pass (Ticket 3) backfills them. Cosine search uses the existing `ivfflat (image_embedding vector_cosine_ops)` index.
+No migration is needed. The catalog has **100 products**; the image ingestion pass backfilled every `image_embedding`.
+
+**No vector index — this is deliberate.** Both `ivfflat` indexes were dropped on 2026-07-21. They had been created with `lists=100` over a 100-row table, i.e. roughly one cluster per product, and `ivfflat` is approximate: it scans only `ivfflat.probes` clusters (default **1**). `match_products_by_image` was therefore returning whatever sat in a single ~1-row cluster — 1 row for a `match_count` of 5 or 20, sometimes 0 — and the "nearest" product it did return was often not the true nearest neighbour. At 100 rows an exact sequential scan is sub-millisecond and always correct, so an ANN index can only cost recall. Reintroduce one past ~10k products, and then size it (`lists ≈ rows/1000`) or use HNSW, which has no `probes` footgun.
 
 ### Retrieval — cosine search + threshold
 
 `ImageRetrievalService` runs a cosine-similarity search against `image_embedding` and returns the top-k results with their scores, mirroring the text `RetrievalService`.
 
 - **Top-k = 5** passed to the LLM (same as text).
-- **Similarity threshold = 0.60** for image search (higher than the 0.40 text threshold — visual similarity scores are expected to be less compressed than voyage-3 text scores, so a query with no result ≥ 0.60 is logged as a lost sale in `chat_logs`). This threshold is a starting value to be recalibrated against real data during W4, the same way 0.40 was calibrated for text.
+- **Similarity threshold = 0.42** for image search: a query whose best visual match scores below it is logged as a lost sale in `chat_logs` (catalog gap), the image-side counterpart of the 0.40 text threshold.
+
+  Calibrated 2026-07-21 (W4 Ticket 13) with [`scripts/calibrate-image-threshold.mjs`](scripts/calibrate-image-threshold.mjs) over 25 photos against the live catalog — 14 of products the catalog carries, 11 of things it does not:
+
+  ```
+  match    (14) : 0.4401 – 0.6611
+  no-match (11) : 0.2125 – 0.4140
+  ```
+
+  The two populations separate cleanly; 0.42 sits in the gap and misclassifies neither side. It is rounded from the 0.427 midpoint, since three decimals would overstate the precision of a 25-sample estimate. Re-run the script to recalibrate whenever the catalog changes shape.
+
+  > Any image score measured before 2026-07-21 is invalid. The `ivfflat` indexes had `lists=100` over a 100-row table, so with the default `probes=1` the RPC scanned a single ~1-row cluster and returned approximate — frequently wrong — neighbours, which depressed top scores to ~0.25. Both vector indexes were dropped; see the schema note below.
 
 ### Hybrid retrieval — image + text in parallel
 

@@ -2,3 +2,12 @@ node_modules/
 dist/
 .env
 *.log
+
+# Threshold-calibration inputs/outputs (scripts/calibrate-image-threshold.mjs):
+# sample photos are local test data, not source — the CSV they produce is a
+# measurement to paste into the ticket, not something to version.
+samples/
+image-threshold-scores.csv
+scores.csv
+scores-v2.csv
+scores-v3.csv
