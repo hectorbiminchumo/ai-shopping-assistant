@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
 type Props = {
@@ -21,6 +21,19 @@ export default function RailSection({
   children,
 }: Props) {
   const trackRef = useRef<HTMLDivElement>(null)
+  // Only show arrows once the track actually overflows.
+  const [scrollable, setScrollable] = useState(false)
+
+  useEffect(() => {
+    const track = trackRef.current
+    if (!track) return
+    const checkScrollable = () =>
+      setScrollable(track.scrollWidth > track.clientWidth + 1)
+    checkScrollable()
+    const observer = new ResizeObserver(checkScrollable)
+    observer.observe(track)
+    return () => observer.disconnect()
+  }, [])
 
   const scroll = (dir: 1 | -1) => {
     const track = trackRef.current
@@ -118,10 +131,12 @@ export default function RailSection({
                 View all
               </LocalizedClientLink>
             )}
-            <div className="flex gap-2">
-              <IconBtn dir={-1} label={`Previous ${title}`} />
-              <IconBtn dir={1} label={`Next ${title}`} />
-            </div>
+            {scrollable && (
+              <div className="flex gap-2">
+                <IconBtn dir={-1} label={`Previous ${title}`} />
+                <IconBtn dir={1} label={`Next ${title}`} />
+              </div>
+            )}
           </div>
         </div>
 

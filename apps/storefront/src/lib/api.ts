@@ -97,6 +97,23 @@ export async function chat(
 
 export class ChatFiltersError extends Error {}
 
+export async function searchImage(
+  file: File,
+  sessionId: string
+): Promise<SemanticSearchResponse> {
+  const body = new FormData()
+  body.append("image", file)
+  body.append("sessionId", sessionId)
+
+  const res = await fetch(`${API_URL}/store/chat/image-search`, { method: "POST", body })
+
+  if (!res.ok) {
+    throw new Error(`Image search failed with status ${res.status}`)
+  }
+
+  return res.json()
+}
+
 type ChatStreamEvent =
   | { type: "delta"; text: string }
   | { type: "done"; response: ChatResponse }
