@@ -7,5 +7,8 @@ export interface ILLMService {
   // returns the original query when there is no history or the call fails.
   condenseQuery(query: string, history: ChatMessage[]): Promise<string>
   complete(prompt: string): Promise<string>
+  // Like complete(), but framed by the image-search system prompt (the query is
+  // a photo, so the assistant presents the visual matches instead of asking).
+  completeImageSearch(prompt: string): Promise<string>
   stream(prompt: string): AsyncIterable<string>
 }

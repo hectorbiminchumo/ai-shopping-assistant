@@ -60,7 +60,7 @@ export class ImageOrchestrator {
       history: session.history,
     })
 
-    const llmMessage = await this.llmService.complete(prompt)
+    const llmMessage = await this.llmService.completeImageSearch(prompt)
     const response = this.responseFormatter.format(llmMessage, retrieved)
 
     // Lost-sale signal for the analytics dashboard is retrieval confidence, not

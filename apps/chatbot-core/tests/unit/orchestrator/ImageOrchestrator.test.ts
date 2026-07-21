@@ -322,9 +322,9 @@ describe("ImageOrchestrator (unit, all dependencies mocked)", () => {
       expect(chatLogger.log).not.toHaveBeenCalled()
     })
 
-    it("propagates a failure from llmService.complete and never logs", async () => {
+    it("propagates a failure from llmService.completeImageSearch and never logs", async () => {
       const llmService = createMockLLMService()
-      ;(llmService.complete as jest.Mock).mockRejectedValue(new Error("llm timeout"))
+      ;(llmService.completeImageSearch as jest.Mock).mockRejectedValue(new Error("llm timeout"))
       const chatLogger = createMockChatLogger()
 
       const orchestrator = new ImageOrchestrator(

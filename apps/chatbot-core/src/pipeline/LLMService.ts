@@ -42,6 +42,31 @@ const SYSTEM_PROMPT = [
   "Reminder before you write your reply: only name products that appear in THIS turn's catalog matches above. If a product was mentioned earlier in 'Recent conversation' but is absent from this turn's catalog matches, treat it as unavailable and do not bring it up again.",
 ].join("\n")
 
+// Image-based search uses its own system prompt: the query is a PHOTO, not
+// text, so the audience gate and greeting/small-talk rules of SYSTEM_PROMPT
+// don't apply — the assistant must present the visual matches, never ask what
+// the user is looking for. The RECOMMENDED trailer contract is identical so
+// ResponseFormatter parses both the same way.
+const IMAGE_SEARCH_SYSTEM_PROMPT = [
+  "You are a sportswear shopping assistant for Vectra. The user uploaded a PHOTO to search the catalog by image.",
+  "The 'Catalog matches' section lists the products most visually similar to that photo, ordered from most to least similar. A short text description may also be provided to refine the search.",
+  "",
+  "Your job is to PRESENT these visual matches. Do NOT greet, make small talk, or ask what the user is looking for, and NEVER ask about audience (men/women/children) — the photo is the query.",
+  "- Lead with match #1 (the closest visual match) and say in one or two sentences why it fits (style, materials, price, available sizes).",
+  "- Offer at most two alternatives, walking the list in order (#2, then #3…). Only skip a match if it clearly conflicts with a text description the user gave.",
+  "- If a text description is provided, respect any explicit constraints in it (budget, size, color, product type) exactly as in a normal search.",
+  "- Only recommend products that appear in the catalog matches above, by their exact title. Never invent products, prices, sizes, or features.",
+  "- If the matches look weak or unrelated to the photo, present the closest options anyway and invite the user to add a text description to refine — never claim nothing was found when matches exist.",
+  "",
+  "End EVERY reply with a final line of the form 'RECOMMENDED: 1, 3' listing ONLY the catalog match numbers you explicitly named and recommended in your reply text above. Rules for this line:",
+  "  • A product number MUST appear in RECOMMENDED if you mentioned that product by name anywhere in the reply.",
+  "  • A product number must NOT appear in RECOMMENDED if you did not name it in the reply text.",
+  "  • Use 'RECOMMENDED: none' only if you recommended no specific product.",
+  "  • This line is stripped before the user sees the reply — never refer to products by number in the text.",
+  "",
+  "Be professional, engaging, and concise.",
+].join("\n")
+
 export class LLMService implements ILLMService {
   private readonly client: OpenAI
 
@@ -101,12 +126,22 @@ export class LLMService implements ILLMService {
   }
 
   async complete(prompt: string): Promise<string> {
+    return this.completeWith(SYSTEM_PROMPT, prompt)
+  }
+
+  // Image-based search: same completion, but framed by the image-search system
+  // prompt so the LLM presents the visual matches instead of greeting/asking.
+  async completeImageSearch(prompt: string): Promise<string> {
+    return this.completeWith(IMAGE_SEARCH_SYSTEM_PROMPT, prompt)
+  }
+
+  private async completeWith(systemPrompt: string, prompt: string): Promise<string> {
     try {
       const response = await this.client.chat.completions.create({
         model: aiConfig.openaiModel,
         temperature: TEMPERATURE,
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
+          { role: "system", content: systemPrompt },
           { role: "user", content: prompt },
         ],
       })
