@@ -41,6 +41,12 @@ export class ImageEmbeddingService implements IImageEmbeddingService {
     if (!aiConfig.voyageApiKey) {
       throw new EmbeddingError("VOYAGE_API_KEY is not set")
     }
+    if (!aiConfig.voyageMultimodalModel) {
+      throw new EmbeddingError("VOYAGE_MULTIMODAL_MODEL is not set")
+    }
+    if (!aiConfig.voyageApiBaseUrl) {
+      throw new EmbeddingError("VOYAGE_API_BASE_URL is not set")
+    }
     if (image.length === 0) {
       throw new EmbeddingError("Empty image buffer")
     }
