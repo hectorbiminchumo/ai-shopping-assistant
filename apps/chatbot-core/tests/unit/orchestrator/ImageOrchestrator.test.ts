@@ -2,7 +2,7 @@ import type { ImageRetrievalService } from "../../../src/image"
 import { ImageOrchestrator } from "../../../src/orchestrator/ImageOrchestrator"
 import type { PromptAssembler, QueryParser, ResponseFormatter } from "../../../src/pipeline"
 import type { ChatResponse, ChatSession, ParsedQuery, Product, RetrievalResult } from "../../../src/types"
-import { createMockImageEmbeddingService } from "../../mocks/clip.mock"
+import { createMockImageEmbeddingService } from "../../mocks/image-embedding.mock"
 import { createMockLLMService } from "../../mocks/openai.mock"
 import {
   createMockChatLogger,
