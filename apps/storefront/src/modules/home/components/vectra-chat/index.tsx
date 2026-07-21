@@ -14,6 +14,7 @@ import {
 import { collectSizeOptions } from "@lib/util/size-options"
 import ProductCard from "@modules/products/components/product-card"
 import FilterPanel from "./filter-panel"
+import ImageUpload, { validateImageFile, IMAGE_FORMAT_HINT } from "./image-upload"
 
 type Message =
   | {
@@ -31,14 +32,6 @@ function makeId(): string {
   return typeof crypto !== "undefined" && "randomUUID" in crypto
     ? crypto.randomUUID()
     : Math.random().toString(36).slice(2)
-}
-
-const MAX_IMAGE_BYTES = 5 * 1024 * 1024
-
-function validateImageFile(file: File): string | null {
-  if (!file.type.startsWith("image/")) return "Only image files are supported."
-  if (file.size > MAX_IMAGE_BYTES) return "Image must be smaller than 5MB."
-  return null
 }
 
 // Human-readable chips for a filters object, used for the active-filter
@@ -164,13 +157,9 @@ export default function VectraChat({
   // Conversation history as maintained by the backend: each response returns
   // the updated history (last 10 turns), which we send back on the next turn
   const historyRef = useRef<ChatHistoryMessage[]>([])
-  const [isDraggingOver, setIsDraggingOver] = useState(false)
-  // Tracks nested dragenter/dragleave pairs so the overlay only hides once
-  // the pointer truly leaves the panel, not on every child it crosses.
-  const dragCounter = useRef(0)
   const chatScrollRef = useRef<HTMLDivElement>(null)
   const taRef = useRef<HTMLTextAreaElement>(null)
-  const fileRef = useRef<HTMLInputElement>(null)
+  const panelRef = useRef<HTMLElement>(null)
   const floatRef = useRef<HTMLButtonElement>(null)
   const prevOpen = useRef(false)
   const pathname = usePathname()
@@ -269,7 +258,7 @@ export default function VectraChat({
 
   const runImageSearch = async (id: string, file: File) => {
     try {
-      const result = await searchImage(file)
+      const result = await searchImage(file, sessionIdRef.current)
       updateImageMessage(id, { status: "done" })
       const picks = toCatalogProducts(result.products, products)
       if (result.hasResults && picks.length) {
@@ -380,32 +369,6 @@ export default function VectraChat({
     }
   }
 
-  const onDragEnter = (e: React.DragEvent) => {
-    if (!e.dataTransfer.types.includes("Files")) return
-    e.preventDefault()
-    dragCounter.current += 1
-    setIsDraggingOver(true)
-  }
-
-  const onDragOver = (e: React.DragEvent) => {
-    // preventDefault is what allows a drop here instead of the browser opening the file
-    if (e.dataTransfer.types.includes("Files")) e.preventDefault()
-  }
-
-  const onDragLeave = (e: React.DragEvent) => {
-    if (!e.dataTransfer.types.includes("Files")) return
-    e.preventDefault()
-    dragCounter.current = Math.max(0, dragCounter.current - 1)
-    if (dragCounter.current === 0) setIsDraggingOver(false)
-  }
-
-  const onDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    dragCounter.current = 0
-    setIsDraggingOver(false)
-    if (e.dataTransfer.files.length) addFiles(e.dataTransfer.files)
-  }
-
   return (
     <>
       {/* ============ KEYFRAME STYLE ============ */}
@@ -454,29 +417,8 @@ export default function VectraChat({
         aria-modal={!mini}
         aria-label="Vectra search assistant"
         aria-hidden={!open}
-        onDragEnter={onDragEnter}
-        onDragOver={onDragOver}
-        onDragLeave={onDragLeave}
-        onDrop={onDrop}
+        ref={panelRef}
       >
-        {/* Drag & drop overlay */}
-        {isDraggingOver && (
-          <div className="vectra-dropzone" aria-hidden="true">
-            <div className="vectra-dropzone-inner">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.6"
-                style={{ width: 30, height: 30 }}
-              >
-                <path d="M21 11.5l-8.5 8.5a5 5 0 01-7-7l9-9a3.3 3.3 0 014.7 4.7l-9 9a1.6 1.6 0 01-2.3-2.3l8.2-8.2" />
-              </svg>
-              <span>Drop image to search</span>
-            </div>
-          </div>
-        )}
-
         {/* Header */}
         <div
           style={{
@@ -854,17 +796,6 @@ export default function VectraChat({
                     outline: "none",
                   }}
                 />
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  hidden
-                  onChange={(e) => {
-                    if (e.target.files) addFiles(e.target.files)
-                    e.target.value = ""
-                  }}
-                />
                 <button
                   onClick={() => setShowFilters((v) => !v)}
                   aria-label={showFilters ? "Hide filters" : "Show filters"}
@@ -914,43 +845,7 @@ export default function VectraChat({
                     </span>
                   )}
                 </button>
-                <button
-                  onClick={() => fileRef.current?.click()}
-                  aria-label="Attach image"
-                  style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: 16,
-                    flexShrink: 0,
-                    display: "grid",
-                    placeItems: "center",
-                    color: "var(--text-muted)",
-                    border: "none",
-                    background: "none",
-                    cursor: "pointer",
-                    transition: "color .2s, background .2s",
-                  }}
-                  onMouseEnter={(e) => {
-                    ;(e.currentTarget as HTMLElement).style.color = "var(--text)"
-                    ;(e.currentTarget as HTMLElement).style.background =
-                      "var(--surface-2)"
-                  }}
-                  onMouseLeave={(e) => {
-                    ;(e.currentTarget as HTMLElement).style.color =
-                      "var(--text-muted)"
-                    ;(e.currentTarget as HTMLElement).style.background = "none"
-                  }}
-                >
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.6"
-                    style={{ width: 21, height: 21 }}
-                  >
-                    <path d="M21 11.5l-8.5 8.5a5 5 0 01-7-7l9-9a3.3 3.3 0 014.7 4.7l-9 9a1.6 1.6 0 01-2.3-2.3l8.2-8.2" />
-                  </svg>
-                </button>
+                <ImageUpload dropZoneRef={panelRef} onFiles={addFiles} />
                 <button
                   onClick={() => send()}
                   disabled={busy}
@@ -1026,7 +921,7 @@ export default function VectraChat({
                 marginTop: 8,
               }}
             >
-              Paste, drag & drop, or attach images · Enter to send · Esc to close
+              {IMAGE_FORMAT_HINT} — paste, drag & drop, or attach to search by image · Enter to send · Esc to close
             </div>
           </div>
         </div>

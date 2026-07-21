@@ -180,4 +180,41 @@ describe("VectraChat image upload", () => {
     expect(screen.queryByTestId("product-card")).not.toBeInTheDocument()
     expect(screen.queryByRole("alert")).not.toBeInTheDocument()
   })
+
+  it("shows an inline error for an image type outside the accepted formats", async () => {
+    render(<VectraChat products={catalog} />)
+    openChat()
+
+    dropFile(makeFile("anim.gif", "image/gif"))
+
+    expect(
+      await screen.findByText(/only jpg, png or webp images are supported/i)
+    ).toBeInTheDocument()
+    expect(searchImageMock).not.toHaveBeenCalled()
+  })
+
+  it("sends the session id alongside the file to the image-search API", async () => {
+    searchImageMock.mockResolvedValue({ products: [], hasResults: false })
+    render(<VectraChat products={catalog} />)
+    openChat()
+
+    dropFile(makeFile("shoe.png", "image/png"))
+
+    await waitFor(() => expect(searchImageMock).toHaveBeenCalledTimes(1))
+    const [, sessionId] = searchImageMock.mock.calls[0]
+    expect(typeof sessionId).toBe("string")
+    expect(sessionId.length).toBeGreaterThan(0)
+  })
+
+  it("triggers the file handler via click-to-browse", async () => {
+    searchImageMock.mockResolvedValue({ products: [], hasResults: false })
+    render(<VectraChat products={catalog} />)
+    openChat()
+
+    fireEvent.click(screen.getByRole("button", { name: "Attach image" }))
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement
+    fireEvent.change(input, { target: { files: [makeFile("shoe.png", "image/png")] } })
+
+    await waitFor(() => expect(searchImageMock).toHaveBeenCalledTimes(1))
+  })
 })
