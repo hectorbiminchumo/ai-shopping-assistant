@@ -37,11 +37,12 @@ function createMockImageRetrievalService(results: RetrievalResult[]): ImageRetri
 }
 
 describe("ImageOrchestrator (integration, mocked providers)", () => {
-  it("merges image and text results, preferring the higher similarity score", async () => {
+  it("blends image + text results and ranks the visual match ahead of the text-only one", async () => {
     const imageResults: RetrievalResult[] = [{ product: imageMatch, similarityScore: 0.7 }]
     const textResults: RetrievalResult[] = [{ product: textMatch, similarityScore: 0.9 }]
 
-    const llmService = createMockLLMService("Here's what matches your photo.")
+    // Trailer so the ResponseFormatter emits cards in the catalog (blend) order.
+    const llmService = createMockLLMService("Here's what matches your photo.\nRECOMMENDED: 1, 2")
     const chatLogger = createMockChatLogger()
 
     const orchestrator = new ImageOrchestrator(
@@ -58,8 +59,11 @@ describe("ImageOrchestrator (integration, mocked providers)", () => {
 
     const response = await orchestrator.handle(Buffer.from([1, 2, 3]), "sneakers", session)
 
+    // Blend: visual match 0.6·0.7 = 0.42 outranks text-only 0.4·0.9 = 0.36, so
+    // in an image search the product that looks like the photo leads.
     expect(response.products).toHaveLength(2)
-    expect(response.products[0].title).toBe("Text Match Sneaker")
+    expect(response.products[0].title).toBe("Visual Match Sneaker")
+    expect(response.products[1].title).toBe("Text Match Sneaker")
     expect(response.hasResults).toBe(true)
     expect(chatLogger.log).toHaveBeenCalled()
   })

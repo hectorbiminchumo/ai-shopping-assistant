@@ -77,7 +77,7 @@ describe("ImageOrchestrator (unit, all dependencies mocked)", () => {
     expect(response).toBe(formatted)
   })
 
-  it("merges image and text results, keeping the higher score per product and sorting descending", async () => {
+  it("blends image and text scores (0.6·image + 0.4·text) and sorts by the blend", async () => {
     const shared = product("shared")
     const imageOnly = product("image-only")
     const textOnly = product("text-only")
@@ -87,7 +87,7 @@ describe("ImageOrchestrator (unit, all dependencies mocked)", () => {
       { product: imageOnly, similarityScore: 0.7 },
     ]
     const textResults: RetrievalResult[] = [
-      { product: shared, similarityScore: 0.9 }, // higher score for the shared product wins
+      { product: shared, similarityScore: 0.9 },
       { product: textOnly, similarityScore: 0.6 },
     ]
 
@@ -108,13 +108,41 @@ describe("ImageOrchestrator (unit, all dependencies mocked)", () => {
     await orchestrator.handle(Buffer.from([1]), "shoes", session)
 
     const [{ retrievedProducts }] = (promptAssembler.assemble as jest.Mock).mock.calls[0]
-    expect(
-      retrievedProducts.map((r: RetrievalResult) => [r.product.id, r.similarityScore])
-    ).toEqual([
-      ["shared", 0.9],
-      ["image-only", 0.7],
-      ["text-only", 0.6],
+    // shared is in BOTH sets → 0.6·0.5 + 0.4·0.9 = 0.66, so it outranks the
+    // single-modality matches (0.6·0.7 = 0.42 image-only, 0.4·0.6 = 0.24 text-only).
+    const scored = retrievedProducts.map((r: RetrievalResult) => [
+      r.product.id,
+      Number(r.similarityScore.toFixed(2)),
     ])
+    expect(scored).toEqual([
+      ["shared", 0.66],
+      ["image-only", 0.42],
+      ["text-only", 0.24],
+    ])
+  })
+
+  it("de-duplicates a product present in both sets into a single blended entry", async () => {
+    const dup = product("dup")
+    const promptAssembler = mockPromptAssembler()
+
+    const orchestrator = new ImageOrchestrator(
+      mockQueryParser(parsedQuery({ rawQuery: "shoes", embeddingText: "shoes" })),
+      createMockImageEmbeddingService(),
+      mockImageRetrievalService([{ product: dup, similarityScore: 0.8 }]),
+      createMockEmbeddingService(),
+      createMockRetrievalService([{ product: dup, similarityScore: 0.5 }]),
+      promptAssembler,
+      createMockLLMService(),
+      mockResponseFormatter(chatResponse()),
+      createMockChatLogger()
+    )
+
+    await orchestrator.handle(Buffer.from([1]), "shoes", session)
+
+    const [{ retrievedProducts }] = (promptAssembler.assemble as jest.Mock).mock.calls[0]
+    expect(retrievedProducts).toHaveLength(1)
+    // 0.6·0.8 + 0.4·0.5 = 0.68
+    expect(Number(retrievedProducts[0].similarityScore.toFixed(2))).toBe(0.68)
   })
 
   it("caps merged results at TOP_K (5) before assembling the prompt", async () => {
@@ -294,9 +322,9 @@ describe("ImageOrchestrator (unit, all dependencies mocked)", () => {
       expect(chatLogger.log).not.toHaveBeenCalled()
     })
 
-    it("propagates a failure from llmService.complete and never logs", async () => {
+    it("propagates a failure from llmService.completeImageSearch and never logs", async () => {
       const llmService = createMockLLMService()
-      ;(llmService.complete as jest.Mock).mockRejectedValue(new Error("llm timeout"))
+      ;(llmService.completeImageSearch as jest.Mock).mockRejectedValue(new Error("llm timeout"))
       const chatLogger = createMockChatLogger()
 
       const orchestrator = new ImageOrchestrator(
