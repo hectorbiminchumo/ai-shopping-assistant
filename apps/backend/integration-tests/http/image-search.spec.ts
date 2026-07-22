@@ -1,4 +1,5 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
+import type { Request } from "express"
 
 // See ../mocks/chatbot-core.mock.ts for why this is required lazily from
 // *inside* the factory instead of imported at the top of this file.
@@ -25,7 +26,7 @@ jest.mock("multer", () => {
 })
 
 import { POST } from "../../src/api/store/chat/image-search/route"
-import { imageSearchUpload } from "../../src/api/middlewares"
+import { imageFileFilter, imageSearchUpload } from "../../src/api/middlewares"
 import { ChatbotError, ImageOrchestrator } from "@dtc/chatbot-core"
 import multer from "multer"
 
@@ -247,4 +248,35 @@ describe("imageSearchUpload middleware", () => {
     expect(res.status).not.toHaveBeenCalled()
     expect(res.json).not.toHaveBeenCalled()
   })
+})
+
+// Exercises the real ACCEPTED_IMAGE_MIME_TYPES allowlist directly. The
+// describe block above only drives imageSearchUpload's error-translation
+// branches via a mocked multer, so it never actually runs this predicate —
+// these cases are the only place the allowlist itself is under test.
+describe("imageFileFilter (mime-type allowlist)", () => {
+  function buildFile(mimetype: string): Express.Multer.File {
+    return { mimetype } as Express.Multer.File
+  }
+
+  it.each(["image/jpeg", "image/png", "image/webp"])("accepts %s", (mimetype) => {
+    const cb = jest.fn()
+
+    imageFileFilter({} as Request, buildFile(mimetype), cb)
+
+    expect(cb).toHaveBeenCalledWith(null, true)
+  })
+
+  it.each(["image/gif", "application/pdf"])(
+    "rejects %s with an error naming the mimetype",
+    (mimetype) => {
+      const cb = jest.fn()
+
+      imageFileFilter({} as Request, buildFile(mimetype), cb)
+
+      expect(cb).toHaveBeenCalledWith(
+        expect.objectContaining({ message: expect.stringContaining(mimetype) })
+      )
+    }
+  )
 })

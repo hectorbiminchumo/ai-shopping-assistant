@@ -3,6 +3,7 @@ import type { MedusaNextFunction, MedusaRequest, MedusaResponse } from "@medusaj
 import type { ConfigModule } from "@medusajs/framework/types"
 import { parseCorsOrigins } from "@medusajs/framework/utils"
 import cors from "cors"
+import type { Request } from "express"
 import multer from "multer"
 
 // Medusa only applies CORS to /store, /admin and /auth. The custom /search
@@ -20,17 +21,25 @@ const storeCors = (req: MedusaRequest, res: MedusaResponse, next: MedusaNextFunc
 const ACCEPTED_IMAGE_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"])
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024 // 5MB — apps/chatbot-core/README.md "Image input constraints"
 
+// Exported so the mime-type allowlist can be unit tested directly, without
+// going through multer (and its own size/stream handling) at all.
+export const imageFileFilter = (
+  _req: Request,
+  file: Express.Multer.File,
+  cb: multer.FileFilterCallback
+): void => {
+  if (!ACCEPTED_IMAGE_MIME_TYPES.has(file.mimetype)) {
+    cb(new Error(`Unsupported image type: ${file.mimetype}`))
+    return
+  }
+  cb(null, true)
+}
+
 const imageUpload = multer({
   storage: multer.memoryStorage(), // Buffer only, never written to disk — the image is embedded
   // in memory and discarded, per the README's "never persisted" requirement.
   limits: { fileSize: MAX_IMAGE_BYTES },
-  fileFilter: (_req, file, cb) => {
-    if (!ACCEPTED_IMAGE_MIME_TYPES.has(file.mimetype)) {
-      cb(new Error(`Unsupported image type: ${file.mimetype}`))
-      return
-    }
-    cb(null, true)
-  },
+  fileFilter: imageFileFilter,
 })
 
 // Wraps multer's single-file middleware with an explicit callback so failures
