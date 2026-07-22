@@ -199,6 +199,34 @@ describe("ImageOrchestrator (unit, all dependencies mocked)", () => {
     expect(retrievalService.search).not.toHaveBeenCalled()
   })
 
+  it("uses raw image scores unblended when a text query is given but text search returns no results", async () => {
+    const imageResults: RetrievalResult[] = [
+      { product: product("p1"), similarityScore: 0.55 },
+      { product: product("p2"), similarityScore: 0.5 },
+    ]
+    const promptAssembler = mockPromptAssembler()
+
+    const orchestrator = new ImageOrchestrator(
+      mockQueryParser(parsedQuery({ rawQuery: "shoes", embeddingText: "shoes" })),
+      createMockImageEmbeddingService(),
+      mockImageRetrievalService(imageResults),
+      createMockEmbeddingService(),
+      createMockRetrievalService([]),
+      promptAssembler,
+      createMockLLMService(),
+      mockResponseFormatter(chatResponse()),
+      createMockChatLogger()
+    )
+
+    await orchestrator.handle(Buffer.from([1]), "shoes", session)
+
+    // Text search ran (textQuery was truthy) but matched nothing, so
+    // mergeResults is skipped entirely — scores stay the raw image
+    // similarity, not attenuated by a phantom 0 text score (0.6·image).
+    const [{ retrievedProducts }] = (promptAssembler.assemble as jest.Mock).mock.calls[0]
+    expect(retrievedProducts).toEqual(imageResults)
+  })
+
   describe("chat logging (drives the analytics 'lost sale' signal)", () => {
     it("logs hasResults: true when the top merged score meets the 0.42 image threshold", async () => {
       const chatLogger = createMockChatLogger()
@@ -341,6 +369,32 @@ describe("ImageOrchestrator (unit, all dependencies mocked)", () => {
 
       await expect(orchestrator.handle(Buffer.from([1]), undefined, session)).rejects.toThrow(
         "llm timeout"
+      )
+      expect(chatLogger.log).not.toHaveBeenCalled()
+    })
+
+    it("propagates a failure from retrievalService.search (text side) and never logs", async () => {
+      const retrievalService = createMockRetrievalService([])
+      ;(retrievalService.search as jest.Mock).mockRejectedValue(new Error("text search down"))
+      const chatLogger = createMockChatLogger()
+
+      const orchestrator = new ImageOrchestrator(
+        mockQueryParser(parsedQuery({ rawQuery: "shoes", embeddingText: "shoes" })),
+        createMockImageEmbeddingService(),
+        mockImageRetrievalService([{ product: product("p1"), similarityScore: 0.8 }]),
+        createMockEmbeddingService(),
+        retrievalService,
+        mockPromptAssembler(),
+        createMockLLMService(),
+        mockResponseFormatter(chatResponse()),
+        chatLogger
+      )
+
+      // textQuery must be truthy here — only then does Promise.all actually
+      // invoke the text branch (searchByText), proving a text-side failure
+      // fails the whole request rather than being silently swallowed.
+      await expect(orchestrator.handle(Buffer.from([1]), "shoes", session)).rejects.toThrow(
+        "text search down"
       )
       expect(chatLogger.log).not.toHaveBeenCalled()
     })
