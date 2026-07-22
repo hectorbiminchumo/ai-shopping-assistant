@@ -399,4 +399,86 @@ describe("ImageOrchestrator (unit, all dependencies mocked)", () => {
       expect(chatLogger.log).not.toHaveBeenCalled()
     })
   })
+
+  // Hybrid retrieval is only affordable because the two searches overlap: each
+  // costs an embedding round-trip plus a vector query, so running them in
+  // sequence roughly doubles the wait on the slowest endpoint in the product.
+  // Nothing else in the suite pins that down — swapping the Promise.all for two
+  // sequential awaits keeps every other test green while halving throughput.
+  //
+  // The proof is invocation order, not elapsed time: one branch is held pending
+  // and the other must still have *started*. Deliberately no timers — fake ones
+  // don't advance real promises, and real delays make CI flaky.
+  describe("hybrid concurrency (image and text searches overlap)", () => {
+    // Resolves only when release() is called, so the branch it belongs to stays
+    // in flight for as long as the test needs.
+    function pending<T>() {
+      let release!: (value: T) => void
+      const promise = new Promise<T>((resolve) => {
+        release = resolve
+      })
+      return { promise, release }
+    }
+
+    // Lets every already-resolved microtask run, so "not called yet" means
+    // genuinely not called rather than not called *so far this tick*.
+    const flush = () => new Promise((resolve) => setImmediate(resolve))
+
+    function buildOrchestrator(overrides: {
+      imageEmbeddingService?: ReturnType<typeof createMockImageEmbeddingService>
+      embeddingService?: ReturnType<typeof createMockEmbeddingService>
+    }) {
+      const imageEmbeddingService =
+        overrides.imageEmbeddingService ?? createMockImageEmbeddingService()
+      const embeddingService = overrides.embeddingService ?? createMockEmbeddingService()
+
+      const orchestrator = new ImageOrchestrator(
+        mockQueryParser(parsedQuery({ rawQuery: "shoes", embeddingText: "shoes" })),
+        imageEmbeddingService,
+        mockImageRetrievalService([{ product: product("p1"), similarityScore: 0.8 }]),
+        embeddingService,
+        createMockRetrievalService([{ product: product("p2"), similarityScore: 0.7 }]),
+        mockPromptAssembler(),
+        createMockLLMService(),
+        mockResponseFormatter(chatResponse()),
+        createMockChatLogger()
+      )
+
+      return { orchestrator, imageEmbeddingService, embeddingService }
+    }
+
+    it("starts the text search while the image search is still in flight", async () => {
+      const held = pending<number[]>()
+      const imageEmbeddingService = createMockImageEmbeddingService()
+      ;(imageEmbeddingService.embedImage as jest.Mock).mockReturnValue(held.promise)
+
+      const { orchestrator, embeddingService } = buildOrchestrator({ imageEmbeddingService })
+
+      const inFlight = orchestrator.handle(Buffer.from([1]), "shoes", session)
+      await flush()
+
+      // Sequentially, this would still be waiting on the image branch
+      expect(embeddingService.embedText).toHaveBeenCalledWith("shoes")
+
+      held.release(Array(512).fill(0.1))
+      await inFlight
+    })
+
+    it("starts the image search while the text search is still in flight", async () => {
+      const held = pending<number[]>()
+      const embeddingService = createMockEmbeddingService()
+      ;(embeddingService.embedText as jest.Mock).mockReturnValue(held.promise)
+
+      const { orchestrator, imageEmbeddingService } = buildOrchestrator({ embeddingService })
+
+      const inFlight = orchestrator.handle(Buffer.from([1]), "shoes", session)
+      await flush()
+
+      // Guards the mirror image: neither branch may be moved out of Promise.all
+      expect(imageEmbeddingService.embedImage).toHaveBeenCalled()
+
+      held.release([0.1, 0.2, 0.3])
+      await inFlight
+    })
+  })
 })
