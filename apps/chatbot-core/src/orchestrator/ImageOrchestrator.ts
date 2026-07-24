@@ -12,6 +12,14 @@ import { meetsImageSimilarityThreshold } from "../utils"
 
 const TOP_K = 5
 
+// Shown when the best visual match is below the image threshold. A vector
+// search always returns neighbours, so a photo of something the catalog does
+// not sell (a bicycle) still comes back with its closest shoes — this is what
+// the user sees instead of those false matches.
+const NO_VISUAL_MATCH_MESSAGE =
+  "I couldn't find anything in our catalog that looks like your photo. " +
+  "Try a different image, or tell me in words what you're after."
+
 // Hybrid retrieval weights (must sum to 1.0). Image is weighted higher because
 // the uploaded photo is the primary intent; the text refines it. Only applied
 // when BOTH an image and a text query are present — see mergeResults.
@@ -63,12 +71,23 @@ export class ImageOrchestrator {
     const llmMessage = await this.llmService.completeImageSearch(prompt)
     const response = this.responseFormatter.format(llmMessage, retrieved)
 
-    // Lost-sale signal for the analytics dashboard is retrieval confidence, not
-    // whether the LLM chose to reply: a query whose best visual match is below
-    // the image threshold is a catalog gap, even if the LLM offered the closest
-    // option anyway. (See ResponseFormatter for the text-side equivalent.)
-    const topScore = retrieved[0]?.similarityScore ?? 0
-    const similarityThresholdMet = retrieved.length > 0 && meetsImageSimilarityThreshold(topScore)
+    // Retrieval confidence is the gate for image search — for BOTH the user
+    // reply and the analytics signal. Unlike text (where ResponseFormatter
+    // trusts the LLM's RECOMMENDED trailer to decide relevance), a vector search
+    // always returns the nearest neighbours, and the image system prompt tells
+    // the model to present them, so it confidently recommends shoes for a photo
+    // of a bicycle. The image similarity score is the only thing that actually
+    // knows the photo matches nothing, so below the threshold we drop the cards
+    // and replace the LLM's message rather than showing false matches.
+    //
+    // Gate on the best PURE IMAGE score, never the blended one. The 0.42
+    // threshold was calibrated on raw image scores; the hybrid blend
+    // (0.6·image + 0.4·text) lives on a compressed scale, so testing it against
+    // 0.42 would reject good visual matches the instant the user adds any text.
+    // "Is the photo something we sell?" is answered by image similarity alone;
+    // the text only refines the ranking of what came back.
+    const topScore = imageResults[0]?.similarityScore ?? 0
+    const similarityThresholdMet = meetsImageSimilarityThreshold(topScore)
 
     await this.chatLogger.log({
       userId: session.userId,
@@ -79,6 +98,10 @@ export class ImageOrchestrator {
       hasResults: similarityThresholdMet,
       categoryHint: parsedQuery.category,
     })
+
+    if (!similarityThresholdMet) {
+      return { ...response, message: NO_VISUAL_MATCH_MESSAGE, products: [], hasResults: false }
+    }
 
     return response
   }
