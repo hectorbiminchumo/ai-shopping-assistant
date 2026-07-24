@@ -36,6 +36,16 @@ type Message =
     }
   | { role: "typing" }
 
+// A file staged in the composer but not sent yet: the user can keep typing,
+// attach more, or remove it before hitting send. `error` marks a file that
+// failed validation — it stays visible so the user knows why it won't be sent.
+type Attachment = {
+  id: string
+  file: File
+  src: string
+  error?: string
+}
+
 function makeId(): string {
   return typeof crypto !== "undefined" && "randomUUID" in crypto
     ? crypto.randomUUID()
@@ -153,6 +163,8 @@ export default function VectraChat({
   ])
   const [input, setInput] = useState("")
   const [busy, setBusy] = useState(false)
+  // Files staged in the composer, sent together with the text on submit
+  const [attachments, setAttachments] = useState<Attachment[]>([])
   // Explicit search filters — set visually, sent with the NEXT message
   const [filters, setFilters] = useState<ChatFilters>({})
   const [showFilters, setShowFilters] = useState(false)
@@ -195,6 +207,9 @@ export default function VectraChat({
     return collectSizeOptions(pool)
   }, [products, filters.category])
   const activeChips = filterChips(filters)
+  // An attachment on its own is a valid message (pure visual search), so text is
+  // not required — but a staged file that failed validation doesn't count.
+  const canSend = input.trim().length > 0 || attachments.some((a) => !a.error)
 
   const scrollToBottom = useCallback(() => {
     chatScrollRef.current?.scrollTo({ top: chatScrollRef.current.scrollHeight })
@@ -298,34 +313,57 @@ export default function VectraChat({
     }
   }
 
-  // Each file becomes its own bubble immediately (object URL — nothing is
-  // uploaded anywhere for this). Invalid files (wrong type, over 5MB) still get
-  // a bubble, just with an inline error instead of a search request.
-  //
-  // Text in the composer is consumed as the query for this batch and shown as a
-  // caption on the bubble, so it is never silently dropped: before this, an
-  // image sent alongside text searched on the image alone.
+  // Staging only — nothing is searched until the user hits send, so they can
+  // attach a photo and then describe what they want about it (the composer text
+  // becomes the hybrid query). Object URLs are local; no upload happens here.
+  // Invalid files (wrong type, over 5MB) are staged too, showing why they will
+  // not be sent, rather than silently vanishing.
   const addFiles = (files: FileList | File[]) => {
-    const list = Array.from(files)
-    const query = input.trim() || undefined
-    const usesQuery = query && list.some((file) => !validateImageFile(file))
-    if (usesQuery) {
-      setInput("")
-      if (taRef.current) taRef.current.style.height = "auto"
-    }
+    // Materialise the list *before* the state updater runs: a FileList from an
+    // <input type="file"> is live, and the input resets itself right after this
+    // call, so reading it lazily inside setAttachments would find it empty.
+    const staged = Array.from(files).map((file) => ({
+      id: makeId(),
+      file,
+      src: URL.createObjectURL(file),
+      error: validateImageFile(file) ?? undefined,
+    }))
+    setAttachments((prev) => [...prev, ...staged])
+  }
 
-    list.forEach((file) => {
-      const id = makeId()
-      const src = URL.createObjectURL(file)
-      const error = validateImageFile(file)
-      setMessages((prev) => [
-        ...prev,
-        error
-          ? { role: "user-image", id, src, status: "error", error }
-          : { role: "user-image", id, src, status: "pending", caption: query },
-      ])
-      if (!error) runImageSearch(id, file, query)
+  // Object URLs are only revoked for attachments that never became a message;
+  // once sent, the thread's image bubble renders from the same src.
+  const discard = (list: Attachment[]) => list.forEach((a) => URL.revokeObjectURL(a.src))
+
+  const removeAttachment = (id: string) => {
+    setAttachments((prev) => {
+      discard(prev.filter((a) => a.id === id))
+      return prev.filter((a) => a.id !== id)
     })
+  }
+
+  // Sends every staged image, each as its own bubble and its own search, with
+  // the composer text applied to all of them as the hybrid query.
+  const sendWithImages = async (ready: Attachment[], query?: string) => {
+    setMessages((prev) => [
+      ...prev,
+      ...ready.map(
+        (a) =>
+          ({ role: "user-image", id: a.id, src: a.src, status: "pending", caption: query }) as Message
+      ),
+    ])
+    // Rejected files never became bubbles, so their URLs are freed here
+    discard(attachments.filter((a) => a.error))
+    setAttachments([])
+    setInput("")
+    if (taRef.current) taRef.current.style.height = "auto"
+    setBusy(true)
+
+    try {
+      await Promise.all(ready.map((a) => runImageSearch(a.id, a.file, query)))
+    } finally {
+      setBusy(false)
+    }
   }
 
   // Replaces the last message in-place — used both to swap the "typing"
@@ -342,9 +380,21 @@ export default function VectraChat({
   const send = async (overrideText?: string) => {
     if (busy) return
     const q = (overrideText ?? input).trim()
-    if (!q) return
+    const ready = attachments.filter((a) => !a.error)
+    if (!q && ready.length === 0) return
+
+    // Images present → hybrid image search, with the text (if any) refining it.
+    // Text alone stays on the conversational streaming endpoint.
+    if (ready.length > 0) {
+      await sendWithImages(ready, q || undefined)
+      return
+    }
 
     setMessages((prev) => [...prev, { role: "user", text: q }, { role: "typing" }])
+    // Drop any rejected files still staged — they can't be sent and the user
+    // has already seen why.
+    discard(attachments)
+    setAttachments([])
     setInput("")
     if (taRef.current) taRef.current.style.height = "auto"
     setBusy(true)
@@ -431,6 +481,14 @@ export default function VectraChat({
         .vectra-float.hidden{opacity:0;pointer-events:none}
         .composer-inner{border:1px solid var(--line-strong);border-radius:20px;background:var(--surface);padding:12px 12px 12px 18px;display:flex;flex-direction:column;gap:10px;transition:border-color .2s}
         .composer-inner:focus-within{border-color:var(--text)}
+        /* Staged attachments: thumbnails shown inside the composer until sent */
+        .vectra-attach-tray{display:flex;flex-wrap:wrap;gap:10px}
+        .vectra-attach{max-width:150px}
+        .vectra-attach-frame{position:relative;width:64px;height:64px}
+        .vectra-attach-thumb{width:64px;height:64px;object-fit:cover;border-radius:10px;border:1px solid var(--line)}
+        .vectra-attach.invalid .vectra-attach-thumb{border-color:var(--clr-danger);opacity:.5}
+        .vectra-attach-remove{position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;background:var(--text);color:var(--bg);border:none;cursor:pointer;line-height:1}
+        .vectra-attach-error{font-size:11.5px;color:var(--clr-danger);margin-top:4px}
         .vectra-dropzone{position:absolute;inset:0;z-index:1;display:grid;place-items:center;background:var(--overlay);pointer-events:none}
         .vectra-dropzone-inner{display:flex;flex-direction:column;align-items:center;gap:10px;padding:32px 40px;border-radius:20px;border:2px dashed var(--accent);background:var(--surface);color:var(--text);font-size:14px;font-weight:600}
         .vectra-skeleton{background:linear-gradient(90deg,var(--surface-2) 25%,var(--line) 37%,var(--surface-2) 63%);background-size:400% 100%;animation:vectra-skeleton 1.4s ease infinite}
@@ -804,6 +862,38 @@ export default function VectraChat({
               </div>
             )}
             <div className="composer-inner">
+              {attachments.length > 0 && (
+                <div className="vectra-attach-tray">
+                  {attachments.map((a) => (
+                    <div key={a.id} className={`vectra-attach${a.error ? " invalid" : ""}`}>
+                      <div className="vectra-attach-frame">
+                        <img className="vectra-attach-thumb" src={a.src} alt={a.file.name} />
+                        <button
+                          className="vectra-attach-remove"
+                          onClick={() => removeAttachment(a.id)}
+                          aria-label={`Remove ${a.file.name}`}
+                        >
+                          <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2.4"
+                            strokeLinecap="round"
+                            className="w-[11px] h-[11px]"
+                          >
+                            <path d="M6 6l12 12M18 6L6 18" />
+                          </svg>
+                        </button>
+                      </div>
+                      {a.error && (
+                        <div className="vectra-attach-error" role="alert">
+                          {a.error}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <textarea
                   ref={taRef}
@@ -887,7 +977,7 @@ export default function VectraChat({
                 <ImageUpload dropZoneRef={panelRef} onFiles={addFiles} />
                 <button
                   onClick={() => send()}
-                  disabled={busy}
+                  disabled={busy || !canSend}
                   aria-label="Send"
                   style={{
                     width: 44,
@@ -899,8 +989,8 @@ export default function VectraChat({
                     display: "grid",
                     placeItems: "center",
                     border: "none",
-                    cursor: busy ? "default" : "pointer",
-                    opacity: busy ? 0.5 : 1,
+                    cursor: busy || !canSend ? "default" : "pointer",
+                    opacity: busy || !canSend ? 0.5 : 1,
                     transition: "background .2s, opacity .2s",
                   }}
                 >
