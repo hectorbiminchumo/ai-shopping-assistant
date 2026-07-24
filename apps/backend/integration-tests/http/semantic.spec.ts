@@ -69,6 +69,19 @@ describe("POST /search/semantic", () => {
     )
   })
 
+  it("returns 400 for an over-length query without calling the orchestrator", async () => {
+    const req = buildReq({ query: "x".repeat(501) })
+    const res = buildRes()
+
+    await POST(req, res)
+
+    expect(MockedSearchOrchestrator).not.toHaveBeenCalled()
+    expect(res.status).toHaveBeenCalledWith(400)
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ errors: expect.arrayContaining(["query is too long"]) })
+    )
+  })
+
   it("returns 502 when retrieval fails", async () => {
     const mockSearch = jest.fn().mockRejectedValue(new RetrievalError("Vector search failed"))
     MockedSearchOrchestrator.mockImplementation(() => ({ search: mockSearch }))
