@@ -5,6 +5,7 @@ import { parseCorsOrigins } from "@medusajs/framework/utils"
 import cors from "cors"
 import type { Request } from "express"
 import multer from "multer"
+import { aiRateLimit } from "./rate-limit"
 
 // Medusa only applies CORS to /store, /admin and /auth. The custom /search
 // routes (semantic search + chat) are called directly from the storefront
@@ -66,11 +67,20 @@ export const imageSearchUpload = (req: MedusaRequest, res: MedusaResponse, next:
 
 export default defineMiddlewares({
   routes: [
-    { matcher: "/search*", middlewares: [storeCors] },
+    // storeCors runs before aiRateLimit so a 429 still carries CORS headers and
+    // the browser can read it. /store routes get Medusa's CORS automatically.
+    { matcher: "/search*", middlewares: [storeCors, aiRateLimit] },
     {
       matcher: "/store/chat/image-search",
       methods: ["POST"],
-      middlewares: [imageSearchUpload],
+      // Rate-limit before multer so an over-limit request is rejected without
+      // buffering its (up to 5MB) upload.
+      middlewares: [aiRateLimit, imageSearchUpload],
+    },
+    {
+      matcher: "/store/search/visual",
+      methods: ["POST"],
+      middlewares: [aiRateLimit],
     },
   ],
 })
