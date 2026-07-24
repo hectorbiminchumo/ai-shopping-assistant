@@ -77,6 +77,103 @@ describe("ImageOrchestrator (unit, all dependencies mocked)", () => {
     expect(response).toBe(formatted)
   })
 
+  // The core of the "bicycle returns shoes" fix: a vector search always yields
+  // neighbours and the image prompt makes the LLM present them, so the only
+  // thing that knows the photo matches nothing is the similarity score. Below
+  // the threshold the user must NOT see those false matches, even though the
+  // formatter (trusting the LLM's RECOMMENDED trailer) produced cards.
+  describe("gating the reply on visual similarity", () => {
+    function buildOrchestrator(topScore: number, formatted: ChatResponse) {
+      return new ImageOrchestrator(
+        mockQueryParser(parsedQuery()),
+        createMockImageEmbeddingService(),
+        mockImageRetrievalService([{ product: product("p1"), similarityScore: topScore }]),
+        createMockEmbeddingService(),
+        createMockRetrievalService([]),
+        mockPromptAssembler(),
+        createMockLLMService(),
+        mockResponseFormatter(formatted),
+        createMockChatLogger()
+      )
+    }
+
+    const withCards = () =>
+      chatResponse({
+        message: "The closest match to your photo is the ADIDAS Black Shoe.",
+        products: [{ id: "p1", medusaProductId: "medusa_p1", title: "ADIDAS Black", similarityScore: 0.36 }],
+        hasResults: true,
+      })
+
+    it("drops the cards and replaces the message when the top score is below the threshold", async () => {
+      const response = await buildOrchestrator(0.36, withCards()).handle(
+        Buffer.from([1]),
+        undefined,
+        session
+      )
+
+      expect(response.products).toEqual([])
+      expect(response.hasResults).toBe(false)
+      expect(response.message).toMatch(/couldn't find anything in our catalog that looks like/i)
+    })
+
+    it("passes the formatter's cards through when the top score meets the threshold", async () => {
+      const formatted = withCards()
+      const response = await buildOrchestrator(0.42, formatted).handle(
+        Buffer.from([1]),
+        undefined,
+        session
+      )
+
+      expect(response).toBe(formatted)
+    })
+
+    // Regression: a good visual match (image 0.55) blended with a weak text
+    // score drops the merged top score below 0.42. The gate must judge the raw
+    // IMAGE score, or adding any text to an image search turns real matches
+    // into "no results" — which is exactly what shipping the attach-text-with-
+    // image composer surfaced.
+    it("keeps the cards when the image matches but a weak text query drags the blend down", async () => {
+      const formatted = withCards()
+      const orchestrator = new ImageOrchestrator(
+        mockQueryParser(parsedQuery({ rawQuery: "gym", embeddingText: "gym" })),
+        createMockImageEmbeddingService(),
+        mockImageRetrievalService([{ product: product("p1"), similarityScore: 0.55 }]),
+        createMockEmbeddingService(),
+        // Weak text match: blend = 0.6·0.55 + 0.4·0.10 = 0.37, below 0.42
+        createMockRetrievalService([{ product: product("p1"), similarityScore: 0.1 }]),
+        mockPromptAssembler(),
+        createMockLLMService(),
+        mockResponseFormatter(formatted),
+        createMockChatLogger()
+      )
+
+      const response = await orchestrator.handle(Buffer.from([1]), "gym", session)
+
+      expect(response).toBe(formatted)
+    })
+
+    it("logs the pure image score as the lost-sale signal, not the blended one", async () => {
+      const chatLogger = createMockChatLogger()
+      const orchestrator = new ImageOrchestrator(
+        mockQueryParser(parsedQuery({ rawQuery: "gym", embeddingText: "gym" })),
+        createMockImageEmbeddingService(),
+        mockImageRetrievalService([{ product: product("p1"), similarityScore: 0.55 }]),
+        createMockEmbeddingService(),
+        createMockRetrievalService([{ product: product("p1"), similarityScore: 0.1 }]),
+        mockPromptAssembler(),
+        createMockLLMService(),
+        mockResponseFormatter(withCards()),
+        chatLogger
+      )
+
+      await orchestrator.handle(Buffer.from([1]), "gym", session)
+
+      expect(chatLogger.log).toHaveBeenCalledWith(
+        expect.objectContaining({ topScore: 0.55, hasResults: true })
+      )
+    })
+  })
+
   it("blends image and text scores (0.6·image + 0.4·text) and sorts by the blend", async () => {
     const shared = product("shared")
     const imageOnly = product("image-only")
