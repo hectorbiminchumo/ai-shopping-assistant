@@ -164,6 +164,19 @@ describe("POST /store/chat/image-search", () => {
     expect(res.status).toHaveBeenCalledWith(400)
   })
 
+  it("returns 400 for an over-length query", async () => {
+    const req = buildReq({ sessionId: "session-1", query: "x".repeat(501) }, fakeImage)
+    const res = buildRes()
+
+    await POST(req, res)
+
+    expect(MockedImageOrchestrator).not.toHaveBeenCalled()
+    expect(res.status).toHaveBeenCalledWith(400)
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ errors: expect.arrayContaining(["query is too long"]) })
+    )
+  })
+
   it("returns 500 with the ChatbotError message when the orchestrator throws a ChatbotError", async () => {
     const mockHandle = jest.fn().mockRejectedValue(new ChatbotError("Voyage API is unavailable"))
     MockedImageOrchestrator.mockImplementation(() => ({ handle: mockHandle }))

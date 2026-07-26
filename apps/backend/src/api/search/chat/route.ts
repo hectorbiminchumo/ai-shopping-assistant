@@ -32,13 +32,16 @@ const filtersSchema = z
   )
 
 const chatBodySchema = z.object({
-  query: z.string().trim().min(1, "query must not be empty"),
+  query: z.string().trim().min(1, "query must not be empty").max(500, "query is too long"),
   sessionId: z.string().trim().min(1, "sessionId must not be empty"),
   history: z
     .array(
       z.object({
         role: z.enum(["user", "assistant"]),
-        content: z.string(),
+        // Capped: the client supplies history and it goes verbatim into the LLM
+        // prompt, so an unbounded content is both a cost vector (20 huge turns)
+        // and a prompt-injection surface.
+        content: z.string().max(2000, "history content is too long"),
       })
     )
     .max(20)

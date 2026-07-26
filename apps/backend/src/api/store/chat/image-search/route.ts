@@ -28,7 +28,7 @@ interface UploadedImageFile {
 
 const imageSearchBodySchema = z.object({
   sessionId: z.string().trim().min(1, "sessionId must not be empty"),
-  query: z.string().trim().min(1, "query must not be empty").optional(),
+  query: z.string().trim().min(1, "query must not be empty").max(500, "query is too long").optional(),
 })
 
 export async function POST(req: MedusaRequest, res: MedusaResponse) {

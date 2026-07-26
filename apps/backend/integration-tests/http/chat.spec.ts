@@ -102,6 +102,36 @@ describe("POST /search/chat", () => {
     expect(res.status).toHaveBeenCalledWith(400)
   })
 
+  it("returns 400 for an over-length query", async () => {
+    const req = buildReq({ query: "x".repeat(501), sessionId: "session-1" })
+    const res = buildRes()
+
+    await POST(req, res)
+
+    expect(MockedChatOrchestrator).not.toHaveBeenCalled()
+    expect(res.status).toHaveBeenCalledWith(400)
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ errors: expect.arrayContaining(["query is too long"]) })
+    )
+  })
+
+  it("returns 400 for an over-length history turn", async () => {
+    const req = buildReq({
+      query: "running shoes",
+      sessionId: "session-1",
+      history: [{ role: "user", content: "x".repeat(2001) }],
+    })
+    const res = buildRes()
+
+    await POST(req, res)
+
+    expect(MockedChatOrchestrator).not.toHaveBeenCalled()
+    expect(res.status).toHaveBeenCalledWith(400)
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ errors: expect.arrayContaining(["history content is too long"]) })
+    )
+  })
+
   it("returns 400 when sessionId is missing", async () => {
     const req = buildReq({ query: "running shoes" })
     const res = buildRes()

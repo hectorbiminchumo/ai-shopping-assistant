@@ -10,7 +10,7 @@ import {
 } from "@dtc/chatbot-core"
 
 const searchBodySchema = z.object({
-  query: z.string().trim().min(1, "query must not be empty"),
+  query: z.string().trim().min(1, "query must not be empty").max(500, "query is too long"),
 })
 
 export async function POST(req: MedusaRequest, res: MedusaResponse) {
