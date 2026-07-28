@@ -1,3 +1,4 @@
+import { HISTORY_TURNS } from "../pipeline/PromptAssembler"
 import type { ImageRetrievalService } from "../image"
 import type {
   IChatLogger,
@@ -100,10 +101,43 @@ export class ImageOrchestrator {
     })
 
     if (!similarityThresholdMet) {
-      return { ...response, message: NO_VISUAL_MATCH_MESSAGE, products: [], hasResults: false }
+      const noMatch = {
+        ...response,
+        message: NO_VISUAL_MATCH_MESSAGE,
+        products: [],
+        hasResults: false,
+      }
+      this.appendHistory(noMatch, textQuery, session)
+      return noMatch
     }
 
+    this.appendHistory(response, textQuery, session)
     return response
+  }
+
+  // Mirrors ChatOrchestrator.finalize so the client can carry the turn forward.
+  // Without it an image search left no trace in the conversation: a follow-up
+  // like "make it above $100" arrived at condenseQuery with nothing to resolve
+  // the pronoun against, so the rewritten query lost the product type and the
+  // search drifted to whatever else cleared the price filter.
+  //
+  // The user turn is marked rather than left blank — the query was a photo, and
+  // the assistant reply that follows it names the matched products, which is
+  // what a later turn actually needs to resolve "it" or "them".
+  private appendHistory(
+    response: ChatResponse,
+    textQuery: string | undefined,
+    session: ChatSession
+  ): void {
+    const trimmed = textQuery?.trim()
+    response.history = [
+      ...session.history,
+      {
+        role: "user" as const,
+        content: trimmed ? `[photo search] ${trimmed}` : "[photo search]",
+      },
+      { role: "assistant" as const, content: response.message },
+    ].slice(-HISTORY_TURNS)
   }
 
   private async searchByImage(imageBuffer: Buffer): Promise<RetrievalResult[]> {

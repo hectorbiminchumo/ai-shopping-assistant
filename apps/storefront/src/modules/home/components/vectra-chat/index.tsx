@@ -286,6 +286,17 @@ export default function VectraChat({
     try {
       const result = await searchImage(file, sessionIdRef.current, query)
       updateImageMessage(id, { status: "done" })
+      // Carry the photo turn into the history, exactly as the text path does.
+      // Skipping it left the next message with no idea the conversation was
+      // about the matched products, so a follow-up like "make it above $100"
+      // had no product type to keep and searched the whole catalog again.
+      historyRef.current = (
+        result.history ?? [
+          ...historyRef.current,
+          { role: "user" as const, content: query?.trim() ? `[photo search] ${query.trim()}` : "[photo search]" },
+          { role: "assistant" as const, content: result.message },
+        ]
+      ).slice(-10)
       const picks = toCatalogProducts(result.products, products)
       // Render the assistant's own reply — it explains why each match fits the
       // photo (see IMAGE_SEARCH_SYSTEM_PROMPT in chatbot-core). The fallback
