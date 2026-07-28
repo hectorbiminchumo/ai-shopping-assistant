@@ -1,0 +1,36 @@
+# Host build artefacts must never enter the image. node_modules in particular
+# holds darwin-arm64 native binaries (@swc/core) that are unusable on Linux —
+# the image installs its own with `npm ci`.
+node_modules
+**/node_modules
+
+# Build outputs — regenerated inside the builder stage.
+dist
+**/dist
+.next
+**/.next
+.medusa
+**/.medusa
+.turbo
+**/.turbo
+
+# Secrets. Railway injects environment variables at runtime; a stray .env
+# copied into the image would silently shadow them via Medusa's loadEnv().
+.env
+.env.*
+**/.env
+**/.env.*
+!**/.env.template
+!**/.env.example
+
+# Not needed to build or run the backend. apps/design is deliberately NOT
+# excluded: it is only 292K, and npm ci validates every workspace in the
+# `apps/**` glob against package-lock.json — hiding it breaks the install.
+.git
+.github
+.vscode
+**/coverage
+**/*.log
+**/.DS_Store
+README.md
+CLAUDE.md
